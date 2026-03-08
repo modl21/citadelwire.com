@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useLatestEpisode } from '@/hooks/useLatestEpisode';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Play, Pause, Volume2, VolumeX, Mic } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Mic, ExternalLink } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 function formatTime(seconds: number): string {
@@ -128,6 +128,15 @@ export function PodcastPlayer() {
             Latest Episode
           </span>
           <span className="text-[11px] text-muted-foreground/40 ml-1">{timeAgo}</span>
+          <a
+            href="https://serve.podhome.fm/CitadelDispatch"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto inline-flex items-center gap-1 text-[11px] text-purple-400/60 hover:text-purple-400 transition-colors"
+          >
+            All Episodes
+            <ExternalLink className="h-2.5 w-2.5" />
+          </a>
         </div>
 
         {/* Title + controls */}
