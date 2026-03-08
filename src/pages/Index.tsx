@@ -5,6 +5,7 @@ import { PostCard } from '@/components/PostCard';
 import { TickerBar } from '@/components/TickerBar';
 import { useCitadelFeed, CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 import { useAuthor } from '@/hooks/useAuthor';
+import { DonateButton } from '@/components/DonateButton';
 import { Zap, RefreshCw } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 
@@ -54,14 +55,17 @@ const Index = () => {
               </h1>
             </div>
           </div>
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="p-2 rounded-full hover:bg-muted/60 transition-colors text-muted-foreground/50 hover:text-foreground disabled:opacity-40 shrink-0"
-            title="Refresh feed"
-          >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <DonateButton />
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="p-2 rounded-full hover:bg-muted/60 transition-colors text-muted-foreground/50 hover:text-foreground disabled:opacity-40"
+              title="Refresh feed"
+            >
+              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
 
         {/* Ticker row */}
