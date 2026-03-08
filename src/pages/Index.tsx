@@ -34,8 +34,16 @@ const Index = () => {
   const npub = nip19.npubEncode(CITADEL_PUBKEY);
 
   useSeoMeta({
-    title: metadata?.display_name ?? 'CITADEL WIRE',
-    description: metadata?.about ?? 'High signal news on Nostr',
+    title: 'CITADEL WIRE',
+    description: 'high signal news',
+    ogTitle: 'CITADEL WIRE',
+    ogDescription: 'high signal news',
+    ogImage: 'https://blossom.primal.net/7e50fc1128859dfdc43d504e2cafec4a1e1e5067b5c6245232a11ee75fdc84d7.jpg',
+    ogType: 'website',
+    twitterCard: 'summary',
+    twitterTitle: 'CITADEL WIRE',
+    twitterDescription: 'high signal news',
+    twitterImage: 'https://blossom.primal.net/7e50fc1128859dfdc43d504e2cafec4a1e1e5067b5c6245232a11ee75fdc84d7.jpg',
   });
 
   return (
