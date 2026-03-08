@@ -111,10 +111,15 @@ const Index = () => {
               )}
               <div className="flex items-center gap-3 mt-2.5 flex-wrap">
                 {metadata?.lud16 && (
-                  <span className="inline-flex items-center gap-1 text-xs text-amber-500 font-medium">
+                  <a
+                    href="https://primal.net/citadel"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-amber-500 hover:text-amber-400 font-medium transition-colors"
+                  >
                     <Zap className="h-3 w-3" />
                     {metadata.lud16}
-                  </span>
+                  </a>
                 )}
                 <a
                   href="https://primal.net/wire"
