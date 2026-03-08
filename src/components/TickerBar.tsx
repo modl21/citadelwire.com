@@ -38,11 +38,22 @@ export function TickerBar() {
 
   return (
     <div className="flex items-center gap-3 sm:gap-5 text-xs font-medium overflow-x-auto scrollbar-none">
-      {/* UTC Clock */}
+      {/* Block Height */}
       <div className="flex items-center gap-1.5 shrink-0">
-        <Clock className="h-3.5 w-3.5 text-sky-400" />
-        <span className="text-foreground font-semibold tabular-nums">{utcTime}</span>
-        <span className="text-muted-foreground/50">UTC</span>
+        <Box className="h-3.5 w-3.5 text-purple-400" />
+        <span className="text-muted-foreground/60">Block</span>
+        {isLoading || !data?.blockHeight ? (
+          <Skeleton className="h-3.5 w-20" />
+        ) : (
+          <a
+            href={`https://mempool.space/block/${data.blockHeight}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground font-semibold tabular-nums hover:text-purple-400 transition-colors"
+          >
+            {formatBlockHeight(data.blockHeight)}
+          </a>
+        )}
       </div>
 
       <div className="w-px h-3 bg-border/50 shrink-0" />
@@ -77,22 +88,11 @@ export function TickerBar() {
 
       <div className="w-px h-3 bg-border/50 shrink-0" />
 
-      {/* Block Height */}
+      {/* UTC Clock */}
       <div className="flex items-center gap-1.5 shrink-0">
-        <Box className="h-3.5 w-3.5 text-purple-400" />
-        <span className="text-muted-foreground/60">Block</span>
-        {isLoading || !data?.blockHeight ? (
-          <Skeleton className="h-3.5 w-20" />
-        ) : (
-          <a
-            href={`https://mempool.space/block/${data.blockHeight}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-foreground font-semibold tabular-nums hover:text-purple-400 transition-colors"
-          >
-            {formatBlockHeight(data.blockHeight)}
-          </a>
-        )}
+        <Clock className="h-3.5 w-3.5 text-sky-400" />
+        <span className="text-foreground font-semibold tabular-nums">{utcTime}</span>
+        <span className="text-muted-foreground/50">UTC</span>
       </div>
     </div>
   );
