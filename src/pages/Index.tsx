@@ -115,7 +115,7 @@ const Index = () => {
                   </span>
                 )}
                 <a
-                  href={`https://njump.me/${npub}`}
+                  href="https://primal.net/wire"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[11px] text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors font-mono truncate max-w-[200px]"
