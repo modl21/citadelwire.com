@@ -37,13 +37,13 @@ export function TickerBar() {
   const utcTime = useUTCClock();
 
   return (
-    <div className="flex items-center gap-3 sm:gap-5 text-xs font-medium overflow-x-auto scrollbar-none">
+    <div className="flex items-center gap-2 sm:gap-5 text-[11px] sm:text-xs font-medium">
       {/* Block Height */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        <Box className="h-3.5 w-3.5 text-purple-400" />
-        <span className="text-muted-foreground/60">Block</span>
+      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        <Box className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-purple-400" />
+        <span className="hidden sm:inline text-muted-foreground/60">Block</span>
         {isLoading || !data?.blockHeight ? (
-          <Skeleton className="h-3.5 w-20" />
+          <Skeleton className="h-3 sm:h-3.5 w-14 sm:w-20" />
         ) : (
           <a
             href={`https://mempool.space/block/${data.blockHeight}`}
@@ -59,11 +59,11 @@ export function TickerBar() {
       <div className="w-px h-3 bg-border/50 shrink-0" />
 
       {/* BTC Price */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        <Bitcoin className="h-3.5 w-3.5 text-amber-500" />
-        <span className="text-muted-foreground/60">BTC</span>
+      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        <Bitcoin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-amber-500" />
+        <span className="hidden sm:inline text-muted-foreground/60">BTC</span>
         {isLoading || !data?.btcPrice ? (
-          <Skeleton className="h-3.5 w-16" />
+          <Skeleton className="h-3 sm:h-3.5 w-12 sm:w-16" />
         ) : (
           <span className="text-foreground font-semibold tabular-nums">
             {formatPrice(data.btcPrice)}
@@ -74,11 +74,11 @@ export function TickerBar() {
       <div className="w-px h-3 bg-border/50 shrink-0" />
 
       {/* Gold (XAUT) Price */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        <span className="text-yellow-500 text-sm leading-none">Au</span>
-        <span className="text-muted-foreground/60">XAUT</span>
+      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        <span className="text-yellow-500 text-[11px] sm:text-sm leading-none">Au</span>
+        <span className="hidden sm:inline text-muted-foreground/60">XAUT</span>
         {isLoading || !data?.goldPrice ? (
-          <Skeleton className="h-3.5 w-16" />
+          <Skeleton className="h-3 sm:h-3.5 w-12 sm:w-16" />
         ) : (
           <span className="text-foreground font-semibold tabular-nums">
             {formatPrice(data.goldPrice)}
@@ -89,10 +89,10 @@ export function TickerBar() {
       <div className="w-px h-3 bg-border/50 shrink-0" />
 
       {/* UTC Clock */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        <Clock className="h-3.5 w-3.5 text-sky-400" />
+      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-sky-400" />
         <span className="text-foreground font-semibold tabular-nums">{utcTime}</span>
-        <span className="text-muted-foreground/50">UTC</span>
+        <span className="hidden sm:inline text-muted-foreground/50">UTC</span>
       </div>
     </div>
   );
