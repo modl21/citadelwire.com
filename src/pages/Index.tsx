@@ -94,16 +94,20 @@ const Index = () => {
       <div className="max-w-2xl mx-auto px-4 sm:px-6">
         <div className="py-5 border-b border-border/40">
           <div className="flex items-start gap-4">
-            <Avatar className="h-14 w-14 sm:h-16 sm:w-16 ring-4 ring-background shadow-xl -mt-8 relative z-10">
-              {metadata?.picture ? (
-                <AvatarImage src={metadata.picture} alt={metadata?.display_name ?? 'CITADEL WIRE'} />
-              ) : null}
-              <AvatarFallback className="text-lg font-bold bg-primary text-primary-foreground">CW</AvatarFallback>
-            </Avatar>
+            <a href="https://primal.net/wire" target="_blank" rel="noopener noreferrer" className="-mt-8 relative z-10 shrink-0">
+              <Avatar className="h-14 w-14 sm:h-16 sm:w-16 ring-4 ring-background shadow-xl transition-opacity hover:opacity-80">
+                {metadata?.picture ? (
+                  <AvatarImage src={metadata.picture} alt={metadata?.display_name ?? 'CITADEL WIRE'} />
+                ) : null}
+                <AvatarFallback className="text-lg font-bold bg-primary text-primary-foreground">CW</AvatarFallback>
+              </Avatar>
+            </a>
             <div className="flex-1 min-w-0 pt-1">
-              <h2 className="text-lg sm:text-xl font-bold tracking-tight">
-                {metadata?.display_name ?? 'CITADEL WIRE'}
-              </h2>
+              <a href="https://primal.net/wire" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
+                <h2 className="text-lg sm:text-xl font-bold tracking-tight">
+                  {metadata?.display_name ?? 'CITADEL WIRE'}
+                </h2>
+              </a>
               {metadata?.about && (
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                   {metadata.about}
