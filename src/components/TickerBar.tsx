@@ -1,6 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useMarketData } from '@/hooks/useMarketData';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Bitcoin, Box } from 'lucide-react';
+import { Bitcoin, Box, Clock } from 'lucide-react';
 
 function formatPrice(value: number): string {
   return value.toLocaleString('en-US', {
@@ -15,11 +16,37 @@ function formatBlockHeight(value: number): string {
   return value.toLocaleString('en-US');
 }
 
+function useUTCClock(): string {
+  const [time, setTime] = useState(() => formatUTC(new Date()));
+  useEffect(() => {
+    const id = setInterval(() => setTime(formatUTC(new Date())), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return time;
+}
+
+function formatUTC(date: Date): string {
+  const h = date.getUTCHours().toString().padStart(2, '0');
+  const m = date.getUTCMinutes().toString().padStart(2, '0');
+  const s = date.getUTCSeconds().toString().padStart(2, '0');
+  return `${h}:${m}:${s}`;
+}
+
 export function TickerBar() {
   const { data, isLoading } = useMarketData();
+  const utcTime = useUTCClock();
 
   return (
     <div className="flex items-center gap-3 sm:gap-5 text-xs font-medium overflow-x-auto scrollbar-none">
+      {/* UTC Clock */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <Clock className="h-3.5 w-3.5 text-sky-400" />
+        <span className="text-foreground font-semibold tabular-nums">{utcTime}</span>
+        <span className="text-muted-foreground/50">UTC</span>
+      </div>
+
+      <div className="w-px h-3 bg-border/50 shrink-0" />
+
       {/* BTC Price */}
       <div className="flex items-center gap-1.5 shrink-0">
         <Bitcoin className="h-3.5 w-3.5 text-amber-500" />
