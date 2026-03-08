@@ -2,6 +2,7 @@ import { useSeoMeta } from '@unhead/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { PostCard } from '@/components/PostCard';
+import { PodcastPlayer } from '@/components/PodcastPlayer';
 import { TickerBar } from '@/components/TickerBar';
 import { useCitadelFeed, CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 import { useAuthor } from '@/hooks/useAuthor';
@@ -126,6 +127,11 @@ const Index = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Podcast player */}
+      <div className="max-w-2xl mx-auto">
+        <PodcastPlayer />
       </div>
 
       {/* Feed */}
