@@ -97,7 +97,8 @@ export function TickerBar() {
       <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
         <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-sky-400" />
         <span className="text-foreground font-semibold tabular-nums">{utcTime}</span>
-        <span className="hidden sm:inline text-muted-foreground/50">{utcDate} UTC</span>
+        <span className="text-muted-foreground/50">{utcDate}</span>
+        <span className="hidden sm:inline text-muted-foreground/50">UTC</span>
       </div>
     </div>
   );
