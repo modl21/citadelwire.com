@@ -20,6 +20,7 @@ export function PodcastPlayer() {
   return (
     <div className="px-4 sm:px-6 py-3">
       <AudioPlayer
+        label="Latest Dispatch"
         title={episode.title}
         mp3Url={episode.mp3Url}
         timeLabel={timeAgo}

@@ -14,6 +14,7 @@ function formatTime(seconds: number): string {
 }
 
 interface AudioPlayerProps {
+  label: string;
   title: string;
   mp3Url: string;
   timeLabel: string;
@@ -57,7 +58,7 @@ export function AudioPlayerSkeleton() {
   );
 }
 
-export function AudioPlayer({ title, mp3Url, timeLabel, allEpisodesUrl, accentColor }: AudioPlayerProps) {
+export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, accentColor }: AudioPlayerProps) {
   const c = colorMap[accentColor];
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -136,7 +137,7 @@ export function AudioPlayer({ title, mp3Url, timeLabel, allEpisodesUrl, accentCo
       <div className="hidden sm:flex items-center gap-1.5 mb-2.5">
         <Mic className={`h-3 w-3 ${c.icon}`} />
         <span className={`text-[11px] font-semibold tracking-wide uppercase ${c.icon}`}>
-          Latest Episode
+          {label}
         </span>
         <span className="text-[11px] text-muted-foreground/40 ml-1">{timeLabel}</span>
         <a
@@ -168,7 +169,7 @@ export function AudioPlayer({ title, mp3Url, timeLabel, allEpisodesUrl, accentCo
           <div className="flex items-center gap-1.5 sm:hidden mb-0.5">
             <Mic className={`h-2.5 w-2.5 ${c.icon}`} />
             <span className={`text-[10px] font-semibold tracking-wide uppercase ${c.icon}`}>
-              Latest Episode
+              {label}
             </span>
             <a
               href={allEpisodesUrl}
