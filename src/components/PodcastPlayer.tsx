@@ -25,6 +25,8 @@ export function PodcastPlayer() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
+  const speeds = [1, 1.25, 1.5, 1.75, 2] as const;
+  const [speedIndex, setSpeedIndex] = useState(0);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -73,6 +75,14 @@ export function PodcastPlayer() {
     audio.muted = !audio.muted;
     setIsMuted(!isMuted);
   }, [isMuted]);
+
+  const cycleSpeed = useCallback(() => {
+    const next = (speedIndex + 1) % speeds.length;
+    setSpeedIndex(next);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = speeds[next];
+    }
+  }, [speedIndex, speeds]);
 
   const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const audio = audioRef.current;
@@ -139,12 +149,21 @@ export function PodcastPlayer() {
             </p>
           </div>
 
-          <button
-            onClick={toggleMute}
-            className="p-1.5 rounded-md hover:bg-muted/40 text-muted-foreground/50 hover:text-muted-foreground transition-colors shrink-0"
-          >
-            {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={cycleSpeed}
+              className="px-1.5 py-1 rounded-md hover:bg-muted/40 text-muted-foreground/50 hover:text-muted-foreground transition-colors text-[11px] font-semibold tabular-nums min-w-[2.5rem] text-center"
+              title="Playback speed"
+            >
+              {speeds[speedIndex]}x
+            </button>
+            <button
+              onClick={toggleMute}
+              className="p-1.5 rounded-md hover:bg-muted/40 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            >
+              {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+            </button>
+          </div>
         </div>
 
         {/* Progress bar */}
