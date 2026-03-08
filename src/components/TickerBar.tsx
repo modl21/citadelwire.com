@@ -16,25 +16,30 @@ function formatBlockHeight(value: number): string {
   return value.toLocaleString('en-US');
 }
 
-function useUTCClock(): string {
-  const [time, setTime] = useState(() => formatUTC(new Date()));
+function useUTCClock(): { time: string; date: string } {
+  const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    const id = setInterval(() => setTime(formatUTC(new Date())), 1000);
+    const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
-  return time;
+  return { time: formatUTCTime(now), date: formatUTCDate(now) };
 }
 
-function formatUTC(date: Date): string {
+function formatUTCTime(date: Date): string {
   const h = date.getUTCHours().toString().padStart(2, '0');
   const m = date.getUTCMinutes().toString().padStart(2, '0');
   const s = date.getUTCSeconds().toString().padStart(2, '0');
   return `${h}:${m}:${s}`;
 }
 
+function formatUTCDate(date: Date): string {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[date.getUTCMonth()]} ${date.getUTCDate()}`;
+}
+
 export function TickerBar() {
   const { data, isLoading } = useMarketData();
-  const utcTime = useUTCClock();
+  const { time: utcTime, date: utcDate } = useUTCClock();
 
   return (
     <div className="flex items-center gap-2 sm:gap-5 text-[11px] sm:text-xs font-medium">
@@ -92,7 +97,7 @@ export function TickerBar() {
       <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
         <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-sky-400" />
         <span className="text-foreground font-semibold tabular-nums">{utcTime}</span>
-        <span className="hidden sm:inline text-muted-foreground/50">UTC</span>
+        <span className="hidden sm:inline text-muted-foreground/50">{utcDate} UTC</span>
       </div>
     </div>
   );
