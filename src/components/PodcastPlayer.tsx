@@ -23,7 +23,7 @@ export function PodcastPlayer() {
         title={episode.title}
         mp3Url={episode.mp3Url}
         timeLabel={timeAgo}
-        allEpisodesUrl="https://serve.podhome.fm/CitadelDispatch"
+        allEpisodesUrl="https://primal.net/citadel"
         accentColor="purple"
       />
     </div>
