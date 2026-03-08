@@ -5,6 +5,9 @@ import { defineConfig } from "vitest/config";
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
+  // For GitHub Pages: set to '/' if using a custom domain,
+  // or '/<repo-name>/' if deploying to username.github.io/<repo-name>/
+  base: '/',
   server: {
     host: "::",
     port: 8080,
