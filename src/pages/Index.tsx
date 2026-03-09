@@ -8,7 +8,7 @@ import { TickerBar } from '@/components/TickerBar';
 import { useCitadelFeed, CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
-import { Zap, RefreshCw } from 'lucide-react';
+import { Zap, RefreshCw, Rss } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 
 function PostSkeleton() {
@@ -66,6 +66,15 @@ const Index = () => {
             </div>
           </a>
           <div className="flex items-center gap-2 shrink-0">
+            <a
+              href="/feed.xml"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-full hover:bg-muted/60 transition-colors text-amber-500/60 hover:text-amber-500"
+              title="RSS Feed"
+            >
+              <Rss className="h-4 w-4" />
+            </a>
             <DonateButton />
             <button
               onClick={() => window.location.reload()}
