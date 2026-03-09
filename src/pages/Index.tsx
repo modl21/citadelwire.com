@@ -68,12 +68,11 @@ const Index = () => {
           <div className="flex items-center gap-2 shrink-0">
             <DonateButton />
             <button
-              onClick={() => refetch()}
-              disabled={isFetching}
-              className="p-2 rounded-full hover:bg-muted/60 transition-colors text-muted-foreground/50 hover:text-foreground disabled:opacity-40"
-              title="Refresh feed"
+              onClick={() => window.location.reload()}
+              className="p-2 rounded-full hover:bg-muted/60 transition-colors text-muted-foreground/50 hover:text-foreground"
+              title="Refresh"
             >
-              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              <RefreshCw className="h-4 w-4" />
             </button>
           </div>
         </div>
