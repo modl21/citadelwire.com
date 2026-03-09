@@ -121,17 +121,21 @@ const Index = () => {
                   {metadata.about}
                 </p>
               )}
-              <p className="text-xs text-muted-foreground/50 mt-1">
-                Curated by{' '}
-                <a
-                  href="https://primal.net/odell"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground/70 hover:text-foreground font-medium transition-colors"
-                >
-                  ODELL
-                </a>
-              </p>
+              <a
+                href="https://primal.net/odell"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 mt-1.5 group/odell"
+              >
+                <Avatar className="h-4 w-4">
+                  <AvatarImage src="https://primaldata.s3.us-east-005.backblazeb2.com/cache/2/c7/ce/2c7ce06799d9a1226680f19826b8fc18ea5df5e2702bcf681e267e0977069e44.jpg" alt="ODELL" />
+                  <AvatarFallback className="text-[6px] bg-muted">O</AvatarFallback>
+                </Avatar>
+                <span className="text-xs text-muted-foreground/50">
+                  Curated by{' '}
+                  <span className="text-muted-foreground/70 group-hover/odell:text-foreground font-medium transition-colors">ODELL</span>
+                </span>
+              </a>
               <div className="flex items-center gap-3 mt-2.5 flex-wrap">
                 {metadata?.lud16 && (
                   <a
