@@ -52,7 +52,7 @@ const Index = () => {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/40">
         {/* Top row: identity + refresh */}
         <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-3 pb-2 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
+          <a href="https://primal.net/wire" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity">
             <Avatar className="h-8 w-8 ring-2 ring-border/40 shrink-0">
               {metadata?.picture ? (
                 <AvatarImage src={metadata.picture} alt={metadata?.display_name ?? 'CITADEL WIRE'} />
@@ -64,7 +64,7 @@ const Index = () => {
                 {metadata?.display_name ?? 'CITADEL WIRE'}
               </h1>
             </div>
-          </div>
+          </a>
           <div className="flex items-center gap-2 shrink-0">
             <DonateButton />
             <button
@@ -121,6 +121,17 @@ const Index = () => {
                   {metadata.about}
                 </p>
               )}
+              <p className="text-xs text-muted-foreground/50 mt-1">
+                Curated by{' '}
+                <a
+                  href="https://primal.net/odell"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground/70 hover:text-foreground font-medium transition-colors"
+                >
+                  ODELL
+                </a>
+              </p>
               <div className="flex items-center gap-3 mt-2.5 flex-wrap">
                 {metadata?.lud16 && (
                   <a
