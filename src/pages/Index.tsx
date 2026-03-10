@@ -124,11 +124,9 @@ const Index = () => {
                   {metadata?.display_name ?? 'CITADEL WIRE'}
                 </h2>
               </a>
-              {metadata?.about && (
-                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                  {metadata.about}
-                </p>
-              )}
+              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                high signal news using live market data
+              </p>
               <a
                 href="https://primal.net/odell"
                 target="_blank"
