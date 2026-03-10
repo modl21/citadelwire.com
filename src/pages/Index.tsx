@@ -8,9 +8,7 @@ import { TickerBar } from '@/components/TickerBar';
 import { useCitadelFeed, CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
-import { generateRSS } from '@/lib/generateRSS';
 import { Zap, RefreshCw, Rss } from 'lucide-react';
-import { useCallback } from 'react';
 import { nip19 } from 'nostr-tools';
 
 function PostSkeleton() {
@@ -34,18 +32,6 @@ const Index = () => {
   const author = useAuthor(CITADEL_PUBKEY);
   const metadata = author.data?.metadata;
   const npub = nip19.npubEncode(CITADEL_PUBKEY);
-
-  const handleDownloadRSS = useCallback(() => {
-    if (!posts || posts.length === 0) return;
-    const xml = generateRSS(posts);
-    const blob = new Blob([xml], { type: 'application/rss+xml; charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'citadelwire.xml';
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [posts]);
 
   useSeoMeta({
     title: 'CITADEL WIRE',
@@ -80,14 +66,15 @@ const Index = () => {
             </div>
           </a>
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={handleDownloadRSS}
-              disabled={!posts || posts.length === 0}
-              className="p-2 rounded-full hover:bg-muted/60 transition-colors text-amber-500/60 hover:text-amber-500 disabled:opacity-30"
-              title="Download RSS Feed"
+            <a
+              href="/feed.xml"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-full hover:bg-muted/60 transition-colors text-amber-500/60 hover:text-amber-500"
+              title="RSS Feed"
             >
               <Rss className="h-4 w-4" />
-            </button>
+            </a>
             <DonateButton />
             <button
               onClick={() => window.location.reload()}
