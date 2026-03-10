@@ -21,13 +21,14 @@ async function fetchBtcPrice(): Promise<number | null> {
 
 async function fetchGoldPrice(): Promise<number | null> {
   try {
-    // CoinGecko free API for XAUT (Tether Gold) price
+    // GeckoTerminal API — reads XAUT price from Uniswap on-chain pools
     const res = await fetch(
-      `${CORS_PROXY}${encodeURIComponent('https://api.coingecko.com/api/v3/simple/price?ids=tether-gold&vs_currencies=usd')}`,
+      `${CORS_PROXY}${encodeURIComponent('https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x68749665FF8D2d112Fa859AA293F07a622782F38')}`,
     );
     if (!res.ok) throw new Error('Failed to fetch gold price');
     const data = await res.json();
-    return data['tether-gold']?.usd ?? null;
+    const price = parseFloat(data?.data?.attributes?.price_usd);
+    return isNaN(price) ? null : price;
   } catch {
     return null;
   }
