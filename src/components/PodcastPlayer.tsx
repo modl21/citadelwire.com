@@ -1,9 +1,11 @@
-import { useLatestEpisode } from '@/hooks/useLatestEpisode';
+import { useRSSEpisode } from '@/hooks/useRSSEpisode';
 import { AudioPlayer, AudioPlayerSkeleton } from '@/components/AudioPlayer';
 import { formatDistanceToNow } from 'date-fns';
 
+const DISPATCH_FEED_URL = 'https://serve.podhome.fm/rss/c90e609a-df1e-596a-bd5e-57bcc8aad6cc';
+
 export function PodcastPlayer() {
-  const { data: episode, isLoading } = useLatestEpisode();
+  const { data: episode, isLoading } = useRSSEpisode(DISPATCH_FEED_URL);
 
   if (isLoading) {
     return (
@@ -15,7 +17,9 @@ export function PodcastPlayer() {
 
   if (!episode) return null;
 
-  const timeAgo = formatDistanceToNow(new Date(episode.event.created_at * 1000), { addSuffix: true });
+  const timeLabel = episode.pubDate
+    ? formatDistanceToNow(new Date(episode.pubDate), { addSuffix: true })
+    : '';
 
   return (
     <div className="px-4 sm:px-6 py-3">
@@ -23,7 +27,7 @@ export function PodcastPlayer() {
         label="Latest Dispatch"
         title={episode.title}
         mp3Url={episode.mp3Url}
-        timeLabel={timeAgo}
+        timeLabel={timeLabel}
         allEpisodesUrl="https://primal.net/citadel"
         accentColor="purple"
       />
