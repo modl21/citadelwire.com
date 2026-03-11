@@ -24,9 +24,9 @@ import QRCode from 'qrcode';
 
 const LIGHTNING_ADDRESS = 'citadel@primal.net';
 
-const presetAmounts = [21, 100, 500, 1000, 5000];
+const presetAmounts = [1000, 5000, 10000, 21000, 42000];
 
-async function fetchInvoice(amountSats: number): Promise<string> {
+async function fetchInvoice(amountSats: number, comment?: string): Promise<string> {
   // Resolve lightning address to LNURL callback
   const [name, domain] = LIGHTNING_ADDRESS.split('@');
   const url = `https://${domain}/.well-known/lnurlp/${name}`;
@@ -46,6 +46,9 @@ async function fetchInvoice(amountSats: number): Promise<string> {
 
   const callbackUrl = new URL(data.callback);
   callbackUrl.searchParams.set('amount', amountMsat.toString());
+  if (comment && comment.trim() && data.commentAllowed && data.commentAllowed > 0) {
+    callbackUrl.searchParams.set('comment', comment.trim().slice(0, data.commentAllowed));
+  }
 
   const invoiceRes = await fetch(callbackUrl.toString());
   if (!invoiceRes.ok) throw new Error('Failed to get invoice');
@@ -61,7 +64,8 @@ function DonateContent({
   onClose: () => void;
 }) {
   const { toast } = useToast();
-  const [amount, setAmount] = useState<number | string>(100);
+  const [amount, setAmount] = useState<number | string>(1000);
+  const [memo, setMemo] = useState('');
   const [invoice, setInvoice] = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -97,7 +101,7 @@ function DonateContent({
         try {
           const webln = (window as Record<string, unknown>).webln as { enable: () => Promise<void>; sendPayment: (invoice: string) => Promise<void> };
           await webln.enable();
-          const pr = await fetchInvoice(finalAmount);
+          const pr = await fetchInvoice(finalAmount, memo);
           await webln.sendPayment(pr);
           toast({ title: 'Donation sent!', description: `You sent ${finalAmount} sats. Thank you!` });
           onClose();
@@ -106,7 +110,7 @@ function DonateContent({
           // WebLN failed or was rejected, fall through to QR
         }
       }
-      const pr = await fetchInvoice(finalAmount);
+      const pr = await fetchInvoice(finalAmount, memo);
       setInvoice(pr);
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
@@ -198,6 +202,13 @@ function DonateContent({
         />
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground/50">sats</span>
       </div>
+
+      <Input
+        type="text"
+        placeholder="Add a memo (optional)"
+        value={memo}
+        onChange={(e) => setMemo(e.target.value)}
+      />
 
       <Button onClick={handleGetInvoice} className="w-full" disabled={isLoading}>
         <Zap className="h-4 w-4 mr-2" />
