@@ -25,7 +25,7 @@ export function RHRPlayer() {
     <div className="px-4 sm:px-6 py-3">
       <AudioPlayer
         label="Latest Recap"
-        title={episode.title}
+        title={episode.title.replace(/RABBIT HOLE RECAP/gi, 'RHR')}
         mp3Url={episode.mp3Url}
         timeLabel={timeLabel}
         allEpisodesUrl="https://primal.net/rhr"
