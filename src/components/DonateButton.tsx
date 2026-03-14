@@ -22,7 +22,7 @@ import { useToast } from '@/hooks/useToast';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import QRCode from 'qrcode';
 
-const LIGHTNING_ADDRESS = 'citadel@primal.net';
+const LIGHTNING_ADDRESS = 'wire@primal.net';
 
 const presetAmounts = [1000, 5000, 10000, 21000, 42000];
 
@@ -241,9 +241,6 @@ export function DonateButton() {
                 </Button>
               </DrawerClose>
               <DrawerTitle>Support CITADEL WIRE</DrawerTitle>
-              <DrawerDescription>
-                Send sats via Lightning to {LIGHTNING_ADDRESS}
-              </DrawerDescription>
             </DrawerHeader>
             <div className="px-4 pb-6">
               <DonateContent onClose={() => setOpen(false)} />
@@ -267,9 +264,6 @@ export function DonateButton() {
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle>Support CITADEL WIRE</DialogTitle>
-            <DialogDescription>
-              Send sats via Lightning to {LIGHTNING_ADDRESS}
-            </DialogDescription>
           </DialogHeader>
           <DonateContent onClose={() => setOpen(false)} />
         </DialogContent>
