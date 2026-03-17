@@ -8,7 +8,8 @@ import { TickerBar } from '@/components/TickerBar';
 import { useCitadelFeed, CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
-import { Zap, RefreshCw, Rss } from 'lucide-react';
+import { usePageViewCount, HOME_PAGE_VIEW_ID } from '@/hooks/usePageViewCount';
+import { Zap, RefreshCw, Rss, Eye } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 
 function PostSkeleton() {
@@ -28,10 +29,14 @@ function PostSkeleton() {
 }
 
 const Index = () => {
-  const { data: posts, isLoading, isError, refetch, isFetching } = useCitadelFeed();
+  const { data: posts, isLoading, isError, refetch } = useCitadelFeed();
   const author = useAuthor(CITADEL_PUBKEY);
   const metadata = author.data?.metadata;
   const npub = nip19.npubEncode(CITADEL_PUBKEY);
+  const { count: pageViews, isLoading: isPageViewsLoading } = usePageViewCount(
+    HOME_PAGE_VIEW_ID,
+    typeof window === 'undefined' ? 'https://wire.shakespeare.wtf/' : window.location.href,
+  );
 
   useSeoMeta({
     title: 'CITADEL WIRE',
@@ -66,6 +71,17 @@ const Index = () => {
             </div>
           </a>
           <div className="flex items-center gap-2 shrink-0">
+            <div
+              className="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/30 px-2.5 py-1 text-[11px] font-medium text-muted-foreground/80"
+              title="Page views"
+              aria-label={`Page views ${pageViews.toLocaleString('en-US')}`}
+            >
+              <Eye className="h-3.5 w-3.5 text-sky-400" />
+              <span className="hidden sm:inline">Views</span>
+              <span className="tabular-nums text-foreground/90">
+                {isPageViewsLoading ? '…' : pageViews.toLocaleString('en-US')}
+              </span>
+            </div>
             <a
               href="/feed.xml"
               target="_blank"
