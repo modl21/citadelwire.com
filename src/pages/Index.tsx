@@ -73,11 +73,11 @@ const Index = () => {
           <div className="flex items-center gap-2 shrink-0">
             <div
               className="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/30 px-2.5 py-1 text-[11px] font-medium text-muted-foreground/80"
-              title="Page views"
-              aria-label={`Page views ${pageViews.toLocaleString('en-US')}`}
+              title="Visitors"
+              aria-label={`Visitors ${pageViews.toLocaleString('en-US')}`}
             >
               <Eye className="h-3.5 w-3.5 text-sky-400" />
-              <span className="hidden sm:inline">Views</span>
+              <span className="hidden sm:inline">Visitors</span>
               <span className="tabular-nums text-foreground/90">
                 {isPageViewsLoading ? '…' : pageViews.toLocaleString('en-US')}
               </span>
