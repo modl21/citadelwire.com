@@ -16,12 +16,18 @@ function parseAmount(content: string): number | null {
   return Number.isSafeInteger(amount) && amount > 0 ? amount : null;
 }
 
+/** Pubkeys excluded from the supporters list. */
+const EXCLUDED_PUBKEYS = new Set([
+  'a341f45ff9758f570a21b000c17d4e53a3a497c8397f26c0e6d61e5acffc7a98', // Michael Saylor
+]);
+
 function aggregateSupporters(events: NostrEvent[]): Supporter[] {
   const map = new Map<string, { totalSats: number; latestAt: number }>();
 
   for (const event of events) {
     const pTag = event.tags.find(([name]) => name === 'p')?.[1];
     if (!pTag || !/^[0-9a-f]{64}$/.test(pTag)) continue;
+    if (EXCLUDED_PUBKEYS.has(pTag)) continue;
 
     const sats = parseAmount(event.content);
     if (!sats) continue;
