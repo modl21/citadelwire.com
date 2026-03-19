@@ -9,7 +9,7 @@ export function PodcastPlayer() {
 
   if (isLoading) {
     return (
-      <div className="px-4 sm:px-6 py-3">
+      <div className="px-4 sm:px-6 py-1.5">
         <AudioPlayerSkeleton />
       </div>
     );
@@ -22,7 +22,7 @@ export function PodcastPlayer() {
     : '';
 
   return (
-    <div className="px-4 sm:px-6 py-3">
+    <div className="px-4 sm:px-6 py-1.5">
       <AudioPlayer
         label="Latest Dispatch"
         title={episode.title}

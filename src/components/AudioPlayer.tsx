@@ -45,15 +45,15 @@ const colorMap = {
 
 export function AudioPlayerSkeleton() {
   return (
-    <div className="rounded-xl bg-muted/30 border border-border/40 p-4">
-      <div className="flex items-center gap-3">
-        <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-3 w-20" />
-          <Skeleton className="h-4 w-3/4" />
+    <div className="rounded-lg bg-muted/30 border border-border/40 px-3 py-2">
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-7 w-7 rounded-md shrink-0" />
+        <div className="flex-1 space-y-1">
+          <Skeleton className="h-2.5 w-16" />
+          <Skeleton className="h-3 w-3/4" />
         </div>
       </div>
-      <Skeleton className="h-1.5 w-full mt-4 rounded-full" />
+      <Skeleton className="h-1 w-full mt-2 rounded-full" />
     </div>
   );
 }
@@ -130,95 +130,79 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className={`rounded-xl bg-gradient-to-br ${c.gradient} border ${c.border} p-3 sm:p-4 transition-all`}>
+    <div className={`rounded-lg bg-gradient-to-br ${c.gradient} border ${c.border} px-3 py-2 transition-all`}>
       <audio ref={audioRef} src={mp3Url} preload="metadata" />
 
-      {/* Top label — hidden on mobile, shown on desktop */}
-      <div className="hidden sm:flex items-center gap-1.5 mb-2.5">
-        <Mic className={`h-3 w-3 ${c.icon}`} />
-        <span className={`text-[11px] font-semibold tracking-wide uppercase ${c.icon}`}>
-          {label}
-        </span>
-        <span className="text-[11px] text-muted-foreground/40 ml-1">{timeLabel}</span>
-        <a
-          href={allEpisodesUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`ml-auto inline-flex items-center gap-1 text-[11px] ${c.link} transition-colors`}
-        >
-          All Episodes
-          <ExternalLink className="h-2.5 w-2.5" />
-        </a>
-      </div>
-
-      {/* Title + controls */}
-      <div className="flex items-center gap-2.5 sm:gap-3">
+      {/* Single row: play button + info + controls */}
+      <div className="flex items-center gap-2">
         <button
           onClick={togglePlay}
-          className={`h-8 w-8 sm:h-10 sm:w-10 rounded-lg ${c.iconBg} flex items-center justify-center transition-colors shrink-0`}
+          className={`h-7 w-7 rounded-md ${c.iconBg} flex items-center justify-center transition-colors shrink-0`}
         >
           {isPlaying ? (
-            <Pause className={`h-3.5 w-3.5 sm:h-4.5 sm:w-4.5 ${c.iconFill}`} />
+            <Pause className={`h-3 w-3 ${c.iconFill}`} />
           ) : (
-            <Play className={`h-3.5 w-3.5 sm:h-4.5 sm:w-4.5 ${c.iconFill} ml-0.5`} />
+            <Play className={`h-3 w-3 ${c.iconFill} ml-0.5`} />
           )}
         </button>
 
         <div className="flex-1 min-w-0">
-          {/* Mobile: inline label before title */}
-          <div className="flex items-center gap-1.5 sm:hidden mb-0.5">
-            <Mic className={`h-2.5 w-2.5 ${c.icon}`} />
-            <span className={`text-[10px] font-semibold tracking-wide uppercase ${c.icon}`}>
+          <div className="flex items-center gap-1.5">
+            <Mic className={`h-2.5 w-2.5 shrink-0 ${c.icon}`} />
+            <span className={`text-[10px] font-semibold tracking-wide uppercase shrink-0 ${c.icon}`}>
               {label}
             </span>
-            <a
-              href={allEpisodesUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`ml-auto inline-flex items-center gap-0.5 text-[10px] ${c.link} transition-colors`}
-            >
-              All
-              <ExternalLink className="h-2 w-2" />
-            </a>
+            <span className="text-[10px] text-muted-foreground/40 shrink-0">{timeLabel}</span>
           </div>
-          <p className="text-[13px] sm:text-sm font-medium leading-snug line-clamp-1 sm:line-clamp-2 text-foreground/90">
+          <p className="text-[12px] font-medium leading-tight line-clamp-1 text-foreground/90 mt-0.5">
             {title}
           </p>
         </div>
 
-        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+        <div className="flex items-center gap-0.5 shrink-0">
           <button
             onClick={cycleSpeed}
-            className="px-1 sm:px-1.5 py-1 rounded-md hover:bg-muted/40 text-muted-foreground/50 hover:text-muted-foreground transition-colors text-[10px] sm:text-[11px] font-semibold tabular-nums min-w-[2rem] sm:min-w-[2.5rem] text-center"
+            className="px-1 py-0.5 rounded hover:bg-muted/40 text-muted-foreground/50 hover:text-muted-foreground transition-colors text-[9px] font-semibold tabular-nums min-w-[1.75rem] text-center"
             title="Playback speed"
           >
             {speeds[speedIndex]}x
           </button>
           <button
             onClick={toggleMute}
-            className="hidden sm:block p-1.5 rounded-md hover:bg-muted/40 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            className="hidden sm:block p-1 rounded hover:bg-muted/40 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
           >
-            {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+            {isMuted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
           </button>
+          <a
+            href={allEpisodesUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`p-1 rounded hover:bg-muted/40 ${c.link} transition-colors`}
+            title="All Episodes"
+          >
+            <ExternalLink className="h-3 w-3" />
+          </a>
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="mt-2 sm:mt-3 space-y-0.5 sm:space-y-1">
+      <div className="mt-1.5 flex items-center gap-2">
+        <span className="text-[8px] text-muted-foreground/40 tabular-nums w-8 text-right shrink-0">
+          {formatTime(currentTime)}
+        </span>
         <div
           ref={progressRef}
           onClick={handleProgressClick}
-          className="h-1 sm:h-1.5 bg-muted/40 rounded-full cursor-pointer group relative overflow-hidden"
+          className="flex-1 h-1 bg-muted/40 rounded-full cursor-pointer relative overflow-hidden"
         >
           <div
             className={`h-full ${c.bar} rounded-full transition-[width] duration-150 ease-linear`}
             style={{ width: `${progress}%` }}
           />
         </div>
-        <div className="flex justify-between text-[9px] sm:text-[10px] text-muted-foreground/40 tabular-nums">
-          <span>{formatTime(currentTime)}</span>
-          <span>{isLoaded ? formatTime(duration) : '--:--'}</span>
-        </div>
+        <span className="text-[8px] text-muted-foreground/40 tabular-nums w-8 shrink-0">
+          {isLoaded ? formatTime(duration) : '--:--'}
+        </span>
       </div>
     </div>
   );
