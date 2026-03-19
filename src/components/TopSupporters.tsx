@@ -1,5 +1,6 @@
 import { useTopSupporters } from '@/hooks/useTopSupporters';
 import { useAuthor } from '@/hooks/useAuthor';
+import { DonateButton } from '@/components/DonateButton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Zap } from 'lucide-react';
@@ -75,9 +76,12 @@ export function TopSupporters() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-3 border-b border-border/30">
       <div className="flex items-center gap-3">
-        <span className="text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-wider shrink-0">
-          Top Supporters
-        </span>
+        <div className="flex flex-col items-start gap-1.5 shrink-0">
+          <span className="text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-wider">
+            Top Supporters
+          </span>
+          <DonateButton />
+        </div>
         <div className="flex items-center gap-2.5 overflow-x-auto scrollbar-hide">
           {supporters.map((supporter, index) => (
             <SupporterAvatar
