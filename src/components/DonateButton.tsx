@@ -99,6 +99,66 @@ function DonateContent({
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollStartRef = useRef<number>(0);
 
+  // Define callbacks BEFORE effects that reference them
+  const recordSupporter = useCallback(async (sats: number) => {
+    const pubkey = validateNpub(npubInput);
+    if (!pubkey) return;
+
+    try {
+      await publishSupporterEvent(nostr, pubkey, sats);
+    } catch (err) {
+      console.warn('Failed to publish supporter event:', err);
+    }
+  }, [nostr, npubInput]);
+
+  const handleGetInvoice = useCallback(async () => {
+    const finalAmount = typeof amount === 'string' ? parseInt(amount, 10) : amount;
+    if (!finalAmount || finalAmount <= 0) {
+      toast({ title: 'Enter an amount', variant: 'destructive' });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      // Try WebLN first
+      if (typeof window !== 'undefined' && 'webln' in window) {
+        try {
+          const webln = (window as Record<string, unknown>).webln as { enable: () => Promise<void>; sendPayment: (invoice: string) => Promise<void> };
+          await webln.enable();
+          const pr = await fetchInvoice(finalAmount, memo);
+          await webln.sendPayment(pr);
+          toast({ title: 'Donation sent!', description: `You sent ${finalAmount} sats. Thank you!` });
+          await recordSupporter(finalAmount);
+          onClose();
+          return;
+        } catch {
+          // WebLN failed or was rejected, fall through to QR
+        }
+      }
+      const pr = await fetchInvoice(finalAmount, memo);
+      setInvoice(pr);
+      setCompletedAmount(finalAmount);
+    } catch (err) {
+      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [amount, memo, toast, onClose, recordSupporter]);
+
+  const handleCopy = async () => {
+    if (!invoice) return;
+    await navigator.clipboard.writeText(invoice);
+    setCopied(true);
+    toast({ title: 'Copied!', description: 'Invoice copied to clipboard' });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handlePaid = async () => {
+    toast({ title: 'Thank you!', description: `Your support means everything.` });
+    await recordSupporter(completedAmount);
+    setDonationCompleted(true);
+    setTimeout(() => onClose(), 1500);
+  };
+
   // Poll for zap receipt (kind 9735) matching the invoice
   useEffect(() => {
     if (!invoice) {
@@ -193,65 +253,6 @@ function DonateContent({
     });
     return () => { cancelled = true; };
   }, [invoice]);
-
-  const recordSupporter = useCallback(async (sats: number) => {
-    const pubkey = validateNpub(npubInput);
-    if (!pubkey) return;
-
-    try {
-      await publishSupporterEvent(nostr, pubkey, sats);
-    } catch (err) {
-      console.warn('Failed to publish supporter event:', err);
-    }
-  }, [nostr, npubInput]);
-
-  const handleGetInvoice = useCallback(async () => {
-    const finalAmount = typeof amount === 'string' ? parseInt(amount, 10) : amount;
-    if (!finalAmount || finalAmount <= 0) {
-      toast({ title: 'Enter an amount', variant: 'destructive' });
-      return;
-    }
-    setIsLoading(true);
-    try {
-      // Try WebLN first
-      if (typeof window !== 'undefined' && 'webln' in window) {
-        try {
-          const webln = (window as Record<string, unknown>).webln as { enable: () => Promise<void>; sendPayment: (invoice: string) => Promise<void> };
-          await webln.enable();
-          const pr = await fetchInvoice(finalAmount, memo);
-          await webln.sendPayment(pr);
-          toast({ title: 'Donation sent!', description: `You sent ${finalAmount} sats. Thank you!` });
-          await recordSupporter(finalAmount);
-          onClose();
-          return;
-        } catch {
-          // WebLN failed or was rejected, fall through to QR
-        }
-      }
-      const pr = await fetchInvoice(finalAmount, memo);
-      setInvoice(pr);
-      setCompletedAmount(finalAmount);
-    } catch (err) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [amount, memo, toast, onClose, recordSupporter]);
-
-  const handleCopy = async () => {
-    if (!invoice) return;
-    await navigator.clipboard.writeText(invoice);
-    setCopied(true);
-    toast({ title: 'Copied!', description: 'Invoice copied to clipboard' });
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handlePaid = async () => {
-    toast({ title: 'Thank you!', description: `Your support means everything.` });
-    await recordSupporter(completedAmount);
-    setDonationCompleted(true);
-    setTimeout(() => onClose(), 1500);
-  };
 
   if (donationCompleted) {
     return (
