@@ -82,7 +82,7 @@ export function TopSupporters() {
           </span>
           <DonateButton />
         </div>
-        <div className="flex items-center gap-2.5 overflow-x-auto scrollbar-hide">
+        <div className="flex items-center gap-2.5 overflow-x-auto scrollbar-hide py-1.5 px-1">
           {supporters.map((supporter, index) => (
             <SupporterAvatar
               key={supporter.pubkey}
