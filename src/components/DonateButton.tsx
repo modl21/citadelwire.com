@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Zap, Copy, Check, ExternalLink, X, User } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Zap, Copy, Check, ExternalLink, X, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,12 +18,15 @@ import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useToast } from '@/hooks/useToast';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { publishSupporterEvent, SUPPORTER_KIND } from '@/hooks/useTopSupporters';
+import { publishSupporterEvent } from '@/hooks/useTopSupporters';
+import { CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 import { useNostr } from '@nostrify/react';
 import { nip19 } from 'nostr-tools';
 import QRCode from 'qrcode';
 
 const LIGHTNING_ADDRESS = 'wire@primal.net';
+const ZAP_POLL_INTERVAL_MS = 3000;
+const ZAP_POLL_MAX_DURATION_MS = 10 * 60 * 1000; // stop polling after 10 minutes
 
 const presetAmounts = [1000, 5000, 10000, 21000, 42000];
 
@@ -92,6 +95,87 @@ function DonateContent({
   const [copied, setCopied] = useState(false);
   const [donationCompleted, setDonationCompleted] = useState(false);
   const [completedAmount, setCompletedAmount] = useState(0);
+  const [zapDetected, setZapDetected] = useState(false);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollStartRef = useRef<number>(0);
+
+  // Poll for zap receipt (kind 9735) matching the invoice
+  useEffect(() => {
+    if (!invoice) {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+      return;
+    }
+
+    pollStartRef.current = Date.now();
+
+    const checkForZapReceipt = async () => {
+      // Stop polling after max duration
+      if (Date.now() - pollStartRef.current > ZAP_POLL_MAX_DURATION_MS) {
+        if (pollTimerRef.current) {
+          clearInterval(pollTimerRef.current);
+          pollTimerRef.current = null;
+        }
+        return;
+      }
+
+      try {
+        const since = Math.floor(pollStartRef.current / 1000) - 30;
+        const events = await nostr.query([
+          {
+            kinds: [9735],
+            '#p': [CITADEL_PUBKEY],
+            since,
+            limit: 20,
+          },
+        ]);
+
+        // Check if any zap receipt contains a bolt11 tag matching our invoice
+        const match = events.find((event) => {
+          const bolt11Tag = event.tags.find(([name]) => name === 'bolt11')?.[1];
+          return bolt11Tag && bolt11Tag.toLowerCase() === invoice.toLowerCase();
+        });
+
+        if (match) {
+          setZapDetected(true);
+          if (pollTimerRef.current) {
+            clearInterval(pollTimerRef.current);
+            pollTimerRef.current = null;
+          }
+        }
+      } catch {
+        // Silently ignore polling errors
+      }
+    };
+
+    // Initial check after a short delay
+    const initialTimeout = setTimeout(checkForZapReceipt, 2000);
+    pollTimerRef.current = setInterval(checkForZapReceipt, ZAP_POLL_INTERVAL_MS);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+  }, [invoice, nostr]);
+
+  // Auto-confirm when zap receipt is detected
+  useEffect(() => {
+    if (!zapDetected || donationCompleted) return;
+
+    const confirm = async () => {
+      toast({ title: 'Payment confirmed!', description: `Zap receipt detected. Thank you!` });
+      await recordSupporter(completedAmount);
+      setDonationCompleted(true);
+      setTimeout(() => onClose(), 1500);
+    };
+
+    void confirm();
+  }, [zapDetected, donationCompleted, completedAmount, recordSupporter, toast, onClose]);
 
   // Generate QR code when invoice changes
   useEffect(() => {
@@ -218,16 +302,22 @@ function DonateContent({
           Open in Wallet
         </Button>
 
+        <div className="flex items-center justify-center gap-2 py-1.5 text-xs text-muted-foreground/60">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>Waiting for payment confirmation...</span>
+        </div>
+
         <Button
-          className="w-full"
+          variant="ghost"
+          size="sm"
+          className="w-full text-xs text-muted-foreground/60 hover:text-foreground"
           onClick={handlePaid}
         >
-          <Check className="h-4 w-4 mr-2" />
-          I've Paid
+          Confirm manually
         </Button>
 
         <button
-          onClick={() => { setInvoice(null); setQrCodeUrl(''); }}
+          onClick={() => { setInvoice(null); setQrCodeUrl(''); setZapDetected(false); }}
           className="text-xs text-muted-foreground/50 hover:text-muted-foreground w-full text-center transition-colors"
         >
           Change amount
