@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useToast } from '@/hooks/useToast';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { publishSupporterEvent } from '@/hooks/useTopSupporters';
+import { publishSupporterEvent } from '@/lib/publishSupporter';
 import { CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 import { useNostr } from '@nostrify/react';
 import { nip19 } from 'nostr-tools';
