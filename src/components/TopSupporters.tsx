@@ -9,7 +9,7 @@ import { Zap } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { cn } from '@/lib/utils';
 
-const EXTRA_PROFILE_RELAYS = ['wss://antiprimal.net'];
+const EXTRA_PROFILE_RELAYS = ['wss://purplepag.es', 'wss://relay.nostr.band', 'wss://antiprimal.net'];
 
 /** Like useAuthor but also checks extra relays for supporter profiles. */
 function useSupporterProfile(pubkey: string) {
@@ -33,25 +33,23 @@ function useSupporterProfile(pubkey: string) {
         }
       }
 
-      // Fall back to extra relays
-      for (const relayUrl of EXTRA_PROFILE_RELAYS) {
-        try {
-          const relay = nostr.relay(relayUrl);
-          const [extra] = await relay.query(
-            [{ kinds: [0], authors: [pubkey], limit: 1 }],
-            { signal: AbortSignal.timeout(3000) },
-          );
-          if (extra) {
-            try {
-              const metadata = n.json().pipe(n.metadata()).parse(extra.content);
-              return { metadata };
-            } catch {
-              return {};
-            }
+      // Fall back: query extra profile relays in parallel
+      const extraGroup = nostr.group(EXTRA_PROFILE_RELAYS);
+      try {
+        const [extra] = await extraGroup.query(
+          [{ kinds: [0], authors: [pubkey], limit: 1 }],
+          { signal: AbortSignal.timeout(4000) },
+        );
+        if (extra) {
+          try {
+            const metadata = n.json().pipe(n.metadata()).parse(extra.content);
+            return { metadata };
+          } catch {
+            return {};
           }
-        } catch {
-          // Relay unreachable, continue
         }
+      } catch {
+        // Extra relays unreachable
       }
 
       return {};
