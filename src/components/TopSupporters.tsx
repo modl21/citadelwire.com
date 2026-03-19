@@ -28,10 +28,8 @@ function SupporterAvatar({ pubkey, totalSats, rank }: { pubkey: string; totalSat
           rank <= 2 ? 'h-9 w-9 ring-amber-500/40' :
           'h-8 w-8 ring-border/40',
         )}>
-          {metadata?.picture ? (
-            <AvatarImage src={metadata.picture} alt={displayName} />
-          ) : null}
-          <AvatarFallback className="text-[10px] font-bold bg-muted text-muted-foreground">
+          <AvatarImage src={metadata?.picture} alt={displayName} />
+          <AvatarFallback className="text-[10px] font-bold bg-muted text-muted-foreground" delayMs={200}>
             {(metadata?.name || '?')[0].toUpperCase()}
           </AvatarFallback>
         </Avatar>

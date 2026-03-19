@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Zap, Copy, Check, ExternalLink, X, User, Loader2 } from 'lucide-react';
+import { Zap, Copy, Check, ExternalLink, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -8,12 +8,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerClose,
-} from '@/components/ui/drawer';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useToast } from '@/hooks/useToast';
@@ -189,7 +188,7 @@ function DonateContent({
     toast({ title: 'Thank you!', description: `Your support means everything.` });
     await recordSupporter(completedAmount);
     setDonationCompleted(true);
-    setTimeout(() => onClose(), 1500);
+    setTimeout(() => window.location.reload(), 2000);
   };
 
   // Poll for zap receipt (kind 9735) matching the invoice
@@ -264,7 +263,7 @@ function DonateContent({
       toast({ title: 'Payment confirmed!', description: `Zap receipt detected. Thank you!` });
       await recordSupporter(completedAmount);
       setDonationCompleted(true);
-      setTimeout(() => onClose(), 1500);
+      setTimeout(() => window.location.reload(), 2000);
     };
 
     void confirm();
@@ -429,21 +428,16 @@ export function DonateButton() {
           <Zap className="h-3.5 w-3.5" />
           Donate
         </button>
-        <Drawer open={open} onOpenChange={setOpen}>
-          <DrawerContent>
-            <DrawerHeader className="text-center relative">
-              <DrawerClose asChild>
-                <Button variant="ghost" size="sm" className="absolute right-4 top-4">
-                  <X className="h-4 w-4" />
-                </Button>
-              </DrawerClose>
-              <DrawerTitle>Support CITADEL WIRE</DrawerTitle>
-            </DrawerHeader>
-            <div className="px-4 pb-6">
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetContent side="bottom" className="rounded-t-2xl max-h-[90dvh] overflow-y-auto">
+            <SheetHeader className="text-center pb-2">
+              <SheetTitle>Support CITADEL WIRE</SheetTitle>
+            </SheetHeader>
+            <div className="px-2 pb-6">
               <DonateContent onClose={() => setOpen(false)} />
             </div>
-          </DrawerContent>
-        </Drawer>
+          </SheetContent>
+        </Sheet>
       </>
     );
   }
