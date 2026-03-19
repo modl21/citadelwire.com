@@ -1,5 +1,7 @@
+import { type NostrMetadata, NSchema as n } from '@nostrify/nostrify';
+import { useNostr } from '@nostrify/react';
+import { useQuery } from '@tanstack/react-query';
 import { useTopSupporters } from '@/hooks/useTopSupporters';
-import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -7,9 +9,61 @@ import { Zap } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { cn } from '@/lib/utils';
 
+const EXTRA_PROFILE_RELAYS = ['wss://antiprimal.net'];
+
+/** Like useAuthor but also checks extra relays for supporter profiles. */
+function useSupporterProfile(pubkey: string) {
+  const { nostr } = useNostr();
+
+  return useQuery<{ metadata?: NostrMetadata }>({
+    queryKey: ['supporter-profile', pubkey],
+    queryFn: async () => {
+      // Query default relays first
+      const [event] = await nostr.query(
+        [{ kinds: [0], authors: [pubkey], limit: 1 }],
+        { signal: AbortSignal.timeout(3000) },
+      );
+
+      if (event) {
+        try {
+          const metadata = n.json().pipe(n.metadata()).parse(event.content);
+          return { metadata };
+        } catch {
+          return {};
+        }
+      }
+
+      // Fall back to extra relays
+      for (const relayUrl of EXTRA_PROFILE_RELAYS) {
+        try {
+          const relay = nostr.relay(relayUrl);
+          const [extra] = await relay.query(
+            [{ kinds: [0], authors: [pubkey], limit: 1 }],
+            { signal: AbortSignal.timeout(3000) },
+          );
+          if (extra) {
+            try {
+              const metadata = n.json().pipe(n.metadata()).parse(extra.content);
+              return { metadata };
+            } catch {
+              return {};
+            }
+          }
+        } catch {
+          // Relay unreachable, continue
+        }
+      }
+
+      return {};
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+}
+
 function SupporterAvatar({ pubkey, totalSats, rank }: { pubkey: string; totalSats: number; rank: number }) {
-  const author = useAuthor(pubkey);
-  const metadata = author.data?.metadata;
+  const profile = useSupporterProfile(pubkey);
+  const metadata = profile.data?.metadata;
   const npub = nip19.npubEncode(pubkey);
   const displayName = metadata?.display_name || metadata?.name || npub.slice(0, 12) + '...';
 
