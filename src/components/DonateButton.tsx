@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useToast } from '@/hooks/useToast';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { publishSupporterEvent } from '@/lib/publishSupporter';
+import { publishSupporterEvent, getVisitorSigner } from '@/lib/publishSupporter';
 import { CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 import { useNostr } from '@nostrify/react';
 import { nip19 } from 'nostr-tools';
@@ -27,17 +27,29 @@ import QRCode from 'qrcode';
 const LIGHTNING_ADDRESS = 'wire@primal.net';
 const ZAP_POLL_INTERVAL_MS = 3000;
 const ZAP_POLL_MAX_DURATION_MS = 10 * 60 * 1000; // stop polling after 10 minutes
+const ZAP_RELAYS = ['wss://relay.primal.net', 'wss://relay.damus.io', 'wss://relay.ditto.pub'];
 
 const presetAmounts = [1000, 5000, 10000, 21000, 42000];
 
-async function fetchInvoice(amountSats: number, comment?: string): Promise<string> {
-  // Resolve lightning address to LNURL callback
+interface LnurlPayEndpoint {
+  callback: string;
+  minSendable: number;
+  maxSendable: number;
+  allowsNostr?: boolean;
+  nostrPubkey?: string;
+  commentAllowed?: number;
+}
+
+async function resolveLnurlEndpoint(): Promise<LnurlPayEndpoint> {
   const [name, domain] = LIGHTNING_ADDRESS.split('@');
   const url = `https://${domain}/.well-known/lnurlp/${name}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to resolve lightning address');
-  const data = await res.json();
+  return res.json();
+}
 
+async function fetchInvoice(amountSats: number, comment?: string): Promise<string> {
+  const data = await resolveLnurlEndpoint();
   if (!data.callback) throw new Error('No callback URL found');
 
   const amountMsat = amountSats * 1000;
@@ -50,6 +62,27 @@ async function fetchInvoice(amountSats: number, comment?: string): Promise<strin
 
   const callbackUrl = new URL(data.callback);
   callbackUrl.searchParams.set('amount', amountMsat.toString());
+
+  // NIP-57: If the endpoint supports Nostr zaps, create and attach a zap request
+  if (data.allowsNostr && data.nostrPubkey) {
+    try {
+      const visitor = getVisitorSigner();
+      const zapRequest = await visitor.signer.signEvent({
+        kind: 9734,
+        created_at: Math.floor(Date.now() / 1000),
+        content: comment?.trim() || '',
+        tags: [
+          ['relays', ...ZAP_RELAYS],
+          ['amount', String(amountMsat)],
+          ['p', CITADEL_PUBKEY],
+        ],
+      });
+      callbackUrl.searchParams.set('nostr', JSON.stringify(zapRequest));
+    } catch {
+      // If zap request signing fails, fall back to plain invoice
+    }
+  }
+
   if (comment && comment.trim() && data.commentAllowed && data.commentAllowed > 0) {
     callbackUrl.searchParams.set('comment', comment.trim().slice(0, data.commentAllowed));
   }

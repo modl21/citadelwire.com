@@ -36,6 +36,13 @@ function getVisitorSecretKey(): Uint8Array {
   return generatedKey;
 }
 
+/** Get an NUser signer from the visitor's ephemeral key (creates one if needed). */
+export function getVisitorSigner(): NUser {
+  const secretKey = getVisitorSecretKey();
+  const login = NLogin.fromNsec(nip19.nsecEncode(secretKey));
+  return NUser.fromNsecLogin(login);
+}
+
 type NostrClientLike = {
   event(event: Record<string, unknown>, opts?: Record<string, unknown>): Promise<unknown>;
 };
@@ -45,9 +52,7 @@ export async function publishSupporterEvent(
   supporterPubkey: string,
   amountSats: number,
 ): Promise<void> {
-  const secretKey = getVisitorSecretKey();
-  const login = NLogin.fromNsec(nip19.nsecEncode(secretKey));
-  const user = NUser.fromNsecLogin(login);
+  const user = getVisitorSigner();
 
   const signedEvent = await user.signer.signEvent({
     kind: SUPPORTER_KIND,

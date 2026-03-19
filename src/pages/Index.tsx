@@ -112,7 +112,7 @@ const Index = () => {
       {/* Profile banner section */}
       <div className="relative">
         {metadata?.banner && (
-          <div className="h-28 sm:h-40 w-full overflow-hidden">
+          <div className="h-14 sm:h-40 w-full overflow-hidden">
             <img
               src={metadata.banner}
               alt=""
