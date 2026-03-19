@@ -50,7 +50,7 @@ export function PostCard({ event, isFirst }: PostCardProps) {
       </div>
 
       {/* Content */}
-      <div>
+      <div className="leading-relaxed">
         <NoteContent event={event} className="text-[15px] sm:text-base text-foreground/90 leading-[1.7]" />
       </div>
     </a>
