@@ -8,6 +8,7 @@ import { TickerBar } from '@/components/TickerBar';
 import { useCitadelFeed, CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
+import { TopSupporters } from '@/components/TopSupporters';
 import { usePageViewCount, HOME_PAGE_VIEW_ID } from '@/hooks/usePageViewCount';
 import { Zap, RefreshCw, Rss, Eye } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
@@ -183,6 +184,9 @@ const Index = () => {
           </div>
         </div>
       </div>
+
+      {/* Top Supporters */}
+      <TopSupporters />
 
       {/* Podcast players */}
       <div className="max-w-2xl mx-auto">

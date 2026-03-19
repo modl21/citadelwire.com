@@ -1,25 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Zap, Copy, Check, ExternalLink, X } from 'lucide-react';
+import { Zap, Copy, Check, ExternalLink, X, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
-  DrawerDescription,
   DrawerClose,
 } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useToast } from '@/hooks/useToast';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { publishSupporterEvent, SUPPORTER_KIND } from '@/hooks/useTopSupporters';
+import { useNostr } from '@nostrify/react';
+import { nip19 } from 'nostr-tools';
 import QRCode from 'qrcode';
 
 const LIGHTNING_ADDRESS = 'wire@primal.net';
@@ -58,18 +59,39 @@ async function fetchInvoice(amountSats: number, comment?: string): Promise<strin
   return invoiceData.pr;
 }
 
+function validateNpub(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const decoded = nip19.decode(trimmed);
+    if (decoded.type === 'npub') {
+      return decoded.data;
+    }
+    if (decoded.type === 'nprofile') {
+      return decoded.data.pubkey;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function DonateContent({
   onClose,
 }: {
   onClose: () => void;
 }) {
   const { toast } = useToast();
+  const { nostr } = useNostr();
   const [amount, setAmount] = useState<number | string>(1000);
   const [memo, setMemo] = useState('');
+  const [npubInput, setNpubInput] = useState('');
   const [invoice, setInvoice] = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [donationCompleted, setDonationCompleted] = useState(false);
+  const [completedAmount, setCompletedAmount] = useState(0);
 
   // Generate QR code when invoice changes
   useEffect(() => {
@@ -88,6 +110,17 @@ function DonateContent({
     return () => { cancelled = true; };
   }, [invoice]);
 
+  const recordSupporter = useCallback(async (sats: number) => {
+    const pubkey = validateNpub(npubInput);
+    if (!pubkey) return;
+
+    try {
+      await publishSupporterEvent(nostr, pubkey, sats);
+    } catch (err) {
+      console.warn('Failed to publish supporter event:', err);
+    }
+  }, [nostr, npubInput]);
+
   const handleGetInvoice = useCallback(async () => {
     const finalAmount = typeof amount === 'string' ? parseInt(amount, 10) : amount;
     if (!finalAmount || finalAmount <= 0) {
@@ -104,6 +137,7 @@ function DonateContent({
           const pr = await fetchInvoice(finalAmount, memo);
           await webln.sendPayment(pr);
           toast({ title: 'Donation sent!', description: `You sent ${finalAmount} sats. Thank you!` });
+          await recordSupporter(finalAmount);
           onClose();
           return;
         } catch {
@@ -112,12 +146,13 @@ function DonateContent({
       }
       const pr = await fetchInvoice(finalAmount, memo);
       setInvoice(pr);
+      setCompletedAmount(finalAmount);
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
-  }, [amount, toast, onClose]);
+  }, [amount, memo, toast, onClose, recordSupporter]);
 
   const handleCopy = async () => {
     if (!invoice) return;
@@ -126,6 +161,22 @@ function DonateContent({
     toast({ title: 'Copied!', description: 'Invoice copied to clipboard' });
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const handlePaid = async () => {
+    toast({ title: 'Thank you!', description: `Your support means everything.` });
+    await recordSupporter(completedAmount);
+    setDonationCompleted(true);
+    setTimeout(() => onClose(), 1500);
+  };
+
+  if (donationCompleted) {
+    return (
+      <div className="py-8 px-1 text-center space-y-3">
+        <div className="text-4xl">🧡</div>
+        <p className="text-sm text-muted-foreground">Thank you for supporting CITADEL WIRE!</p>
+      </div>
+    );
+  }
 
   if (invoice) {
     const displayAmount = typeof amount === 'string' ? parseInt(amount, 10) : amount;
@@ -165,6 +216,14 @@ function DonateContent({
         >
           <ExternalLink className="h-4 w-4 mr-2" />
           Open in Wallet
+        </Button>
+
+        <Button
+          className="w-full"
+          onClick={handlePaid}
+        >
+          <Check className="h-4 w-4 mr-2" />
+          I've Paid
         </Button>
 
         <button
@@ -209,6 +268,20 @@ function DonateContent({
         value={memo}
         onChange={(e) => setMemo(e.target.value)}
       />
+
+      <div className="relative">
+        <Input
+          type="text"
+          placeholder="Your npub (optional, to appear as supporter)"
+          value={npubInput}
+          onChange={(e) => setNpubInput(e.target.value)}
+          className="pl-9 text-sm"
+        />
+        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+      </div>
+      {npubInput && !validateNpub(npubInput) && (
+        <p className="text-[11px] text-destructive -mt-2 ml-1">Enter a valid npub or nprofile</p>
+      )}
 
       <Button onClick={handleGetInvoice} className="w-full" disabled={isLoading}>
         <Zap className="h-4 w-4 mr-2" />
