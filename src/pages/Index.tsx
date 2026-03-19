@@ -110,9 +110,17 @@ const Index = () => {
       </header>
 
       {/* Profile info */}
-      <div className="max-w-2xl mx-auto px-4 sm:px-6">
-        <div className="py-3.5 border-b border-border/40">
-          <div className="flex items-start gap-3.5">
+      <div className="relative isolate overflow-hidden">
+        {metadata?.banner && (
+          <img
+            src={metadata.banner}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover opacity-[0.07] dark:opacity-[0.12] -z-10"
+          />
+        )}
+        <div className="max-w-2xl mx-auto px-4 sm:px-6">
+          <div className="py-3.5 border-b border-border/40">
+            <div className="flex items-start gap-3.5">
             <a href="https://primal.net/wire" target="_blank" rel="noopener noreferrer" className="shrink-0">
               <Avatar className="h-11 w-11 ring-2 ring-border/30 shadow-md transition-opacity hover:opacity-80">
                 {metadata?.picture ? (
@@ -163,6 +171,7 @@ const Index = () => {
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
 
