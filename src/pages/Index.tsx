@@ -135,7 +135,7 @@ const Index = () => {
                   {metadata?.display_name ?? 'CITADEL WIRE'}
                 </h2>
               </a>
-              <p className="text-xs text-muted-foreground/60 mt-0.5">
+              <p className="text-xs text-white mt-0.5">
                 high signal news using live market data
               </p>
               <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
