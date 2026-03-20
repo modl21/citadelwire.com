@@ -63,8 +63,44 @@ function useSupporterProfile(pubkey: string) {
 function SupporterAvatar({ pubkey, totalSats, rank }: { pubkey: string; totalSats: number; rank: number }) {
   const profile = useSupporterProfile(pubkey);
   const metadata = profile.data?.metadata;
+  const hasProfile = !!metadata;
   const npub = nip19.npubEncode(pubkey);
   const displayName = metadata?.display_name || metadata?.name || npub.slice(0, 12) + '...';
+
+  const avatar = (
+    <div className="relative">
+      <Avatar className={cn(
+        'ring-1 transition-transform group-hover:scale-110',
+        rank === 0 ? 'h-6 w-6 ring-amber-500/60' :
+        rank <= 2 ? 'h-5 w-5 ring-amber-500/40' :
+        'h-5 w-5 ring-border/40',
+      )}>
+        <AvatarImage src={metadata?.picture || DEFAULT_AVATAR} alt={displayName} />
+        <AvatarFallback delayMs={200}>
+          <img src={DEFAULT_AVATAR} alt={displayName} className="h-full w-full object-cover" />
+        </AvatarFallback>
+      </Avatar>
+      {rank === 0 && (
+        <div className="absolute -top-0.5 -right-0.5 bg-amber-500 text-white rounded-full w-2.5 h-2.5 flex items-center justify-center">
+          <Zap className="h-1.5 w-1.5" />
+        </div>
+      )}
+    </div>
+  );
+
+  if (!hasProfile) {
+    return (
+      <div 
+        className="flex flex-col items-center gap-0.5 shrink-0 select-none opacity-60"
+        title={`Anonymous Supporter — ${totalSats.toLocaleString('en-US')} sats`}
+      >
+        {avatar}
+        <span className="text-[7px] text-muted-foreground/60 tabular-nums font-medium">
+          {totalSats >= 1000 ? `${Math.round(totalSats / 1000)}k` : totalSats}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <a
@@ -74,24 +110,7 @@ function SupporterAvatar({ pubkey, totalSats, rank }: { pubkey: string; totalSat
       className="flex flex-col items-center gap-0.5 group shrink-0"
       title={`${displayName} — ${totalSats.toLocaleString('en-US')} sats`}
     >
-      <div className="relative">
-        <Avatar className={cn(
-          'ring-1 transition-transform group-hover:scale-110',
-          rank === 0 ? 'h-6 w-6 ring-amber-500/60' :
-          rank <= 2 ? 'h-5 w-5 ring-amber-500/40' :
-          'h-5 w-5 ring-border/40',
-        )}>
-          <AvatarImage src={metadata?.picture || DEFAULT_AVATAR} alt={displayName} />
-          <AvatarFallback delayMs={200}>
-            <img src={DEFAULT_AVATAR} alt={displayName} className="h-full w-full object-cover" />
-          </AvatarFallback>
-        </Avatar>
-        {rank === 0 && (
-          <div className="absolute -top-0.5 -right-0.5 bg-amber-500 text-white rounded-full w-2.5 h-2.5 flex items-center justify-center">
-            <Zap className="h-1.5 w-1.5" />
-          </div>
-        )}
-      </div>
+      {avatar}
       <span className="text-[7px] text-muted-foreground/60 tabular-nums font-medium group-hover:text-foreground/80 transition-colors">
         {totalSats >= 1000 ? `${Math.round(totalSats / 1000)}k` : totalSats}
       </span>
