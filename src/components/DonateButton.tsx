@@ -17,10 +17,12 @@ import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useToast } from '@/hooks/useToast';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { publishSupporterEvent, getVisitorSigner } from '@/lib/publishSupporter';
 import { CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 import { useNostr } from '@nostrify/react';
 import { nip19 } from 'nostr-tools';
+import type { NUser } from '@nostrify/react/login';
 import QRCode from 'qrcode';
 
 const LIGHTNING_ADDRESS = 'wire@primal.net';
@@ -47,7 +49,7 @@ async function resolveLnurlEndpoint(): Promise<LnurlPayEndpoint> {
   return res.json();
 }
 
-async function fetchInvoice(amountSats: number, comment?: string): Promise<string> {
+async function fetchInvoice(amountSats: number, comment?: string, signer?: NUser): Promise<string> {
   const data = await resolveLnurlEndpoint();
   if (!data.callback) throw new Error('No callback URL found');
 
@@ -63,10 +65,11 @@ async function fetchInvoice(amountSats: number, comment?: string): Promise<strin
   callbackUrl.searchParams.set('amount', amountMsat.toString());
 
   // NIP-57: If the endpoint supports Nostr zaps, create and attach a zap request
+  // Use the provided signer (logged-in user) or fall back to ephemeral visitor key
   if (data.allowsNostr && data.nostrPubkey) {
     try {
-      const visitor = getVisitorSigner();
-      const zapRequest = await visitor.signer.signEvent({
+      const zapSigner = signer ?? getVisitorSigner();
+      const zapRequest = await zapSigner.signer.signEvent({
         kind: 9734,
         created_at: Math.floor(Date.now() / 1000),
         content: comment?.trim() || '',
@@ -118,9 +121,10 @@ function DonateContent({
 }) {
   const { toast } = useToast();
   const { nostr } = useNostr();
+  const { user } = useCurrentUser();
   const [amount, setAmount] = useState<number | string>(1000);
   const [memo, setMemo] = useState('');
-  const [npubInput, setNpubInput] = useState('');
+  const [npubInput, setNpubInput] = useState(() => user ? nip19.npubEncode(user.pubkey) : '');
   const [invoice, setInvoice] = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -156,7 +160,7 @@ function DonateContent({
         try {
           const webln = (window as Record<string, unknown>).webln as { enable: () => Promise<void>; sendPayment: (invoice: string) => Promise<void> };
           await webln.enable();
-          const pr = await fetchInvoice(finalAmount, memo);
+          const pr = await fetchInvoice(finalAmount, memo, user);
           await webln.sendPayment(pr);
           toast({ title: 'Donation sent!', description: `You sent ${finalAmount} sats. Thank you!` });
           await recordSupporter(finalAmount);
@@ -166,7 +170,7 @@ function DonateContent({
           // WebLN failed or was rejected, fall through to QR
         }
       }
-      const pr = await fetchInvoice(finalAmount, memo);
+      const pr = await fetchInvoice(finalAmount, memo, user);
       setInvoice(pr);
       setCompletedAmount(finalAmount);
     } catch (err) {
