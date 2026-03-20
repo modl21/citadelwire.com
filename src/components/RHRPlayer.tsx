@@ -28,7 +28,7 @@ export function RHRPlayer() {
         title={episode.title.replace(/RABBIT HOLE RECAP/gi, 'RHR')}
         mp3Url={episode.mp3Url}
         timeLabel={timeLabel}
-        allEpisodesUrl="https://primal.net/rhr"
+        allEpisodesUrl="https://rhr.tv"
         accentColor="orange"
       />
     </div>
