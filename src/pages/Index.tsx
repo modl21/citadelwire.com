@@ -149,9 +149,9 @@ const Index = () => {
                     <AvatarImage src="https://primaldata.s3.us-east-005.backblazeb2.com/cache/2/c7/ce/2c7ce06799d9a1226680f19826b8fc18ea5df5e2702bcf681e267e0977069e44.jpg" alt="ODELL" />
                     <AvatarFallback className="text-[6px] bg-muted">O</AvatarFallback>
                   </Avatar>
-                  <span className="text-[11px] text-muted-foreground/45">
+                  <span className="text-[11px] text-white/70">
                     Curated by{' '}
-                    <span className="text-muted-foreground/65 group-hover/odell:text-foreground font-medium transition-colors">ODELL</span>
+                    <span className="text-white group-hover/odell:text-white font-medium transition-colors">ODELL</span>
                   </span>
                 </a>
                 {metadata?.lud16 && (
