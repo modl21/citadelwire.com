@@ -10,6 +10,7 @@ import { nip19 } from 'nostr-tools';
 import { cn } from '@/lib/utils';
 
 const EXTRA_PROFILE_RELAYS = ['wss://purplepag.es', 'wss://relay.nostr.band', 'wss://antiprimal.net'];
+const DEFAULT_AVATAR = 'https://blossom.ditto.pub/62ead074d0d5a7d1b707b101f7d0db62af97bd66843f4f28c7a1d9007e1e6960.jpeg';
 
 /** Like useAuthor but also checks extra relays for supporter profiles. */
 function useSupporterProfile(pubkey: string) {
@@ -80,9 +81,9 @@ function SupporterAvatar({ pubkey, totalSats, rank }: { pubkey: string; totalSat
           rank <= 2 ? 'h-5 w-5 ring-amber-500/40' :
           'h-5 w-5 ring-border/40',
         )}>
-          <AvatarImage src={metadata?.picture} alt={displayName} />
-          <AvatarFallback className="text-[6px] font-bold bg-muted text-muted-foreground" delayMs={200}>
-            {(metadata?.name || '?')[0].toUpperCase()}
+          <AvatarImage src={metadata?.picture || DEFAULT_AVATAR} alt={displayName} />
+          <AvatarFallback delayMs={200}>
+            <img src={DEFAULT_AVATAR} alt={displayName} className="h-full w-full object-cover" />
           </AvatarFallback>
         </Avatar>
         {rank === 0 && (
