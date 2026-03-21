@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Zap, Copy, Check, ExternalLink, User, Loader2 } from 'lucide-react';
+import { Zap, Copy, Check, ExternalLink, AtSign, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -97,21 +97,56 @@ async function fetchInvoice(amountSats: number, comment?: string, signer?: NUser
   return invoiceData.pr;
 }
 
-function validateNpub(value: string): string | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
+const CORS_PROXY = 'https://proxy.shakespeare.diy/?url=';
+
+/** Resolve a NIP-05 identifier (user@domain) to a hex pubkey. */
+async function resolveNip05(identifier: string): Promise<string | null> {
+  const trimmed = identifier.trim().toLowerCase();
+  if (!trimmed.includes('@')) return null;
+
+  const [localPart, domain] = trimmed.split('@');
+  if (!localPart || !domain) return null;
+
   try {
-    const decoded = nip19.decode(trimmed);
-    if (decoded.type === 'npub') {
-      return decoded.data;
-    }
-    if (decoded.type === 'nprofile') {
-      return decoded.data.pubkey;
-    }
+    const url = `https://${domain}/.well-known/nostr.json?name=${encodeURIComponent(localPart)}`;
+    const res = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`);
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    const pubkey = data?.names?.[localPart];
+    if (pubkey && /^[0-9a-f]{64}$/.test(pubkey)) return pubkey;
     return null;
   } catch {
     return null;
   }
+}
+
+/** Try to parse an npub/nprofile directly. */
+function parseNpub(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const decoded = nip19.decode(trimmed);
+    if (decoded.type === 'npub') return decoded.data;
+    if (decoded.type === 'nprofile') return decoded.data.pubkey;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Resolve input to a hex pubkey — supports NIP-05 (user@domain), npub, and nprofile. */
+async function resolveIdentity(input: string): Promise<string | null> {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  // If it looks like a NIP-05 address
+  if (trimmed.includes('@')) {
+    return resolveNip05(trimmed);
+  }
+
+  // Otherwise try npub/nprofile
+  return parseNpub(trimmed);
 }
 
 function DonateContent({
@@ -124,7 +159,9 @@ function DonateContent({
   const { user } = useCurrentUser();
   const [amount, setAmount] = useState<number | string>(1000);
   const [memo, setMemo] = useState('');
-  const [npubInput, setNpubInput] = useState(() => user ? nip19.npubEncode(user.pubkey) : '');
+  const [identityInput, setIdentityInput] = useState(() => user?.pubkey ? nip19.npubEncode(user.pubkey) : '');
+  const [resolvedPubkey, setResolvedPubkey] = useState<string | null>(() => user?.pubkey ?? null);
+  const [isResolving, setIsResolving] = useState(false);
   const [invoice, setInvoice] = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -137,15 +174,14 @@ function DonateContent({
 
   // Define callbacks BEFORE effects that reference them
   const recordSupporter = useCallback(async (sats: number) => {
-    const pubkey = validateNpub(npubInput);
-    if (!pubkey) return;
+    if (!resolvedPubkey) return;
 
     try {
-      await publishSupporterEvent(nostr, pubkey, sats);
+      await publishSupporterEvent(nostr, resolvedPubkey, sats);
     } catch (err) {
       console.warn('Failed to publish supporter event:', err);
     }
-  }, [nostr, npubInput]);
+  }, [nostr, resolvedPubkey]);
 
   const handleGetInvoice = useCallback(async () => {
     const finalAmount = typeof amount === 'string' ? parseInt(amount, 10) : amount;
@@ -399,15 +435,34 @@ function DonateContent({
       <div className="relative">
         <Input
           type="text"
-          placeholder="Your npub (optional, to appear as supporter)"
-          value={npubInput}
-          onChange={(e) => setNpubInput(e.target.value)}
+          placeholder="Nostr username (e.g. odell@primal.net)"
+          value={identityInput}
+          onChange={(e) => {
+            setIdentityInput(e.target.value);
+            setResolvedPubkey(null);
+          }}
+          onBlur={async () => {
+            const val = identityInput.trim();
+            if (!val) { setResolvedPubkey(null); return; }
+            setIsResolving(true);
+            const pubkey = await resolveIdentity(val);
+            setResolvedPubkey(pubkey);
+            setIsResolving(false);
+          }}
           className="pl-9 text-sm"
         />
-        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+        <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
       </div>
-      {npubInput && !validateNpub(npubInput) && (
-        <p className="text-[11px] text-destructive -mt-2 ml-1">Enter a valid npub or nprofile</p>
+      {identityInput && !isResolving && resolvedPubkey && (
+        <p className="text-[11px] text-green-500 -mt-2 ml-1">Verified</p>
+      )}
+      {identityInput && !isResolving && !resolvedPubkey && identityInput.length > 3 && (
+        <p className="text-[11px] text-muted-foreground/50 -mt-2 ml-1">Enter a NIP-05 address (user@domain) or npub</p>
+      )}
+      {isResolving && (
+        <p className="text-[11px] text-muted-foreground/50 -mt-2 ml-1 flex items-center gap-1">
+          <Loader2 className="h-2.5 w-2.5 animate-spin" /> Looking up...
+        </p>
       )}
 
       <Button onClick={handleGetInvoice} className="w-full" disabled={isLoading}>
