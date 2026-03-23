@@ -96,6 +96,11 @@ function isBulletListItem(line: string): boolean {
   return /^\s*[-•–]\s/.test(line);
 }
 
+/** Detect if a line is a sub-item (starts with --). */
+function isSubItem(line: string): boolean {
+  return /^\s*--\s/.test(line);
+}
+
 /** Render a list item, highlighting the leading category/title if present. */
 function renderListItem(text: string): string {
   // Match patterns like "TITLE: rest", "TITLE - rest", "TITLE — rest", "**TITLE**: rest"
@@ -105,6 +110,37 @@ function renderListItem(text: string): string {
     return `<strong>${escapeHtml(title.trim())}</strong> — ${renderInline(rest.trim())}`;
   }
   return renderInline(text);
+}
+
+/** Nest sub-items (class="sub-item") under the preceding parent <li>. */
+function nestSubItems(items: string[]): string {
+  const result: string[] = [];
+  let i = 0;
+
+  while (i < items.length) {
+    const item = items[i];
+    if (item.includes('class="sub-item"')) {
+      // Collect consecutive sub-items
+      const subs: string[] = [];
+      while (i < items.length && items[i].includes('class="sub-item"')) {
+        // Remove the sub-item class and re-wrap as a plain <li>
+        subs.push(items[i].replace(' class="sub-item"', ''));
+        i++;
+      }
+      // Attach to the last parent item
+      if (result.length > 0) {
+        const lastParent = result[result.length - 1];
+        result[result.length - 1] = lastParent.replace('</li>', `<ul class="nested">${subs.join('')}</ul></li>`);
+      } else {
+        result.push(`<li><ul class="nested">${subs.join('')}</ul></li>`);
+      }
+    } else {
+      result.push(item);
+      i++;
+    }
+  }
+
+  return result.join('');
 }
 
 /** Parse the content into structured HTML. */
@@ -133,24 +169,48 @@ function renderContent(content: string): string {
     // Numbered list → render as bullets with highlighted category title
     if (isNumberedListItem(trimmed)) {
       const items: string[] = [];
-      while (i < lines.length && isNumberedListItem(lines[i].trim())) {
-        const itemText = lines[i].trim().replace(/^\d+[\.\)]\s*/, '');
-        items.push(`<li>${renderListItem(itemText)}</li>`);
+      while (i < lines.length && (isNumberedListItem(lines[i].trim()) || isSubItem(lines[i].trim()))) {
+        const currentLine = lines[i].trim();
+        if (isSubItem(currentLine)) {
+          const subText = currentLine.replace(/^\s*--\s*/, '');
+          items.push(`<li class="sub-item">${renderInline(subText)}</li>`);
+        } else {
+          const itemText = currentLine.replace(/^\d+[\.\)]\s*/, '');
+          items.push(`<li>${renderListItem(itemText)}</li>`);
+        }
         i++;
       }
-      blocks.push(`<ul>${items.join('')}</ul>`);
+      blocks.push(`<ul>${nestSubItems(items)}</ul>`);
+      continue;
+    }
+
+    // Sub-items on their own (-- lines outside a numbered list)
+    if (isSubItem(trimmed)) {
+      const items: string[] = [];
+      while (i < lines.length && isSubItem(lines[i].trim())) {
+        const subText = lines[i].trim().replace(/^\s*--\s*/, '');
+        items.push(`<li>${renderInline(subText)}</li>`);
+        i++;
+      }
+      blocks.push(`<ul class="nested">${items.join('')}</ul>`);
       continue;
     }
 
     // Bullet list
     if (isBulletListItem(trimmed)) {
       const items: string[] = [];
-      while (i < lines.length && isBulletListItem(lines[i].trim())) {
-        const itemText = lines[i].trim().replace(/^\s*[-•–]\s*/, '');
-        items.push(`<li>${renderListItem(itemText)}</li>`);
+      while (i < lines.length && (isBulletListItem(lines[i].trim()) || isSubItem(lines[i].trim()))) {
+        const currentLine = lines[i].trim();
+        if (isSubItem(currentLine)) {
+          const subText = currentLine.replace(/^\s*--\s*/, '');
+          items.push(`<li class="sub-item">${renderInline(subText)}</li>`);
+        } else {
+          const itemText = currentLine.replace(/^\s*[-•–]\s*/, '');
+          items.push(`<li>${renderListItem(itemText)}</li>`);
+        }
         i++;
       }
-      blocks.push(`<ul>${items.join('')}</ul>`);
+      blocks.push(`<ul>${nestSubItems(items)}</ul>`);
       continue;
     }
 
