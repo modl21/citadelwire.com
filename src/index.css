@@ -109,3 +109,93 @@ html {
 .dark ::selection {
   background: hsl(220 14% 93% / 0.18);
 }
+
+/* Note content prose styling */
+.note-content {
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  text-rendering: optimizeLegibility;
+}
+.note-content p {
+  margin-top: 0.4em;
+  margin-bottom: 0.4em;
+}
+.note-content p:first-child {
+  margin-top: 0;
+}
+.note-content p:last-child {
+  margin-bottom: 0;
+}
+.note-content a {
+  color: hsl(213 94% 58%);
+  text-decoration: none;
+  font-weight: inherit;
+  transition: color 0.15s;
+}
+.note-content a:hover {
+  color: hsl(213 94% 68%);
+  text-decoration: underline;
+}
+.note-content strong {
+  font-weight: 650;
+  color: hsl(var(--foreground));
+}
+.note-content em {
+  font-style: italic;
+}
+.note-content ul, .note-content ol {
+  margin-top: 0.35em;
+  margin-bottom: 0.35em;
+  padding-left: 1.25em;
+}
+.note-content li {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+.note-content blockquote {
+  border-left: 2px solid hsl(var(--border));
+  padding-left: 0.75em;
+  font-style: normal;
+  color: hsl(var(--muted-foreground));
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+.note-content code {
+  font-size: 0.85em;
+  padding: 0.15em 0.35em;
+  border-radius: 0.25em;
+  background: hsl(var(--muted));
+  color: inherit;
+  font-weight: inherit;
+}
+.note-content code::before, .note-content code::after {
+  content: none;
+}
+.note-content pre {
+  background: hsl(var(--muted));
+  border-radius: 0.5em;
+  padding: 0.75em 1em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  overflow-x: auto;
+}
+.note-content pre code {
+  padding: 0;
+  background: none;
+}
+.note-content img {
+  border-radius: 0.5em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  max-width: 100%;
+}
+.note-content hr {
+  border-color: hsl(var(--border));
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+}
+.note-content h1, .note-content h2, .note-content h3 {
+  font-weight: 700;
+  color: hsl(var(--foreground));
+  margin-top: 0.6em;
+  margin-bottom: 0.3em;
+}

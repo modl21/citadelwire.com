@@ -32,27 +32,28 @@ export function PostCard({ event, isFirst }: PostCardProps) {
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        'group relative block py-5 px-4 sm:px-6 transition-colors duration-200 hover:bg-muted/40',
-        !isFirst && 'border-t border-border/60',
+        'group relative block py-4 sm:py-5 px-4 sm:px-6 transition-colors duration-200 hover:bg-muted/40',
+        !isFirst && 'border-t border-border/40',
       )}
     >
       {/* Timestamp */}
-      <div className="flex items-center gap-2 mb-2.5">
+      <div className="flex items-center gap-1.5 mb-2">
         <time
           dateTime={new Date(event.created_at * 1000).toISOString()}
-          className="text-xs font-medium text-muted-foreground/70 tracking-wide uppercase"
+          className="text-[11px] font-medium text-muted-foreground/50 tracking-wide uppercase"
           title={absolute}
         >
           {absolute}
         </time>
-        <span className="text-xs text-muted-foreground/40">·</span>
-        <span className="text-xs text-muted-foreground/50">{relative}</span>
+        <span className="text-[11px] text-muted-foreground/30">·</span>
+        <span className="text-[11px] text-muted-foreground/40">{relative}</span>
       </div>
 
       {/* Content */}
-      <div className="leading-relaxed">
-        <NoteContent event={event} className="text-[15px] sm:text-base text-foreground/90 leading-[1.7]" />
-      </div>
+      <NoteContent
+        event={event}
+        className="text-[15px] sm:text-[15px] text-foreground/95 leading-[1.75] tracking-[-0.01em]"
+      />
     </a>
   );
 }
