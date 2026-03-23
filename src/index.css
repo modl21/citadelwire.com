@@ -206,6 +206,7 @@ html {
   margin-top: 0.2em;
   margin-bottom: 0.2em;
   padding-left: 0.15em;
+  font-weight: 600;
 }
 .note-content ul li::marker {
   color: hsl(var(--muted-foreground) / 0.5);
