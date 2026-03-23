@@ -96,6 +96,17 @@ function isBulletListItem(line: string): boolean {
   return /^\s*[-•–]\s/.test(line);
 }
 
+/** Render a list item, highlighting the leading category/title if present. */
+function renderListItem(text: string): string {
+  // Match patterns like "TITLE: rest", "TITLE - rest", "TITLE — rest", "**TITLE**: rest"
+  const categoryMatch = text.match(/^(\*{0,2})([^:–—\-\n]{2,50}?)(\*{0,2})\s*[:–—\-]\s+(.+)$/s);
+  if (categoryMatch) {
+    const [, , title, , rest] = categoryMatch;
+    return `<strong>${escapeHtml(title.trim())}</strong> — ${renderInline(rest.trim())}`;
+  }
+  return renderInline(text);
+}
+
 /** Parse the content into structured HTML. */
 function renderContent(content: string): string {
   const lines = content.split('\n');
@@ -119,15 +130,15 @@ function renderContent(content: string): string {
       continue;
     }
 
-    // Numbered list
+    // Numbered list → render as bullets with highlighted category title
     if (isNumberedListItem(trimmed)) {
       const items: string[] = [];
       while (i < lines.length && isNumberedListItem(lines[i].trim())) {
         const itemText = lines[i].trim().replace(/^\d+[\.\)]\s*/, '');
-        items.push(`<li>${renderInline(itemText)}</li>`);
+        items.push(`<li>${renderListItem(itemText)}</li>`);
         i++;
       }
-      blocks.push(`<ol>${items.join('')}</ol>`);
+      blocks.push(`<ul>${items.join('')}</ul>`);
       continue;
     }
 
@@ -136,7 +147,7 @@ function renderContent(content: string): string {
       const items: string[] = [];
       while (i < lines.length && isBulletListItem(lines[i].trim())) {
         const itemText = lines[i].trim().replace(/^\s*[-•–]\s*/, '');
-        items.push(`<li>${renderInline(itemText)}</li>`);
+        items.push(`<li>${renderListItem(itemText)}</li>`);
         i++;
       }
       blocks.push(`<ul>${items.join('')}</ul>`);
