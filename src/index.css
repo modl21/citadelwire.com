@@ -115,9 +115,25 @@ html {
   font-feature-settings: 'kern' 1, 'liga' 1;
   text-rendering: optimizeLegibility;
 }
+
+/* Titles / headlines */
+.note-content h3 {
+  font-size: 1.05em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: hsl(var(--foreground));
+  margin-top: 0;
+  margin-bottom: 0.6em;
+  line-height: 1.4;
+}
+.note-content h3:not(:first-child) {
+  margin-top: 0.8em;
+}
+
+/* Paragraphs */
 .note-content p {
-  margin-top: 0.4em;
-  margin-bottom: 0.4em;
+  margin-top: 0.55em;
+  margin-bottom: 0.55em;
 }
 .note-content p:first-child {
   margin-top: 0;
@@ -125,6 +141,21 @@ html {
 .note-content p:last-child {
   margin-bottom: 0;
 }
+
+/* Spacing between different block types */
+.note-content h3 + p {
+  margin-top: 0;
+}
+.note-content p + ol,
+.note-content p + ul {
+  margin-top: 0.5em;
+}
+.note-content ol + p,
+.note-content ul + p {
+  margin-top: 0.6em;
+}
+
+/* Links */
 .note-content a {
   color: hsl(213 94% 58%);
   text-decoration: none;
@@ -135,6 +166,8 @@ html {
   color: hsl(213 94% 68%);
   text-decoration: underline;
 }
+
+/* Bold / italic */
 .note-content strong {
   font-weight: 650;
   color: hsl(var(--foreground));
@@ -142,15 +175,43 @@ html {
 .note-content em {
   font-style: italic;
 }
-.note-content ul, .note-content ol {
-  margin-top: 0.35em;
-  margin-bottom: 0.35em;
+
+/* Ordered lists */
+.note-content ol {
+  margin-top: 0.4em;
+  margin-bottom: 0.4em;
+  padding-left: 1.5em;
+  list-style-type: decimal;
+  counter-reset: none;
+}
+.note-content ol li {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+  padding-left: 0.25em;
+}
+.note-content ol li::marker {
+  color: hsl(var(--muted-foreground));
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+/* Unordered lists */
+.note-content ul {
+  margin-top: 0.4em;
+  margin-bottom: 0.4em;
   padding-left: 1.25em;
+  list-style-type: disc;
 }
-.note-content li {
-  margin-top: 0.1em;
-  margin-bottom: 0.1em;
+.note-content ul li {
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+  padding-left: 0.15em;
 }
+.note-content ul li::marker {
+  color: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Blockquotes */
 .note-content blockquote {
   border-left: 2px solid hsl(var(--border));
   padding-left: 0.75em;
@@ -159,6 +220,11 @@ html {
   margin-top: 0.5em;
   margin-bottom: 0.5em;
 }
+.note-content blockquote p {
+  margin: 0;
+}
+
+/* Code */
 .note-content code {
   font-size: 0.85em;
   padding: 0.15em 0.35em;
@@ -170,32 +236,11 @@ html {
 .note-content code::before, .note-content code::after {
   content: none;
 }
-.note-content pre {
-  background: hsl(var(--muted));
-  border-radius: 0.5em;
-  padding: 0.75em 1em;
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
-  overflow-x: auto;
-}
-.note-content pre code {
-  padding: 0;
-  background: none;
-}
+
+/* Images */
 .note-content img {
   border-radius: 0.5em;
   margin-top: 0.5em;
   margin-bottom: 0.5em;
   max-width: 100%;
-}
-.note-content hr {
-  border-color: hsl(var(--border));
-  margin-top: 0.75em;
-  margin-bottom: 0.75em;
-}
-.note-content h1, .note-content h2, .note-content h3 {
-  font-weight: 700;
-  color: hsl(var(--foreground));
-  margin-top: 0.6em;
-  margin-bottom: 0.3em;
 }
