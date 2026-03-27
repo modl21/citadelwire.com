@@ -12,6 +12,7 @@ import { TopSupporters } from '@/components/TopSupporters';
 import { usePageViewCount, HOME_PAGE_VIEW_ID } from '@/hooks/usePageViewCount';
 import { Zap, RefreshCw, Rss, Eye } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
+import { WireSchedule } from '@/components/WireSchedule';
 
 function PostSkeleton() {
   return (
@@ -104,8 +105,13 @@ const Index = () => {
         </div>
 
         {/* Ticker row */}
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-2.5">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-1.5">
           <TickerBar />
+        </div>
+
+        {/* Schedule row */}
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-2.5 border-t border-border/20 pt-2">
+          <WireSchedule />
         </div>
       </header>
 
