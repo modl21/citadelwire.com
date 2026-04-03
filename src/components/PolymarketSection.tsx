@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { usePolymarkets, type ParsedMarket } from '@/hooks/usePolymarkets';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, ChevronDown } from 'lucide-react';
 
@@ -59,11 +60,13 @@ function MarketSkeleton() {
 export function PolymarketSection() {
   const { data: markets, isLoading, isError } = usePolymarkets();
   const [expanded, setExpanded] = useState(false);
+  const isMobile = useIsMobile();
 
   if (isError) return null;
   if (!isLoading && (!markets || markets.length === 0)) return null;
 
-  const hasMore = !isLoading && markets && markets.length > 2;
+  const previewCount = isMobile ? 1 : 2;
+  const hasMore = !isLoading && markets && markets.length > previewCount;
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-2.5 border-b border-border/30">
@@ -80,15 +83,15 @@ export function PolymarketSection() {
         </span>
       </div>
 
-      {/* Always-visible top 2 markets */}
+      {/* Always-visible preview markets */}
       <div className="-mx-3 sm:-mx-4">
         {isLoading ? (
           <>
             <MarketSkeleton />
-            <MarketSkeleton />
+            {!isMobile && <MarketSkeleton />}
           </>
         ) : (
-          markets!.slice(0, 2).map((market) => (
+          markets!.slice(0, previewCount).map((market) => (
             <MarketRow key={market.id} market={market} />
           ))
         )}
@@ -97,7 +100,7 @@ export function PolymarketSection() {
       {/* Expanded markets */}
       {expanded && !isLoading && markets && (
         <div className="-mx-3 sm:-mx-4">
-          {markets.slice(2, 15).map((market) => (
+          {markets.slice(previewCount, 15).map((market) => (
             <MarketRow key={market.id} market={market} />
           ))}
         </div>
@@ -110,7 +113,7 @@ export function PolymarketSection() {
           className="w-full mt-1.5 py-2 rounded-lg border border-border/40 bg-muted/20 hover:bg-muted/40 transition-colors flex items-center justify-center gap-1.5"
         >
           <span className="text-xs font-semibold text-muted-foreground/70">
-            {expanded ? 'Show Less' : `Show ${Math.min(markets!.length, 15) - 2} More Markets`}
+            {expanded ? 'Show Less' : `Show ${Math.min(markets!.length, 15) - previewCount} More Markets`}
           </span>
           <ChevronDown
             className={`h-3.5 w-3.5 text-muted-foreground/50 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
