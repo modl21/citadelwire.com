@@ -130,14 +130,14 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className={`rounded-lg bg-gradient-to-br ${c.gradient} border ${c.border} px-3 py-2 transition-all`}>
+    <div className={`rounded-lg bg-gradient-to-br ${c.gradient} border ${c.border} px-2.5 py-1.5 sm:px-3 sm:py-2 transition-all`}>
       <audio ref={audioRef} src={mp3Url} preload="metadata" />
 
       {/* Single row: play button + info + controls */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         <button
           onClick={togglePlay}
-          className={`h-7 w-7 rounded-md ${c.iconBg} flex items-center justify-center transition-colors shrink-0`}
+          className={`h-6 w-6 sm:h-7 sm:w-7 rounded-md ${c.iconBg} flex items-center justify-center transition-colors shrink-0`}
         >
           {isPlaying ? (
             <Pause className={`h-3 w-3 ${c.iconFill}`} />
@@ -185,8 +185,8 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="mt-1.5 flex items-center gap-2">
+      {/* Progress bar — always visible on desktop, only when playing on mobile */}
+      <div className={`mt-1.5 flex items-center gap-2 ${isPlaying || currentTime > 0 ? '' : 'hidden sm:flex'}`}>
         <span className="text-[8px] text-muted-foreground/40 tabular-nums w-8 text-right shrink-0">
           {formatTime(currentTime)}
         </span>
