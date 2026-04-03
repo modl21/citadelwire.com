@@ -10,7 +10,7 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
 import { TopSupporters } from '@/components/TopSupporters';
 import { usePageViewCount, HOME_PAGE_VIEW_ID } from '@/hooks/usePageViewCount';
-import { Zap, RefreshCw, Rss, Eye } from 'lucide-react';
+import { Globe, RefreshCw, Rss, Eye } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { WireSchedule } from '@/components/WireSchedule';
 import { PolymarketSection } from '@/components/PolymarketSection';
@@ -125,7 +125,7 @@ const Index = () => {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-0.5 text-amber-500/70 hover:text-amber-500 font-medium transition-colors whitespace-nowrap shrink-0"
           >
-            <Zap className="h-3 w-3" />
+            <Globe className="h-3 w-3" />
             wire@primal.net
           </a>
           <span className="text-muted-foreground/30">·</span>
@@ -161,7 +161,7 @@ const Index = () => {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-0.5 text-amber-500/70 hover:text-amber-500 font-medium transition-colors"
               >
-                <Zap className="h-3 w-3" />
+                <Globe className="h-3 w-3" />
                 {metadata.lud16}
               </a>
               <span className="text-muted-foreground/30">·</span>
