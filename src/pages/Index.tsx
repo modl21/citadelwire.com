@@ -69,7 +69,8 @@ const Index = () => {
             </Avatar>
             <div className="min-w-0">
               <h1 className="text-sm font-bold tracking-tight truncate">
-                {metadata?.display_name ?? 'CITADEL WIRE'}
+                <span className="sm:hidden">WIRE</span>
+                <span className="hidden sm:inline">{metadata?.display_name ?? 'CITADEL WIRE'}</span>
               </h1>
             </div>
           </a>
