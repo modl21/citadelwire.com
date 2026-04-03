@@ -115,34 +115,51 @@ const Index = () => {
       </header>
 
       {/* Profile info — compact */}
+      {/* Profile info — compact on mobile, full on desktop */}
       <div className="max-w-2xl mx-auto px-4 sm:px-6">
-        <div className="py-1.5 border-b border-border/40 flex items-center gap-1.5 sm:gap-2.5 text-[10px] sm:text-[11px] overflow-hidden">
+        {/* Mobile: single tight line */}
+        <div className="sm:hidden py-1.5 border-b border-border/40 flex items-center gap-1.5 text-[10px] overflow-hidden">
           <span className="text-white font-bold whitespace-nowrap"><span className="text-amber-400">live</span> market data</span>
           <span className="text-muted-foreground/30">·</span>
           <a href="https://primal.net/odell" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 shrink-0 group/odell">
-            <Avatar className="h-3.5 w-3.5 sm:h-4 sm:w-4">
+            <Avatar className="h-3.5 w-3.5">
               <AvatarImage src="https://primaldata.s3.us-east-005.backblazeb2.com/cache/2/c7/ce/2c7ce06799d9a1226680f19826b8fc18ea5df5e2702bcf681e267e0977069e44.jpg" alt="ODELL" />
               <AvatarFallback className="text-[6px] bg-muted">O</AvatarFallback>
             </Avatar>
             <span className="text-white/70 whitespace-nowrap">
               by{' '}
+              <span className="text-white font-medium">ODELL</span>
+            </span>
+          </a>
+        </div>
+        {/* Desktop: full layout */}
+        <div className="hidden sm:flex py-2 border-b border-border/40 items-center gap-2.5 text-[11px]">
+          <a href="https://primal.net/odell" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 shrink-0 group/odell">
+            <Avatar className="h-4 w-4">
+              <AvatarImage src="https://primaldata.s3.us-east-005.backblazeb2.com/cache/2/c7/ce/2c7ce06799d9a1226680f19826b8fc18ea5df5e2702bcf681e267e0977069e44.jpg" alt="ODELL" />
+              <AvatarFallback className="text-[6px] bg-muted">O</AvatarFallback>
+            </Avatar>
+            <span className="text-white/70">
+              Curated by{' '}
               <span className="text-white group-hover/odell:text-white font-medium transition-colors">ODELL</span>
             </span>
           </a>
           {metadata?.lud16 && (
             <>
-              <span className="text-muted-foreground/30 hidden sm:inline">·</span>
+              <span className="text-muted-foreground/30">·</span>
               <a
                 href="https://primal.net/wire"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden sm:inline-flex items-center gap-0.5 text-amber-500/70 hover:text-amber-500 font-medium transition-colors whitespace-nowrap"
+                className="inline-flex items-center gap-0.5 text-amber-500/70 hover:text-amber-500 font-medium transition-colors"
               >
                 <Zap className="h-3 w-3" />
                 {metadata.lud16}
               </a>
+              <span className="text-muted-foreground/30">·</span>
             </>
           )}
+          <span className="text-white font-bold">high signal news using <span className="text-amber-400">live</span> market data</span>
         </div>
       </div>
 
