@@ -9,16 +9,8 @@ function formatVolume(usd: number): string {
   return `$${usd.toFixed(0)}`;
 }
 
-function formatPercent(price: number): string {
-  return `${Math.round(price * 100)}%`;
-}
-
 function MarketRow({ market }: { market: ParsedMarket }) {
-  const yesOutcome = market.outcomes.find((o) => o.name === 'Yes');
-  const noOutcome = market.outcomes.find((o) => o.name === 'No');
-  const leadOutcome = yesOutcome && yesOutcome.price >= 0.5 ? yesOutcome : noOutcome;
-  const leadPct = leadOutcome ? leadOutcome.price : 0;
-  const isYesLeading = leadOutcome?.name === 'Yes';
+  const pct = Math.round(market.leadPrice * 100);
 
   return (
     <a
@@ -30,19 +22,26 @@ function MarketRow({ market }: { market: ParsedMarket }) {
       {/* Probability badge */}
       <div
         className={cn(
-          'shrink-0 w-12 text-center rounded px-1.5 py-0.5 text-[11px] font-bold tabular-nums',
-          isYesLeading
+          'shrink-0 min-w-[3rem] text-center rounded px-1.5 py-0.5 text-[11px] font-bold tabular-nums',
+          pct >= 50
             ? 'bg-emerald-500/15 text-emerald-400'
             : 'bg-rose-500/15 text-rose-400',
         )}
       >
-        {formatPercent(leadPct)}
+        {pct}%
       </div>
 
-      {/* Question */}
-      <span className="flex-1 min-w-0 text-[13px] sm:text-sm text-foreground/90 leading-snug truncate group-hover:text-foreground transition-colors">
-        {market.question}
-      </span>
+      {/* Question + leading option */}
+      <div className="flex-1 min-w-0 truncate">
+        <span className="text-[13px] sm:text-sm text-foreground/90 leading-snug group-hover:text-foreground transition-colors">
+          {market.question}
+        </span>
+        {market.isMultiChoice && market.leadName && (
+          <span className="ml-1.5 text-[11px] text-sky-400/80 font-medium">
+            {market.leadName}
+          </span>
+        )}
+      </div>
 
       {/* 24h Volume */}
       <span className="shrink-0 text-[10px] sm:text-[11px] text-muted-foreground/50 font-medium tabular-nums hidden sm:block">
@@ -65,7 +64,6 @@ function MarketSkeleton() {
 export function PolymarketSection() {
   const { data: markets, isLoading, isError } = usePolymarkets();
 
-  // Don't render at all if error or empty after load
   if (isError) return null;
   if (!isLoading && (!markets || markets.length === 0)) return null;
 
