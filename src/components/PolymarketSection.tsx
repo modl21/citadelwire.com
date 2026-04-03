@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { usePolymarkets, type ParsedMarket } from '@/hooks/usePolymarkets';
-import { useIsMobile } from '@/hooks/useIsMobile';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, ChevronDown } from 'lucide-react';
 
@@ -59,55 +58,65 @@ function MarketSkeleton() {
 
 export function PolymarketSection() {
   const { data: markets, isLoading, isError } = usePolymarkets();
-  const isMobile = useIsMobile();
-  const [expanded, setExpanded] = useState(!isMobile);
+  const [expanded, setExpanded] = useState(false);
 
   if (isError) return null;
   if (!isLoading && (!markets || markets.length === 0)) return null;
 
+  const hasMore = !isLoading && markets && markets.length > 2;
+
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-2.5 border-b border-border/30">
-      {/* Section header — clickable toggle */}
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        className="flex items-center justify-between w-full py-1 -my-0.5 rounded-md hover:bg-muted/30 transition-colors"
-      >
+      {/* Section header */}
+      <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-1.5">
           <TrendingUp className="h-3 w-3 text-amber-400" />
           <span className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider">
             Prediction Markets
           </span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[9px] text-muted-foreground/30 font-medium">
-            via Polymarket
-          </span>
-          <div className="flex items-center justify-center rounded-full h-5 w-5 bg-muted/50">
-            <ChevronDown
-              className={`h-3.5 w-3.5 text-muted-foreground/60 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-            />
-          </div>
-        </div>
-      </button>
+        <span className="text-[9px] text-muted-foreground/30 font-medium">
+          via Polymarket
+        </span>
+      </div>
 
-      {/* Market rows — collapsible */}
-      <div
-        className={`-mx-3 sm:-mx-4 overflow-hidden transition-all duration-300 ease-in-out ${
-          expanded ? 'max-h-[2000px] opacity-100 mt-1' : 'max-h-0 opacity-0'
-        }`}
-      >
+      {/* Always-visible top 2 markets */}
+      <div className="-mx-3 sm:-mx-4">
         {isLoading ? (
           <>
-            {Array.from({ length: 4 }).map((_, i) => (
-              <MarketSkeleton key={i} />
-            ))}
+            <MarketSkeleton />
+            <MarketSkeleton />
           </>
         ) : (
-          markets!.slice(0, 15).map((market) => (
+          markets!.slice(0, 2).map((market) => (
             <MarketRow key={market.id} market={market} />
           ))
         )}
       </div>
+
+      {/* Expanded markets */}
+      {expanded && !isLoading && markets && (
+        <div className="-mx-3 sm:-mx-4">
+          {markets.slice(2, 15).map((market) => (
+            <MarketRow key={market.id} market={market} />
+          ))}
+        </div>
+      )}
+
+      {/* Show more / Show less button */}
+      {hasMore && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="w-full mt-1.5 py-2 rounded-lg border border-border/40 bg-muted/20 hover:bg-muted/40 transition-colors flex items-center justify-center gap-1.5"
+        >
+          <span className="text-xs font-semibold text-muted-foreground/70">
+            {expanded ? 'Show Less' : `Show ${Math.min(markets!.length, 15) - 2} More Markets`}
+          </span>
+          <ChevronDown
+            className={`h-3.5 w-3.5 text-muted-foreground/50 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+          />
+        </button>
+      )}
     </div>
   );
 }
