@@ -123,7 +123,7 @@ export function TopSupporters() {
 
   if (isLoading) {
     return (
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-1.5 border-b border-border/30">
+      <div className="hidden sm:block max-w-2xl mx-auto px-4 sm:px-6 py-1.5 border-b border-border/30">
         <div className="flex items-center gap-2">
           <span className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider shrink-0">Top Supporters</span>
           <div className="flex items-center gap-1.5 overflow-hidden">
@@ -144,7 +144,7 @@ export function TopSupporters() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-1.5 border-b border-border/30">
+    <div className="hidden sm:block max-w-2xl mx-auto px-4 sm:px-6 py-1.5 border-b border-border/30">
       <div className="flex items-center gap-2">
         <div className="flex flex-col items-start gap-1 shrink-0">
           <span className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider">
