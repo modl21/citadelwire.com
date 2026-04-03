@@ -19,7 +19,7 @@ function MarketRow({ market }: { market: ParsedMarket }) {
       className="group flex items-center gap-2.5 py-2 px-3 sm:px-4 rounded-lg transition-colors hover:bg-muted/40"
     >
       {/* Probability badge */}
-      <div className="shrink-0 min-w-[3rem] text-center rounded px-1.5 py-0.5 text-[11px] font-extrabold tabular-nums bg-amber-500/15 text-amber-400">
+      <div className="shrink-0 min-w-[3rem] text-center rounded px-1.5 py-0.5 text-[11px] font-extrabold tabular-nums bg-foreground/10 text-amber-400">
         {pct}%
       </div>
 
