@@ -24,15 +24,17 @@ function MarketRow({ market }: { market: ParsedMarket }) {
       </div>
 
       {/* Question + leading option */}
-      <div className="flex-1 min-w-0 truncate">
-        <span className="text-[13px] sm:text-sm text-foreground/90 leading-snug group-hover:text-foreground transition-colors">
-          {market.question}
-        </span>
-        {market.isMultiChoice && market.leadName && (
-          <span className="ml-1.5 text-[11px] text-sky-400/80 font-medium">
-            {market.leadName}
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
+          <span className="text-[13px] sm:text-sm text-foreground/90 leading-snug group-hover:text-foreground transition-colors truncate">
+            {market.question}
           </span>
-        )}
+          {market.isMultiChoice && market.leadName && (
+            <span className="text-[11px] sm:text-[11px] text-amber-400 font-semibold shrink-0">
+              {market.leadName}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* 24h Volume */}
