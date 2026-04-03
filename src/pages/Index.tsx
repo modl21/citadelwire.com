@@ -141,8 +141,10 @@ const Index = () => {
                 <Zap className="h-3 w-3" />
                 {metadata.lud16}
               </a>
+              <span className="text-[11px] text-muted-foreground/30">·</span>
             </>
           )}
+          <span className="text-[11px] text-white font-bold">high signal news using live market data</span>
         </div>
       </div>
 
