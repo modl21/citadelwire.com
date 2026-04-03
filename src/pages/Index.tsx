@@ -116,69 +116,33 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Profile info */}
-      <div className="relative isolate overflow-hidden">
-        {metadata?.banner && (
-          <img
-            src={metadata.banner}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover opacity-[0.07] dark:opacity-[0.12] -z-10"
-          />
-        )}
-        <div className="max-w-2xl mx-auto px-4 sm:px-6">
-          <div className="py-3.5 border-b border-border/40">
-            <div className="flex items-start gap-3.5">
-            <a href="https://primal.net/wire" target="_blank" rel="noopener noreferrer" className="shrink-0">
-              <Avatar className="h-11 w-11 ring-2 ring-border/30 shadow-md transition-opacity hover:opacity-80">
-                {metadata?.picture ? (
-                  <AvatarImage src={metadata.picture} alt={metadata?.display_name ?? 'CITADEL WIRE'} />
-                ) : null}
-                <AvatarFallback className="text-sm font-bold bg-primary text-primary-foreground">CW</AvatarFallback>
-              </Avatar>
-            </a>
-            <div className="flex-1 min-w-0">
-              <a href="https://primal.net/wire" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
-                <h2 className="text-base font-bold tracking-tight">
-                  {metadata?.display_name ?? 'CITADEL WIRE'}
-                </h2>
+      {/* Profile info — compact */}
+      <div className="max-w-2xl mx-auto px-4 sm:px-6">
+        <div className="py-2 border-b border-border/40 flex items-center gap-2.5">
+          <a href="https://primal.net/odell" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 shrink-0 group/odell">
+            <Avatar className="h-4 w-4">
+              <AvatarImage src="https://primaldata.s3.us-east-005.backblazeb2.com/cache/2/c7/ce/2c7ce06799d9a1226680f19826b8fc18ea5df5e2702bcf681e267e0977069e44.jpg" alt="ODELL" />
+              <AvatarFallback className="text-[6px] bg-muted">O</AvatarFallback>
+            </Avatar>
+            <span className="text-[11px] text-white/70">
+              Curated by{' '}
+              <span className="text-white group-hover/odell:text-white font-medium transition-colors">ODELL</span>
+            </span>
+          </a>
+          {metadata?.lud16 && (
+            <>
+              <span className="text-[11px] text-muted-foreground/30">·</span>
+              <a
+                href="https://primal.net/wire"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-0.5 text-[11px] text-amber-500/70 hover:text-amber-500 font-medium transition-colors"
+              >
+                <Zap className="h-3 w-3" />
+                {metadata.lud16}
               </a>
-              <p className="text-xs text-white mt-0.5">
-                high signal news using live market data
-              </p>
-              <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
-                <a
-                  href="https://primal.net/odell"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 group/odell"
-                >
-                  <Avatar className="h-4 w-4">
-                    <AvatarImage src="https://primaldata.s3.us-east-005.backblazeb2.com/cache/2/c7/ce/2c7ce06799d9a1226680f19826b8fc18ea5df5e2702bcf681e267e0977069e44.jpg" alt="ODELL" />
-                    <AvatarFallback className="text-[6px] bg-muted">O</AvatarFallback>
-                  </Avatar>
-                  <span className="text-[11px] text-white/70">
-                    Curated by{' '}
-                    <span className="text-white group-hover/odell:text-white font-medium transition-colors">ODELL</span>
-                  </span>
-                </a>
-                {metadata?.lud16 && (
-                  <>
-                    <span className="text-[11px] text-muted-foreground/30">·</span>
-                    <a
-                      href="https://primal.net/wire"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-0.5 text-[11px] text-amber-500/70 hover:text-amber-500 font-medium transition-colors"
-                    >
-                      <Zap className="h-3 w-3" />
-                      {metadata.lud16}
-                    </a>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+            </>
+          )}
         </div>
       </div>
 
