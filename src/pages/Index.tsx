@@ -119,7 +119,15 @@ const Index = () => {
       <div className="max-w-2xl mx-auto px-4 sm:px-6">
         {/* Mobile: single tight line */}
         <div className="sm:hidden py-1.5 border-b border-border/40 flex items-center gap-1.5 text-[10px] overflow-hidden">
-          <span className="text-white font-bold whitespace-nowrap"><span className="text-amber-400">live</span> market data</span>
+          <a
+            href="https://primal.net/wire"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-0.5 text-amber-500/70 hover:text-amber-500 font-medium transition-colors whitespace-nowrap shrink-0"
+          >
+            <Zap className="h-3 w-3" />
+            wire@primal.net
+          </a>
           <span className="text-muted-foreground/30">·</span>
           <a href="https://primal.net/odell" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 shrink-0 group/odell">
             <Avatar className="h-3.5 w-3.5">
