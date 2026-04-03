@@ -13,6 +13,7 @@ import { usePageViewCount, HOME_PAGE_VIEW_ID } from '@/hooks/usePageViewCount';
 import { Zap, RefreshCw, Rss, Eye } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { WireSchedule } from '@/components/WireSchedule';
+import { PolymarketSection } from '@/components/PolymarketSection';
 
 function PostSkeleton() {
   return (
@@ -183,6 +184,9 @@ const Index = () => {
 
       {/* Top Supporters */}
       <TopSupporters />
+
+      {/* Prediction Markets */}
+      <PolymarketSection />
 
       {/* Podcast players */}
       <div className="max-w-2xl mx-auto">
