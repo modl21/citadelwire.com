@@ -2,35 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 
 const CORS_PROXY = 'https://proxy.shakespeare.diy/?url=';
 
-export interface PolymarketEvent {
-  id: string;
-  slug: string;
-  title: string;
-  /** The top-level image for the event (may be empty). */
-  image: string;
-  /** Markets within this event. */
-  markets: PolymarketMarket[];
-}
-
-export interface PolymarketMarket {
-  id: string;
-  question: string;
-  /** JSON string of outcomes, e.g. '["Yes","No"]' */
-  outcomes: string;
-  /** JSON string of outcome prices, e.g. '[0.73,0.27]' */
-  outcomePrices: string;
-  /** 24h volume in USD cents (string). */
-  volume24hr: number;
-  /** Total liquidity. */
-  liquidity: number;
-  /** Active flag. */
-  active: boolean;
-  /** Closed flag. */
-  closed: boolean;
-  /** Image for the specific market (often same as event image). */
-  image: string;
-}
-
 export interface ParsedMarket {
   id: string;
   eventSlug: string;
@@ -42,31 +13,42 @@ export interface ParsedMarket {
 }
 
 /**
- * Polymarket Gamma API — fetch trending high-volume events.
+ * Polymarket Gamma API — fetch trending high-volume political events.
  *
- * We query the /events endpoint sorted by 24hr volume descending.
- * The `tag` param filters by topic; "Politics" captures most geopolitics.
- * We then parse each event's first market for display.
+ * Tries multiple approaches for resilience:
+ * 1. Direct fetch (gamma API may support CORS)
+ * 2. Via CORS proxy as fallback
  */
-async function fetchPolymarkets(): Promise<ParsedMarket[]> {
+async function fetchFromGammaAPI(useProxy: boolean): Promise<ParsedMarket[]> {
   const url = new URL('https://gamma-api.polymarket.com/events');
-  url.searchParams.set('limit', '8');
+  url.searchParams.set('limit', '10');
   url.searchParams.set('active', 'true');
   url.searchParams.set('closed', 'false');
   url.searchParams.set('order', 'volume24hr');
   url.searchParams.set('ascending', 'false');
-  // Focus on geopolitics / politics-related markets
   url.searchParams.set('tag', 'Politics');
 
-  const res = await fetch(`${CORS_PROXY}${encodeURIComponent(url.toString())}`);
+  const fetchUrl = useProxy
+    ? `${CORS_PROXY}${encodeURIComponent(url.toString())}`
+    : url.toString();
+
+  const res = await fetch(fetchUrl, {
+    headers: { 'Accept': 'application/json' },
+    signal: AbortSignal.timeout(10000),
+  });
+
   if (!res.ok) throw new Error(`Polymarket API error: ${res.status}`);
 
-  const events: PolymarketEvent[] = await res.json();
+  const events = await res.json();
+
+  if (!Array.isArray(events)) {
+    throw new Error('Unexpected API response format');
+  }
 
   const parsed: ParsedMarket[] = [];
 
   for (const event of events) {
-    if (!event.markets || event.markets.length === 0) continue;
+    if (!event.markets || !Array.isArray(event.markets) || event.markets.length === 0) continue;
 
     // Use the first (primary) market of the event
     const market = event.markets[0];
@@ -74,31 +56,55 @@ async function fetchPolymarkets(): Promise<ParsedMarket[]> {
 
     let outcomes: { name: string; price: number }[] = [];
     try {
-      const names: string[] = JSON.parse(market.outcomes);
-      const prices: string[] = JSON.parse(market.outcomePrices);
-      outcomes = names.map((name, i) => ({
+      const names: string[] = typeof market.outcomes === 'string'
+        ? JSON.parse(market.outcomes)
+        : market.outcomes;
+      const prices: (string | number)[] = typeof market.outcomePrices === 'string'
+        ? JSON.parse(market.outcomePrices)
+        : market.outcomePrices;
+      outcomes = names.map((name: string, i: number) => ({
         name,
-        price: parseFloat(prices[i]) || 0,
+        price: typeof prices[i] === 'number' ? prices[i] as number : parseFloat(prices[i] as string) || 0,
       }));
     } catch {
       continue;
     }
 
-    // Skip markets with no meaningful volume
-    if (market.volume24hr < 1000) continue;
+    const vol = typeof market.volume24hr === 'string'
+      ? parseFloat(market.volume24hr)
+      : (market.volume24hr ?? 0);
 
     parsed.push({
-      id: market.id,
-      eventSlug: event.slug,
-      question: event.title || market.question,
-      image: event.image || market.image,
+      id: market.id ?? event.id ?? String(parsed.length),
+      eventSlug: event.slug ?? event.id ?? '',
+      question: event.title || market.question || 'Untitled Market',
+      image: event.image || market.image || '',
       outcomes,
-      volume24hr: market.volume24hr,
-      liquidity: market.liquidity,
+      volume24hr: vol,
+      liquidity: typeof market.liquidity === 'string'
+        ? parseFloat(market.liquidity)
+        : (market.liquidity ?? 0),
     });
   }
 
+  // Sort by volume descending (in case API doesn't)
+  parsed.sort((a, b) => b.volume24hr - a.volume24hr);
+
   return parsed;
+}
+
+async function fetchPolymarkets(): Promise<ParsedMarket[]> {
+  // Try direct fetch first (gamma API may allow CORS)
+  try {
+    const result = await fetchFromGammaAPI(false);
+    if (result.length > 0) return result;
+  } catch {
+    // Direct fetch failed, try via proxy
+  }
+
+  // Fallback: via CORS proxy
+  const result = await fetchFromGammaAPI(true);
+  return result;
 }
 
 export function usePolymarkets() {
