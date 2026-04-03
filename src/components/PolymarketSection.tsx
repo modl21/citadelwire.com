@@ -36,7 +36,7 @@ function MarketRow({ market }: { market: ParsedMarket }) {
       </div>
 
       {/* 24h Volume */}
-      <span className="shrink-0 text-[10px] sm:text-[11px] text-muted-foreground/50 font-medium tabular-nums hidden sm:block">
+      <span className="shrink-0 text-[10px] sm:text-[11px] text-foreground/70 font-semibold tabular-nums hidden sm:block">
         {formatVolume(market.volume24hr)}
       </span>
     </a>
