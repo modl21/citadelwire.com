@@ -157,8 +157,8 @@ async function fetchFromGammaAPI(useProxy: boolean): Promise<ParsedMarket[]> {
       }
     }
 
-    // Skip resolved/settled markets showing 100%
-    if (leadPrice >= 1) continue;
+    // Skip resolved/settled markets showing 100% (or rounding to it)
+    if (Math.round(leadPrice * 100) >= 100) continue;
 
     parsed.push({
       id: event.id ?? activeMarkets[0].id ?? String(parsed.length),
