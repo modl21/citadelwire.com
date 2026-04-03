@@ -1,7 +1,6 @@
 import { usePolymarkets, type ParsedMarket } from '@/hooks/usePolymarkets';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 function formatVolume(usd: number): string {
   if (usd >= 1_000_000) return `$${(usd / 1_000_000).toFixed(1)}M`;
@@ -20,14 +19,7 @@ function MarketRow({ market }: { market: ParsedMarket }) {
       className="group flex items-center gap-2.5 py-2 px-3 sm:px-4 rounded-lg transition-colors hover:bg-muted/40"
     >
       {/* Probability badge */}
-      <div
-        className={cn(
-          'shrink-0 min-w-[3rem] text-center rounded px-1.5 py-0.5 text-[11px] font-bold tabular-nums',
-          pct >= 50
-            ? 'bg-emerald-500/15 text-emerald-400'
-            : 'bg-rose-500/15 text-rose-400',
-        )}
-      >
+      <div className="shrink-0 min-w-[3rem] text-center rounded px-1.5 py-0.5 text-[11px] font-extrabold tabular-nums bg-foreground/10 text-foreground">
         {pct}%
       </div>
 
