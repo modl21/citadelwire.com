@@ -60,19 +60,16 @@ const Index = () => {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/40">
         {/* Top row: identity + refresh */}
         <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-3 pb-2 flex items-center justify-between">
-          <a href="https://primal.net/wire" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity">
-            <Avatar className="h-8 w-8 ring-2 ring-border/40 shrink-0">
+          <a href="https://primal.net/wire" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity shrink-0">
+            <Avatar className="h-7 w-7 sm:h-8 sm:w-8 ring-2 ring-border/40 shrink-0">
               {metadata?.picture ? (
                 <AvatarImage src={metadata.picture} alt={metadata?.display_name ?? 'CITADEL WIRE'} />
               ) : null}
               <AvatarFallback className="text-[10px] font-bold bg-primary text-primary-foreground">CW</AvatarFallback>
             </Avatar>
-            <div className="min-w-0">
-              <h1 className="text-sm font-bold tracking-tight truncate">
-                <span className="sm:hidden">WIRE</span>
-                <span className="hidden sm:inline">{metadata?.display_name ?? 'CITADEL WIRE'}</span>
-              </h1>
-            </div>
+            <h1 className="text-xs sm:text-sm font-bold tracking-tight whitespace-nowrap">
+              CITADEL WIRE
+            </h1>
           </a>
           <div className="flex items-center gap-2 shrink-0">
             <div
