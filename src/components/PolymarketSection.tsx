@@ -70,28 +70,30 @@ export function PolymarketSection() {
       {/* Section header — clickable toggle */}
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="flex items-center justify-between w-full mb-1 group/toggle"
+        className="flex items-center justify-between w-full py-1 -my-0.5 rounded-md hover:bg-muted/30 transition-colors"
       >
         <div className="flex items-center gap-1.5">
-          <TrendingUp className="h-3 w-3 text-sky-400" />
+          <TrendingUp className="h-3 w-3 text-amber-400" />
           <span className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider">
             Prediction Markets
           </span>
-          <ChevronDown
-            className={`h-3 w-3 text-muted-foreground/40 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-          />
         </div>
-        <span
-          className="text-[9px] text-muted-foreground/30 font-medium"
-        >
-          via Polymarket
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] text-muted-foreground/30 font-medium">
+            via Polymarket
+          </span>
+          <div className="flex items-center justify-center rounded-full h-5 w-5 bg-muted/50">
+            <ChevronDown
+              className={`h-3.5 w-3.5 text-muted-foreground/60 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+            />
+          </div>
+        </div>
       </button>
 
       {/* Market rows — collapsible */}
       <div
         className={`-mx-3 sm:-mx-4 overflow-hidden transition-all duration-300 ease-in-out ${
-          expanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
+          expanded ? 'max-h-[2000px] opacity-100 mt-1' : 'max-h-0 opacity-0'
         }`}
       >
         {isLoading ? (
@@ -101,7 +103,7 @@ export function PolymarketSection() {
             ))}
           </>
         ) : (
-          markets!.slice(0, 6).map((market) => (
+          markets!.slice(0, 15).map((market) => (
             <MarketRow key={market.id} market={market} />
           ))
         )}

@@ -76,7 +76,7 @@ function extractOptionName(market: Record<string, unknown>): string {
 
 async function fetchFromGammaAPI(useProxy: boolean): Promise<ParsedMarket[]> {
   const url = new URL('https://gamma-api.polymarket.com/events');
-  url.searchParams.set('limit', '20');
+  url.searchParams.set('limit', '30');
   url.searchParams.set('active', 'true');
   url.searchParams.set('closed', 'false');
   url.searchParams.set('order', 'volume24hr');
