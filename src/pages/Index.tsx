@@ -167,7 +167,7 @@ const Index = () => {
               <span className="text-muted-foreground/30">·</span>
             </>
           )}
-          <span className="text-white font-bold">high signal news using <span className="text-amber-400">live</span> market data</span>
+          <span className="font-bold"><span className="text-white">high signal news</span> <span className="text-muted-foreground/50">using</span> <span className="text-amber-400">live</span> <span className="text-muted-foreground/50">market data</span></span>
         </div>
       </div>
 
