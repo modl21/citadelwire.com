@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useMarketData } from '@/hooks/useMarketData';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Bitcoin, Box, Clock } from 'lucide-react';
 
 function formatPrice(value: number): string {
@@ -37,69 +39,117 @@ function formatUTCDate(date: Date): string {
   return `${months[date.getUTCMonth()]} ${date.getUTCDate()}`;
 }
 
+function BtcChartDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg p-0 overflow-hidden bg-background border-border/60 gap-0">
+        <VisuallyHidden>
+          <DialogTitle>Bitcoin Price Chart</DialogTitle>
+        </VisuallyHidden>
+        <div className="px-4 py-3 border-b border-border/40 flex items-center gap-2">
+          <Bitcoin className="h-4 w-4 text-amber-500" />
+          <span className="text-sm font-semibold text-foreground">Bitcoin — 30 Day</span>
+          <span className="text-xs text-muted-foreground/50 ml-auto">Coinbase / USD</span>
+        </div>
+        <a
+          href="https://bitcoinity.org/markets/coinbase/USD"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block bg-[#1a1a2e] dark:bg-background"
+        >
+          <img
+            src="https://bitcoinity.org/markets/image?span=30d&size=medium&currency=USD&exchange=coinbase"
+            alt="Bitcoin 30-day price chart"
+            className="w-full h-auto block dark:opacity-90 dark:invert-0"
+            style={{ minHeight: 180 }}
+          />
+        </a>
+        <div className="px-4 py-2 border-t border-border/40">
+          <a
+            href="https://bitcoinity.org/markets/coinbase/USD"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
+          >
+            bitcoinity.org
+          </a>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function TickerBar() {
   const { data, isLoading } = useMarketData();
   const { time: utcTime, date: utcDate } = useUTCClock();
+  const [chartOpen, setChartOpen] = useState(false);
 
   return (
-    <div className="flex items-center gap-2 sm:gap-5 text-[11px] sm:text-xs font-medium">
-      {/* Block Height */}
-      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-        <Box className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-purple-400" />
-        <span className="hidden sm:inline text-muted-foreground/60">Block</span>
-        {isLoading || !data?.blockHeight ? (
-          <Skeleton className="h-3 sm:h-3.5 w-14 sm:w-20" />
-        ) : (
-          <a
-            href={`https://mempool.space/block/${data.blockHeight}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-foreground font-semibold tabular-nums hover:text-purple-400 transition-colors"
-          >
-            {formatBlockHeight(data.blockHeight)}
-          </a>
-        )}
+    <>
+      <div className="flex items-center gap-2 sm:gap-5 text-[11px] sm:text-xs font-medium">
+        {/* Block Height */}
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <Box className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-purple-400" />
+          <span className="hidden sm:inline text-muted-foreground/60">Block</span>
+          {isLoading || !data?.blockHeight ? (
+            <Skeleton className="h-3 sm:h-3.5 w-14 sm:w-20" />
+          ) : (
+            <a
+              href={`https://mempool.space/block/${data.blockHeight}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground font-semibold tabular-nums hover:text-purple-400 transition-colors"
+            >
+              {formatBlockHeight(data.blockHeight)}
+            </a>
+          )}
+        </div>
+
+        <div className="w-px h-3 bg-border/50 shrink-0" />
+
+        {/* BTC Price */}
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <Bitcoin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-amber-500" />
+          <span className="hidden sm:inline text-muted-foreground/60">BTC</span>
+          {isLoading || !data?.btcPrice ? (
+            <Skeleton className="h-3 sm:h-3.5 w-12 sm:w-16" />
+          ) : (
+            <button
+              onClick={() => setChartOpen(true)}
+              className="text-foreground font-semibold tabular-nums hover:text-amber-500 transition-colors cursor-pointer"
+            >
+              {formatPrice(data.btcPrice)}
+            </button>
+          )}
+        </div>
+
+        <div className="w-px h-3 bg-border/50 shrink-0" />
+
+        {/* Gold (XAUT) Price */}
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <span className="text-yellow-500 text-[11px] sm:text-sm leading-none">Au</span>
+          <span className="hidden sm:inline text-muted-foreground/60">XAUT</span>
+          {isLoading || !data?.goldPrice ? (
+            <Skeleton className="h-3 sm:h-3.5 w-12 sm:w-16" />
+          ) : (
+            <span className="text-foreground font-semibold tabular-nums">
+              {formatPrice(data.goldPrice)}
+            </span>
+          )}
+        </div>
+
+        <div className="w-px h-3 bg-border/50 shrink-0" />
+
+        {/* UTC Clock */}
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-sky-400" />
+          <span className="text-foreground font-semibold tabular-nums">{utcTime}</span>
+          <span className="text-muted-foreground/50">{utcDate}</span>
+          <span className="hidden sm:inline text-muted-foreground/50">UTC</span>
+        </div>
       </div>
 
-      <div className="w-px h-3 bg-border/50 shrink-0" />
-
-      {/* BTC Price */}
-      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-        <Bitcoin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-amber-500" />
-        <span className="hidden sm:inline text-muted-foreground/60">BTC</span>
-        {isLoading || !data?.btcPrice ? (
-          <Skeleton className="h-3 sm:h-3.5 w-12 sm:w-16" />
-        ) : (
-          <span className="text-foreground font-semibold tabular-nums">
-            {formatPrice(data.btcPrice)}
-          </span>
-        )}
-      </div>
-
-      <div className="w-px h-3 bg-border/50 shrink-0" />
-
-      {/* Gold (XAUT) Price */}
-      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-        <span className="text-yellow-500 text-[11px] sm:text-sm leading-none">Au</span>
-        <span className="hidden sm:inline text-muted-foreground/60">XAUT</span>
-        {isLoading || !data?.goldPrice ? (
-          <Skeleton className="h-3 sm:h-3.5 w-12 sm:w-16" />
-        ) : (
-          <span className="text-foreground font-semibold tabular-nums">
-            {formatPrice(data.goldPrice)}
-          </span>
-        )}
-      </div>
-
-      <div className="w-px h-3 bg-border/50 shrink-0" />
-
-      {/* UTC Clock */}
-      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-        <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-sky-400" />
-        <span className="text-foreground font-semibold tabular-nums">{utcTime}</span>
-        <span className="text-muted-foreground/50">{utcDate}</span>
-        <span className="hidden sm:inline text-muted-foreground/50">UTC</span>
-      </div>
-    </div>
+      <BtcChartDialog open={chartOpen} onOpenChange={setChartOpen} />
+    </>
   );
 }
