@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Bitcoin, TrendingUp, TrendingDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CHART_SPANS, useCoinChart, getChange, formatPricePrecise } from '@/lib/chartUtils';
+import { CHART_SPANS, useCoinChart, useCoinStats, getChange, formatPricePrecise, type CoinStats } from '@/lib/chartUtils';
 import { cn } from '@/lib/utils';
 
 // ── Responsive Sparkline Canvas ──────────────────────────────
@@ -201,9 +201,137 @@ function ChartPanel({ coinId, title, icon, accentColor, activeAccent, sourceUrl 
   );
 }
 
+// ── Stats Helpers ────────────────────────────────────────────
+
+function formatCompact(value: number): string {
+  if (value >= 1_000_000_000_000) return `$${(value / 1_000_000_000_000).toFixed(2)}T`;
+  if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(2)}B`;
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
+  return `$${value.toFixed(0)}`;
+}
+
+function formatSupply(value: number, symbol?: string): string {
+  const s = symbol ? ` ${symbol}` : '';
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B${s}`;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M${s}`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K${s}`;
+  return `${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}${s}`;
+}
+
+function PctBadge({ value }: { value: number | null }) {
+  if (value === null) return <span className="text-muted-foreground/30">—</span>;
+  const isUp = value >= 0;
+  const sign = isUp ? '+' : '';
+  return (
+    <span className={cn('text-[10px] font-bold tabular-nums', isUp ? 'text-emerald-400' : 'text-red-400')}>
+      {sign}{value.toFixed(2)}%
+    </span>
+  );
+}
+
+function StatRow({ label, value, sub }: { label: string; value: React.ReactNode; sub?: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2 py-[3px]">
+      <span className="text-[10px] text-muted-foreground/50 font-medium shrink-0">{label}</span>
+      <div className="flex items-baseline gap-1.5 min-w-0 justify-end">
+        <span className="text-[10px] text-foreground/80 font-semibold tabular-nums truncate">{value}</span>
+        {sub}
+      </div>
+    </div>
+  );
+}
+
+// ── Stats Panel ──────────────────────────────────────────────
+
+interface StatsPanelProps {
+  stats: CoinStats;
+  symbol: string;
+  accentColor: string;
+}
+
+function StatsPanel({ stats, symbol, accentColor }: StatsPanelProps) {
+  return (
+    <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
+      <div className="px-3 py-2 border-b border-border/20">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+          Key Stats
+        </span>
+      </div>
+      <div className="px-3 py-1.5 divide-y divide-border/10">
+        {/* Market Cap */}
+        {stats.marketCap !== null && (
+          <StatRow label="Market Cap" value={formatCompact(stats.marketCap)} />
+        )}
+
+        {/* 24h Volume */}
+        {stats.volume24h !== null && (
+          <StatRow label="24h Volume" value={formatCompact(stats.volume24h)} />
+        )}
+
+        {/* 24h Range */}
+        {stats.low24h !== null && stats.high24h !== null && (
+          <StatRow
+            label="24h Range"
+            value={
+              <span className="text-[9px]">
+                <span className="text-red-400/70">{formatPricePrecise(stats.low24h)}</span>
+                <span className="text-muted-foreground/30 mx-0.5">–</span>
+                <span className="text-emerald-400/70">{formatPricePrecise(stats.high24h)}</span>
+              </span>
+            }
+          />
+        )}
+
+        {/* Performance */}
+        <StatRow label="24h" value={<PctBadge value={stats.priceChangePct24h} />} />
+        <StatRow label="7d" value={<PctBadge value={stats.priceChangePct7d} />} />
+        <StatRow label="30d" value={<PctBadge value={stats.priceChangePct30d} />} />
+
+        {/* ATH */}
+        {stats.ath !== null && (
+          <StatRow
+            label="ATH"
+            value={formatPricePrecise(stats.ath)}
+            sub={<PctBadge value={stats.athChangePercent} />}
+          />
+        )}
+
+        {/* Supply */}
+        {stats.circulatingSupply !== null && (
+          <StatRow label="Circulating" value={formatSupply(stats.circulatingSupply, symbol)} />
+        )}
+        {stats.maxSupply !== null && (
+          <StatRow label="Max Supply" value={formatSupply(stats.maxSupply, symbol)} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatsSkeleton() {
+  return (
+    <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
+      <div className="px-3 py-2 border-b border-border/20">
+        <Skeleton className="h-2.5 w-16" />
+      </div>
+      <div className="px-3 py-2 space-y-2.5">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <div key={i} className="flex items-center justify-between">
+            <Skeleton className="h-2 w-14" />
+            <Skeleton className="h-2 w-16" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Sidebar Exports ──────────────────────────────────────────
 
 export function BTCSidebarCharts() {
+  const { data: stats, isLoading: statsLoading } = useCoinStats('bitcoin', true);
+
   return (
     <div className="space-y-3">
       <ChartPanel
@@ -214,11 +342,18 @@ export function BTCSidebarCharts() {
         activeAccent="bg-amber-500/20 text-amber-400"
         sourceUrl="https://www.coingecko.com/en/coins/bitcoin"
       />
+      {statsLoading ? (
+        <StatsSkeleton />
+      ) : stats ? (
+        <StatsPanel stats={stats} symbol="BTC" accentColor="#f59e0b" />
+      ) : null}
     </div>
   );
 }
 
 export function XAUTSidebarCharts() {
+  const { data: stats, isLoading: statsLoading } = useCoinStats('tether-gold', true);
+
   return (
     <div className="space-y-3">
       <ChartPanel
@@ -229,6 +364,11 @@ export function XAUTSidebarCharts() {
         activeAccent="bg-yellow-500/20 text-yellow-500"
         sourceUrl="https://www.coingecko.com/en/coins/tether-gold"
       />
+      {statsLoading ? (
+        <StatsSkeleton />
+      ) : stats ? (
+        <StatsPanel stats={stats} symbol="XAUT" accentColor="#eab308" />
+      ) : null}
     </div>
   );
 }

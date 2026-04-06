@@ -55,3 +55,60 @@ export function formatPricePrecise(value: number): string {
     maximumFractionDigits: 2,
   });
 }
+
+// ── Coin Stats ───────────────────────────────────────────────
+
+export interface CoinStats {
+  marketCap: number | null;
+  volume24h: number | null;
+  high24h: number | null;
+  low24h: number | null;
+  ath: number | null;
+  athDate: string | null;
+  athChangePercent: number | null;
+  circulatingSupply: number | null;
+  totalSupply: number | null;
+  maxSupply: number | null;
+  priceChange24h: number | null;
+  priceChangePct24h: number | null;
+  priceChangePct7d: number | null;
+  priceChangePct30d: number | null;
+}
+
+export function useCoinStats(coinId: string, enabled: boolean) {
+  return useQuery<CoinStats>({
+    queryKey: ['coin-stats', coinId],
+    queryFn: async () => {
+      const url = `https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false`;
+      let res: Response;
+      try {
+        res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) throw new Error('direct failed');
+      } catch {
+        res = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(10000) });
+      }
+      if (!res.ok) throw new Error(`CoinGecko error: ${res.status}`);
+      const data = await res.json();
+      const md = data.market_data;
+      return {
+        marketCap: md?.market_cap?.usd ?? null,
+        volume24h: md?.total_volume?.usd ?? null,
+        high24h: md?.high_24h?.usd ?? null,
+        low24h: md?.low_24h?.usd ?? null,
+        ath: md?.ath?.usd ?? null,
+        athDate: md?.ath_date?.usd ?? null,
+        athChangePercent: md?.ath_change_percentage?.usd ?? null,
+        circulatingSupply: md?.circulating_supply ?? null,
+        totalSupply: md?.total_supply ?? null,
+        maxSupply: md?.max_supply ?? null,
+        priceChange24h: md?.price_change_24h ?? null,
+        priceChangePct24h: md?.price_change_percentage_24h ?? null,
+        priceChangePct7d: md?.price_change_percentage_7d ?? null,
+        priceChangePct30d: md?.price_change_percentage_30d ?? null,
+      };
+    },
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+}
