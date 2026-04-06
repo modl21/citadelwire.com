@@ -299,6 +299,12 @@ function StatsPanel({ stats, symbol, hideMarketCap, hideCirculating, hideMaxSupp
             sub={<PctBadge value={stats.athChangePercent} />}
           />
         )}
+        {stats.athDate !== null && (
+          <StatRow
+            label="ATH Date"
+            value={new Date(stats.athDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          />
+        )}
 
         {/* Supply */}
         {!hideCirculating && stats.circulatingSupply !== null && (
