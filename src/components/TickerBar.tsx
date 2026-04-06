@@ -43,6 +43,7 @@ const CHART_SPANS = [
   { label: '24H', span: '24h', exchange: 'bitstamp', url: 'https://bitcoinity.org/markets/bitstamp/USD', img: 'https://bitcoinity.org/markets/image?span=24h&size=medium&currency=USD&exchange=bitstamp' },
   { label: '7D', span: '7d', exchange: 'bitstamp', url: 'https://bitcoinity.org/markets/bitstamp/USD', img: 'https://bitcoinity.org/markets/image?span=7d&size=medium&currency=USD&exchange=bitstamp' },
   { label: '30D', span: '30d', exchange: 'coinbase', url: 'https://bitcoinity.org/markets/coinbase/USD', img: 'https://bitcoinity.org/markets/image?span=30d&size=medium&currency=USD&exchange=coinbase' },
+  { label: '6M', span: '6m', exchange: 'bitstamp', url: 'https://bitcoinity.org/markets/bitstamp/USD', img: 'https://bitcoinity.org/markets/image?span=6m&size=medium&currency=USD&exchange=bitstamp' },
 ] as const;
 
 function BtcChartDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
