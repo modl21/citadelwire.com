@@ -324,7 +324,7 @@ export function TickerBar() {
           ) : (
             <button
               onClick={() => setBtcChartOpen(true)}
-              className="text-foreground font-semibold tabular-nums hover:text-amber-500 transition-colors cursor-pointer"
+              className="text-foreground font-semibold tabular-nums hover:text-amber-500 transition-colors cursor-pointer underline decoration-dotted decoration-muted-foreground/30 underline-offset-2 hover:decoration-amber-500/50"
             >
               {formatPrice(data.btcPrice)}
             </button>
@@ -342,7 +342,7 @@ export function TickerBar() {
           ) : (
             <button
               onClick={() => setXautChartOpen(true)}
-              className="text-foreground font-semibold tabular-nums hover:text-yellow-500 transition-colors cursor-pointer"
+              className="text-foreground font-semibold tabular-nums hover:text-yellow-500 transition-colors cursor-pointer underline decoration-dotted decoration-muted-foreground/30 underline-offset-2 hover:decoration-yellow-500/50"
             >
               {formatPrice(data.goldPrice)}
             </button>
