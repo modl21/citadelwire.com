@@ -39,6 +39,50 @@ function isGeopolitics(title: string): boolean {
   return GEO_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
+/** Filter out events referencing past months/dates that are no longer relevant. */
+function isStale(title: string): boolean {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-indexed
+
+  const months = [
+    'january', 'february', 'march', 'april', 'may', 'june',
+    'july', 'august', 'september', 'october', 'november', 'december',
+  ];
+
+  const lower = title.toLowerCase();
+
+  for (let i = 0; i < months.length; i++) {
+    if (!lower.includes(months[i])) continue;
+
+    // Check if a year is mentioned alongside the month
+    const yearMatch = lower.match(new RegExp(`${months[i]}\\s*(\\d{4})`));
+    if (yearMatch) {
+      const year = parseInt(yearMatch[1], 10);
+      if (year < currentYear || (year === currentYear && i < currentMonth)) return true;
+    } else {
+      // No year specified — assume current year, so past months are stale
+      if (i < currentMonth) return true;
+    }
+  }
+
+  // Also catch short forms like "in Mar", "by Feb"
+  const shortMonths = [
+    'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+    'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+  ];
+  for (let i = 0; i < shortMonths.length; i++) {
+    // Match short month as a whole word (not as part of another word like "march")
+    const regex = new RegExp(`\\b${shortMonths[i]}\\b`);
+    if (!regex.test(lower)) continue;
+    // Skip if the full month name was already checked above
+    if (lower.includes(months[i])) continue;
+    if (i < currentMonth) return true;
+  }
+
+  return false;
+}
+
 function parseOutcome(raw: string | string[]): string[] {
   if (Array.isArray(raw)) return raw;
   try { return JSON.parse(raw); } catch { return []; }
@@ -104,8 +148,9 @@ async function fetchFromGammaAPI(useProxy: boolean): Promise<ParsedMarket[]> {
 
     const title: string = event.title || '';
 
-    // Filter to geopolitics-relevant events
+    // Filter to geopolitics-relevant events, skip stale ones
     if (!isGeopolitics(title)) continue;
+    if (isStale(title)) continue;
 
     const activeMarkets = event.markets.filter(
       (m: Record<string, unknown>) => m.active && !m.closed,
@@ -156,6 +201,12 @@ async function fetchFromGammaAPI(useProxy: boolean): Promise<ParsedMarket[]> {
         leadPrice = noPrice;
       }
     }
+
+    // Skip resolved/settled markets showing 100% (or rounding to it)
+    if (Math.round(leadPrice * 100) >= 100) continue;
+
+    // Skip markets where we couldn't determine a leading outcome
+    if (!leadName || leadPrice <= 0) continue;
 
     parsed.push({
       id: event.id ?? activeMarkets[0].id ?? String(parsed.length),
