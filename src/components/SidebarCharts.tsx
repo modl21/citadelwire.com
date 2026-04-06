@@ -248,9 +248,12 @@ interface StatsPanelProps {
   stats: CoinStats;
   symbol: string;
   accentColor: string;
+  hideMarketCap?: boolean;
+  hideCirculating?: boolean;
+  hideMaxSupply?: boolean;
 }
 
-function StatsPanel({ stats, symbol, accentColor }: StatsPanelProps) {
+function StatsPanel({ stats, symbol, hideMarketCap, hideCirculating, hideMaxSupply }: StatsPanelProps) {
   return (
     <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
       <div className="px-3 py-2 border-b border-border/20">
@@ -260,7 +263,7 @@ function StatsPanel({ stats, symbol, accentColor }: StatsPanelProps) {
       </div>
       <div className="px-3 py-1.5 divide-y divide-border/10">
         {/* Market Cap */}
-        {stats.marketCap !== null && (
+        {!hideMarketCap && stats.marketCap !== null && (
           <StatRow label="Market Cap" value={formatCompact(stats.marketCap)} />
         )}
 
@@ -298,10 +301,10 @@ function StatsPanel({ stats, symbol, accentColor }: StatsPanelProps) {
         )}
 
         {/* Supply */}
-        {stats.circulatingSupply !== null && (
+        {!hideCirculating && stats.circulatingSupply !== null && (
           <StatRow label="Circulating" value={formatSupply(stats.circulatingSupply, symbol)} />
         )}
-        {stats.maxSupply !== null && (
+        {!hideMaxSupply && stats.maxSupply !== null && (
           <StatRow label="Max Supply" value={formatSupply(stats.maxSupply, symbol)} />
         )}
       </div>
@@ -345,7 +348,7 @@ export function BTCSidebarCharts() {
       {statsLoading ? (
         <StatsSkeleton />
       ) : stats ? (
-        <StatsPanel stats={stats} symbol="BTC" accentColor="#f59e0b" />
+        <StatsPanel stats={stats} symbol="BTC" accentColor="#f59e0b" hideCirculating hideMaxSupply />
       ) : null}
     </div>
   );
@@ -367,7 +370,7 @@ export function XAUTSidebarCharts() {
       {statsLoading ? (
         <StatsSkeleton />
       ) : stats ? (
-        <StatsPanel stats={stats} symbol="XAUT" accentColor="#eab308" />
+        <StatsPanel stats={stats} symbol="XAUT" accentColor="#eab308" hideMarketCap hideCirculating />
       ) : null}
     </div>
   );
