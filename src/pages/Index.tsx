@@ -14,6 +14,7 @@ import { Globe, RefreshCw, Rss, Eye } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { WireSchedule } from '@/components/WireSchedule';
 import { PolymarketSection } from '@/components/PolymarketSection';
+import { BTCSidebarCharts, XAUTSidebarCharts } from '@/components/SidebarCharts';
 
 function PostSkeleton() {
   return (
@@ -114,100 +115,115 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Profile info — compact */}
-      {/* Profile info — compact on mobile, full on desktop */}
-      <div className="max-w-2xl mx-auto px-4 sm:px-6">
-        <div className="py-1.5 sm:py-2 border-b border-border/40 flex items-center gap-1.5 sm:gap-2.5 text-[9px] sm:text-[11px] overflow-hidden">
-          <a href="https://primal.net/odell" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 shrink-0 group/odell">
-            <Avatar className="h-3.5 w-3.5 sm:h-4 sm:w-4">
-              <AvatarImage src="https://primaldata.s3.us-east-005.backblazeb2.com/cache/2/c7/ce/2c7ce06799d9a1226680f19826b8fc18ea5df5e2702bcf681e267e0977069e44.jpg" alt="ODELL" />
-              <AvatarFallback className="text-[6px] bg-muted">O</AvatarFallback>
-            </Avatar>
-            <span className="text-white/70 whitespace-nowrap">
-              <span className="hidden sm:inline">Curated </span>by{' '}
-              <span className="text-white group-hover/odell:text-white font-medium transition-colors">ODELL</span>
-            </span>
-          </a>
-          {metadata?.lud16 && (
-            <>
+      {/* 3-column layout wrapper: sidebar charts on widescreen, hidden on smaller */}
+      <div className="flex justify-center gap-6 xl:px-6">
+        {/* Left sidebar — BTC charts (widescreen only) */}
+        <aside className="hidden xl:block w-[260px] 2xl:w-[300px] shrink-0 sticky top-[130px] self-start max-h-[calc(100vh-150px)] overflow-y-auto py-4 scrollbar-none">
+          <BTCSidebarCharts />
+        </aside>
+
+        {/* Center column — main content */}
+        <div className="w-full max-w-2xl min-w-0">
+          {/* Profile info — compact on mobile, full on desktop */}
+          <div className="px-4 sm:px-6">
+            <div className="py-1.5 sm:py-2 border-b border-border/40 flex items-center gap-1.5 sm:gap-2.5 text-[9px] sm:text-[11px] overflow-hidden">
+              <a href="https://primal.net/odell" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 shrink-0 group/odell">
+                <Avatar className="h-3.5 w-3.5 sm:h-4 sm:w-4">
+                  <AvatarImage src="https://primaldata.s3.us-east-005.backblazeb2.com/cache/2/c7/ce/2c7ce06799d9a1226680f19826b8fc18ea5df5e2702bcf681e267e0977069e44.jpg" alt="ODELL" />
+                  <AvatarFallback className="text-[6px] bg-muted">O</AvatarFallback>
+                </Avatar>
+                <span className="text-white/70 whitespace-nowrap">
+                  <span className="hidden sm:inline">Curated </span>by{' '}
+                  <span className="text-white group-hover/odell:text-white font-medium transition-colors">ODELL</span>
+                </span>
+              </a>
+              {metadata?.lud16 && (
+                <>
+                  <span className="text-muted-foreground/30">·</span>
+                  <a
+                    href="https://primal.net/wire"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-0.5 text-amber-500/70 hover:text-amber-500 font-medium transition-colors whitespace-nowrap shrink-0"
+                  >
+                    <Globe className="h-3 w-3" />
+                    {metadata.lud16}
+                  </a>
+                </>
+              )}
               <span className="text-muted-foreground/30">·</span>
+              <span className="text-white whitespace-nowrap"><span className="font-bold">high signal news</span> using <span className="text-amber-400 font-bold">live</span> market data</span>
+            </div>
+          </div>
+
+          {/* Top Supporters */}
+          <TopSupporters />
+
+          {/* Prediction Markets */}
+          <PolymarketSection />
+
+          {/* Podcast players */}
+          <div>
+            <PodcastPlayer />
+            <RHRPlayer />
+          </div>
+
+          {/* Feed */}
+          <main>
+            {isLoading ? (
+              <div>
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <PostSkeleton key={i} />
+                ))}
+              </div>
+            ) : isError ? (
+              <div className="py-16 px-4 text-center">
+                <p className="text-muted-foreground text-sm">
+                  Failed to load posts. Please try again.
+                </p>
+                <button
+                  onClick={() => refetch()}
+                  className="mt-3 text-sm font-medium text-primary hover:underline"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : posts && posts.length > 0 ? (
+              <div>
+                {posts.map((post, index) => (
+                  <PostCard key={post.id} event={post} isFirst={index === 0} />
+                ))}
+              </div>
+            ) : (
+              <div className="py-16 px-4 text-center">
+                <p className="text-muted-foreground text-sm">
+                  No posts yet. Check back later.
+                </p>
+              </div>
+            )}
+          </main>
+
+          {/* Footer */}
+          <footer className="px-4 sm:px-6 py-8 mt-4 border-t border-border/20">
+            <p className="text-[11px] text-muted-foreground/30 text-center">
+              Vibed with{' '}
               <a
-                href="https://primal.net/wire"
+                href="https://shakespeare.diy"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-0.5 text-amber-500/70 hover:text-amber-500 font-medium transition-colors whitespace-nowrap shrink-0"
+                className="hover:text-muted-foreground/50 transition-colors underline underline-offset-2"
               >
-                <Globe className="h-3 w-3" />
-                {metadata.lud16}
+                Shakespeare
               </a>
-            </>
-          )}
-          <span className="text-muted-foreground/30">·</span>
-          <span className="text-white whitespace-nowrap"><span className="font-bold">high signal news</span> using <span className="text-amber-400 font-bold">live</span> market data</span>
+            </p>
+          </footer>
         </div>
+
+        {/* Right sidebar — XAUT charts (widescreen only) */}
+        <aside className="hidden xl:block w-[260px] 2xl:w-[300px] shrink-0 sticky top-[130px] self-start max-h-[calc(100vh-150px)] overflow-y-auto py-4 scrollbar-none">
+          <XAUTSidebarCharts />
+        </aside>
       </div>
-
-      {/* Top Supporters */}
-      <TopSupporters />
-
-      {/* Prediction Markets */}
-      <PolymarketSection />
-
-      {/* Podcast players */}
-      <div className="max-w-2xl mx-auto">
-        <PodcastPlayer />
-        <RHRPlayer />
-      </div>
-
-      {/* Feed */}
-      <main className="max-w-2xl mx-auto">
-        {isLoading ? (
-          <div>
-            {Array.from({ length: 8 }).map((_, i) => (
-              <PostSkeleton key={i} />
-            ))}
-          </div>
-        ) : isError ? (
-          <div className="py-16 px-4 text-center">
-            <p className="text-muted-foreground text-sm">
-              Failed to load posts. Please try again.
-            </p>
-            <button
-              onClick={() => refetch()}
-              className="mt-3 text-sm font-medium text-primary hover:underline"
-            >
-              Retry
-            </button>
-          </div>
-        ) : posts && posts.length > 0 ? (
-          <div>
-            {posts.map((post, index) => (
-              <PostCard key={post.id} event={post} isFirst={index === 0} />
-            ))}
-          </div>
-        ) : (
-          <div className="py-16 px-4 text-center">
-            <p className="text-muted-foreground text-sm">
-              No posts yet. Check back later.
-            </p>
-          </div>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="max-w-2xl mx-auto px-4 sm:px-6 py-8 mt-4 border-t border-border/20">
-        <p className="text-[11px] text-muted-foreground/30 text-center">
-          Vibed with{' '}
-          <a
-            href="https://shakespeare.diy"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-muted-foreground/50 transition-colors underline underline-offset-2"
-          >
-            Shakespeare
-          </a>
-        </p>
-      </footer>
     </div>
   );
 };

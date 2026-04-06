@@ -263,3 +263,12 @@ html {
   margin-bottom: 0.5em;
   max-width: 100%;
 }
+
+/* Hide scrollbar but keep scrolling */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
