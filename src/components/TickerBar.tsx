@@ -40,12 +40,13 @@ function formatUTCDate(date: Date): string {
 }
 
 const CHART_SPANS = [
+  { label: '24H', span: '24h', exchange: 'bitstamp', url: 'https://bitcoinity.org/markets/bitstamp/USD', img: 'https://bitcoinity.org/markets/image?span=24h&size=medium&currency=USD&exchange=bitstamp' },
   { label: '7D', span: '7d', exchange: 'bitstamp', url: 'https://bitcoinity.org/markets/bitstamp/USD', img: 'https://bitcoinity.org/markets/image?span=7d&size=medium&currency=USD&exchange=bitstamp' },
   { label: '30D', span: '30d', exchange: 'coinbase', url: 'https://bitcoinity.org/markets/coinbase/USD', img: 'https://bitcoinity.org/markets/image?span=30d&size=medium&currency=USD&exchange=coinbase' },
 ] as const;
 
 function BtcChartDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const [activeIdx, setActiveIdx] = useState(1); // default 30D
+  const [activeIdx, setActiveIdx] = useState(2); // default 30D
   const chart = CHART_SPANS[activeIdx];
 
   return (
