@@ -4,7 +4,7 @@ import { useMarketData } from '@/hooks/useMarketData';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { Bitcoin, Box, Clock } from 'lucide-react';
+import { Bitcoin, Box, Clock, TrendingUp, TrendingDown } from 'lucide-react';
 
 const CORS_PROXY = 'https://proxy.shakespeare.diy/?url=';
 
@@ -14,6 +14,15 @@ function formatPrice(value: number): string {
     currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
+  });
+}
+
+function formatPricePrecise(value: number): string {
+  return value.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 }
 
@@ -42,90 +51,24 @@ function formatUTCDate(date: Date): string {
   return `${months[date.getUTCMonth()]} ${date.getUTCDate()}`;
 }
 
-// ── BTC Chart Dialog ────────────────────────────────────────
+// ── Shared chart infrastructure ─────────────────────────────
 
-const BTC_CHART_SPANS = [
-  { label: '24H', span: '24h', exchange: 'bitstamp', url: 'https://bitcoinity.org/markets/bitstamp/USD', img: 'https://bitcoinity.org/markets/image?span=24h&size=medium&currency=USD&exchange=bitstamp' },
-  { label: '7D', span: '7d', exchange: 'bitstamp', url: 'https://bitcoinity.org/markets/bitstamp/USD', img: 'https://bitcoinity.org/markets/image?span=7d&size=medium&currency=USD&exchange=bitstamp' },
-  { label: '30D', span: '30d', exchange: 'coinbase', url: 'https://bitcoinity.org/markets/coinbase/USD', img: 'https://bitcoinity.org/markets/image?span=30d&size=medium&currency=USD&exchange=coinbase' },
-  { label: '6M', span: '6m', exchange: 'bitstamp', url: 'https://bitcoinity.org/markets/bitstamp/USD', img: 'https://bitcoinity.org/markets/image?span=6m&size=medium&currency=USD&exchange=bitstamp' },
-] as const;
-
-function BtcChartDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const [activeIdx, setActiveIdx] = useState(2);
-  const chart = BTC_CHART_SPANS[activeIdx];
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden bg-background border-border/60 gap-0">
-        <VisuallyHidden>
-          <DialogTitle>Bitcoin Price Chart</DialogTitle>
-        </VisuallyHidden>
-        <div className="px-4 py-3 border-b border-border/40 flex items-center gap-2">
-          <Bitcoin className="h-4 w-4 text-amber-500" />
-          <span className="text-sm font-semibold text-foreground">Bitcoin</span>
-          <div className="flex items-center gap-0.5 ml-1">
-            {BTC_CHART_SPANS.map((s, i) => (
-              <button
-                key={s.label}
-                onClick={() => setActiveIdx(i)}
-                className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
-                  i === activeIdx
-                    ? 'bg-amber-500/20 text-amber-400'
-                    : 'text-muted-foreground/50 hover:text-muted-foreground/80 hover:bg-muted/40'
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-          <span className="text-xs text-muted-foreground/50 ml-auto capitalize">{chart.exchange} / USD</span>
-        </div>
-        <a
-          href={chart.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block bg-[#1a1a2e] dark:bg-background"
-        >
-          <img
-            src={chart.img}
-            alt={`Bitcoin ${chart.label} price chart`}
-            className="w-full h-auto block dark:opacity-90 dark:invert-0"
-            style={{ minHeight: 180 }}
-          />
-        </a>
-        <div className="px-4 py-2 border-t border-border/40">
-          <a
-            href={chart.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
-          >
-            bitcoinity.org
-          </a>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ── XAUT Sparkline Chart ────────────────────────────────────
-
-const XAUT_SPANS = [
+const CHART_SPANS = [
   { label: '24H', days: 1 },
   { label: '7D', days: 7 },
   { label: '30D', days: 30 },
   { label: '6M', days: 180 },
 ] as const;
 
-function useXautChart(days: number, enabled: boolean) {
+function useCoinChart(coinId: string, days: number, enabled: boolean) {
   return useQuery<number[][]>({
-    queryKey: ['xaut-chart', days],
+    queryKey: ['coin-chart', coinId, days],
     queryFn: async () => {
-      const url = `https://api.coingecko.com/api/v3/coins/tether-gold/market_chart?vs_currency=usd&days=${days}`;
+      const url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`;
       let res: Response;
       try {
         res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) throw new Error('direct failed');
       } catch {
         res = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(10000) });
       }
@@ -139,7 +82,23 @@ function useXautChart(days: number, enabled: boolean) {
   });
 }
 
-function SparklineCanvas({ prices, width, height }: { prices: number[][]; width: number; height: number }) {
+interface PriceChange {
+  first: number;
+  last: number;
+  change: number;
+  pct: number;
+  isUp: boolean;
+}
+
+function getChange(prices: number[][]): PriceChange {
+  const first = prices[0][1];
+  const last = prices[prices.length - 1][1];
+  const change = last - first;
+  const pct = first !== 0 ? (change / first) * 100 : 0;
+  return { first, last, change, pct, isUp: change >= 0 };
+}
+
+function SparklineCanvas({ prices, width, height, accentColor }: { prices: number[][]; width: number; height: number; accentColor: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const draw = useCallback(() => {
@@ -157,29 +116,34 @@ function SparklineCanvas({ prices, width, height }: { prices: number[][]; width:
     const min = Math.min(...values);
     const max = Math.max(...values);
     const range = max - min || 1;
+    const { isUp } = getChange(prices);
+
+    const lineColor = isUp ? '#22c55e' : '#ef4444';
 
     const padTop = 16;
     const padBottom = 24;
-    const padLeft = 0;
-    const padRight = 0;
-    const chartW = width - padLeft - padRight;
+    const chartW = width;
     const chartH = height - padTop - padBottom;
 
     // Gradient fill
     const gradient = ctx.createLinearGradient(0, padTop, 0, height - padBottom);
-    gradient.addColorStop(0, 'rgba(234, 179, 8, 0.25)');
-    gradient.addColorStop(1, 'rgba(234, 179, 8, 0.02)');
+    if (isUp) {
+      gradient.addColorStop(0, 'rgba(34, 197, 94, 0.2)');
+      gradient.addColorStop(1, 'rgba(34, 197, 94, 0.01)');
+    } else {
+      gradient.addColorStop(0, 'rgba(239, 68, 68, 0.2)');
+      gradient.addColorStop(1, 'rgba(239, 68, 68, 0.01)');
+    }
 
     ctx.beginPath();
     for (let i = 0; i < values.length; i++) {
-      const x = padLeft + (i / (values.length - 1)) * chartW;
+      const x = (i / (values.length - 1)) * chartW;
       const y = padTop + (1 - (values[i] - min) / range) * chartH;
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
-    // Fill area
-    ctx.lineTo(padLeft + chartW, padTop + chartH);
-    ctx.lineTo(padLeft, padTop + chartH);
+    ctx.lineTo(chartW, padTop + chartH);
+    ctx.lineTo(0, padTop + chartH);
     ctx.closePath();
     ctx.fillStyle = gradient;
     ctx.fill();
@@ -187,33 +151,33 @@ function SparklineCanvas({ prices, width, height }: { prices: number[][]; width:
     // Line
     ctx.beginPath();
     for (let i = 0; i < values.length; i++) {
-      const x = padLeft + (i / (values.length - 1)) * chartW;
+      const x = (i / (values.length - 1)) * chartW;
       const y = padTop + (1 - (values[i] - min) / range) * chartH;
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
-    ctx.strokeStyle = '#eab308';
+    ctx.strokeStyle = lineColor;
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
     // Price labels
     const computedStyle = getComputedStyle(document.documentElement);
-    const isMuted = computedStyle.getPropertyValue('--muted-foreground').trim();
-    const labelColor = isMuted ? `hsl(${isMuted} / 0.5)` : 'rgba(150,150,150,0.5)';
+    const mutedFg = computedStyle.getPropertyValue('--muted-foreground').trim();
+    const labelColor = mutedFg ? `hsl(${mutedFg} / 0.5)` : 'rgba(150,150,150,0.5)';
 
     ctx.fillStyle = labelColor;
     ctx.font = '10px Inter Variable, Inter, system-ui, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`$${max.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, padLeft + 4, padTop - 4);
-    ctx.fillText(`$${min.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, padLeft + 4, padTop + chartH + 14);
+    ctx.fillText(`$${max.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, 4, padTop - 4);
+    ctx.fillText(`$${min.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, 4, padTop + chartH + 14);
 
-    // Current price (last value)
-    const last = values[values.length - 1];
-    ctx.fillStyle = '#eab308';
+    // Current price
+    ctx.fillStyle = accentColor;
     ctx.font = 'bold 11px Inter Variable, Inter, system-ui, sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(`$${last.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, padLeft + chartW - 4, padTop - 4);
-  }, [prices, width, height]);
+    const last = values[values.length - 1];
+    ctx.fillText(`$${last.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, chartW - 4, padTop - 4);
+  }, [prices, width, height, accentColor]);
 
   useEffect(() => { draw(); }, [draw]);
 
@@ -221,41 +185,80 @@ function SparklineCanvas({ prices, width, height }: { prices: number[][]; width:
     <canvas
       ref={canvasRef}
       style={{ width, height }}
-      className="block"
+      className="block w-full"
     />
   );
 }
 
-function XautChartDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+function ChangeIndicator({ prices }: { prices: number[][] }) {
+  const { change, pct, isUp } = getChange(prices);
+  const sign = isUp ? '+' : '';
+
+  return (
+    <div className={`flex items-center gap-1.5 ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
+      {isUp ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+      <span className="text-sm font-bold tabular-nums">
+        {sign}{formatPricePrecise(change)}
+      </span>
+      <span className="text-xs font-semibold tabular-nums opacity-70">
+        ({sign}{pct.toFixed(2)}%)
+      </span>
+    </div>
+  );
+}
+
+// ── Unified Chart Dialog ────────────────────────────────────
+
+interface ChartDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  coinId: string;
+  title: string;
+  icon: React.ReactNode;
+  accentColor: string;
+  activeAccent: string;
+  sourceLabel: string;
+  sourceUrl: string;
+}
+
+function CoinChartDialog({ open, onOpenChange, coinId, title, icon, accentColor, activeAccent, sourceLabel, sourceUrl }: ChartDialogProps) {
   const [activeIdx, setActiveIdx] = useState(2); // default 30D
-  const span = XAUT_SPANS[activeIdx];
-  const { data: prices, isLoading } = useXautChart(span.days, open);
+  const span = CHART_SPANS[activeIdx];
+  const { data: prices, isLoading } = useCoinChart(coinId, span.days, open);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg p-0 overflow-hidden bg-background border-border/60 gap-0">
         <VisuallyHidden>
-          <DialogTitle>XAUT Gold Price Chart</DialogTitle>
+          <DialogTitle>{title} Price Chart</DialogTitle>
         </VisuallyHidden>
-        <div className="px-4 py-3 border-b border-border/40 flex items-center gap-2">
-          <span className="text-yellow-500 text-sm font-bold leading-none">Au</span>
-          <span className="text-sm font-semibold text-foreground">XAUT</span>
-          <div className="flex items-center gap-0.5 ml-1">
-            {XAUT_SPANS.map((s, i) => (
-              <button
-                key={s.label}
-                onClick={() => setActiveIdx(i)}
-                className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
-                  i === activeIdx
-                    ? 'bg-yellow-500/20 text-yellow-500'
-                    : 'text-muted-foreground/50 hover:text-muted-foreground/80 hover:bg-muted/40'
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
+        <div className="px-4 py-3 border-b border-border/40">
+          <div className="flex items-center gap-2">
+            {icon}
+            <span className="text-sm font-semibold text-foreground">{title}</span>
+            <div className="flex items-center gap-0.5 ml-1">
+              {CHART_SPANS.map((s, i) => (
+                <button
+                  key={s.label}
+                  onClick={() => setActiveIdx(i)}
+                  className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
+                    i === activeIdx
+                      ? activeAccent
+                      : 'text-muted-foreground/50 hover:text-muted-foreground/80 hover:bg-muted/40'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <span className="text-xs text-muted-foreground/50 ml-auto">USD</span>
           </div>
-          <span className="text-xs text-muted-foreground/50 ml-auto">USD</span>
+          {/* Change indicator */}
+          {prices && prices.length >= 2 && (
+            <div className="mt-2">
+              <ChangeIndicator prices={prices} />
+            </div>
+          )}
         </div>
         <div className="bg-background px-2 py-3" style={{ minHeight: 200 }}>
           {isLoading || !prices ? (
@@ -263,17 +266,17 @@ function XautChartDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
               <Skeleton className="h-full w-full rounded" />
             </div>
           ) : (
-            <SparklineCanvas prices={prices} width={460} height={200} />
+            <SparklineCanvas prices={prices} width={460} height={200} accentColor={accentColor} />
           )}
         </div>
         <div className="px-4 py-2 border-t border-border/40">
           <a
-            href="https://www.coingecko.com/en/coins/tether-gold"
+            href={sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
           >
-            coingecko.com
+            {sourceLabel}
           </a>
         </div>
       </DialogContent>
@@ -357,8 +360,28 @@ export function TickerBar() {
         </div>
       </div>
 
-      <BtcChartDialog open={btcChartOpen} onOpenChange={setBtcChartOpen} />
-      <XautChartDialog open={xautChartOpen} onOpenChange={setXautChartOpen} />
+      <CoinChartDialog
+        open={btcChartOpen}
+        onOpenChange={setBtcChartOpen}
+        coinId="bitcoin"
+        title="Bitcoin"
+        icon={<Bitcoin className="h-4 w-4 text-amber-500" />}
+        accentColor="#f59e0b"
+        activeAccent="bg-amber-500/20 text-amber-400"
+        sourceLabel="coingecko.com"
+        sourceUrl="https://www.coingecko.com/en/coins/bitcoin"
+      />
+      <CoinChartDialog
+        open={xautChartOpen}
+        onOpenChange={setXautChartOpen}
+        coinId="tether-gold"
+        title="XAUT"
+        icon={<span className="text-yellow-500 text-sm font-bold leading-none">Au</span>}
+        accentColor="#eab308"
+        activeAccent="bg-yellow-500/20 text-yellow-500"
+        sourceLabel="coingecko.com"
+        sourceUrl="https://www.coingecko.com/en/coins/tether-gold"
+      />
     </>
   );
 }
