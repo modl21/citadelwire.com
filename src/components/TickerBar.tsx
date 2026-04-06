@@ -40,8 +40,8 @@ function formatUTCDate(date: Date): string {
 }
 
 const CHART_SPANS = [
-  { label: '7D', span: '7d', exchange: 'bitstamp', url: 'https://bitcoinity.org/markets/bitstamp/USD' },
-  { label: '30D', span: '30d', exchange: 'coinbase', url: 'https://bitcoinity.org/markets/coinbase/USD' },
+  { label: '7D', span: '7d', exchange: 'bitstamp', url: 'https://bitcoinity.org/markets/bitstamp/USD', img: 'https://bitcoinity.org/markets/image?span=7d&size=medium&currency=USD&exchange=bitstamp' },
+  { label: '30D', span: '30d', exchange: 'coinbase', url: 'https://bitcoinity.org/markets/coinbase/USD', img: 'https://bitcoinity.org/markets/image?span=30d&size=medium&currency=USD&exchange=coinbase' },
 ] as const;
 
 function BtcChartDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
@@ -81,7 +81,7 @@ function BtcChartDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
           className="block bg-[#1a1a2e] dark:bg-background"
         >
           <img
-            src={`https://bitcoinity.org/markets/image?span=${chart.span}&size=medium&currency=USD&exchange=${chart.exchange}`}
+            src={chart.img}
             alt={`Bitcoin ${chart.label} price chart`}
             className="w-full h-auto block dark:opacity-90 dark:invert-0"
             style={{ minHeight: 180 }}
