@@ -12,8 +12,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const CITADEL_PUBKEY = '01d077c7b21bfee89a6883edabcd408ef324e9ab431f46bf57d5860430bcb97c';
 const SITE_URL = 'https://citadelwire.com';
 const RELAYS = [
+  'wss://premium.primal.net',
   'wss://relay.primal.net',
+  'wss://relay.ditto.pub',
   'wss://relay.damus.io',
+  'wss://antiprimal.net',
 ];
 const NOTE_CONTENT_REGEX = /(https?:\/\/[^\s]+)|nostr:(npub1|note1|nprofile1|nevent1)([023456789acdefghjklmnpqrstuvwxyz]+)|(#\w+)/g;
 
@@ -147,7 +150,7 @@ async function fetchPosts() {
   const filter = {
     kinds: [1],
     authors: [CITADEL_PUBKEY],
-    limit: 50,
+    limit: 100,
   };
 
   const results = await Promise.all(
