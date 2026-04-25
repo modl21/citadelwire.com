@@ -55,8 +55,10 @@ function useSupporterProfile(pubkey: string) {
 
       return {};
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
     retry: 1,
+    refetchOnMount: false,
   });
 }
 

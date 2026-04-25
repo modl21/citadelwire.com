@@ -22,8 +22,19 @@ function formatBlockHeight(value: number): string {
 function useUTCClock(): { time: string; date: string } {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
+    const update = () => setNow(new Date());
+    const msUntilNextSecond = 1000 - new Date().getMilliseconds();
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+
+    const timeoutId = setTimeout(() => {
+      update();
+      intervalId = setInterval(update, 1000);
+    }, msUntilNextSecond);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
   return { time: formatUTCTime(now), date: formatUTCDate(now) };
 }

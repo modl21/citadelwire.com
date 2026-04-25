@@ -192,9 +192,11 @@ export function usePageViewCount(pageId: string, pageUrl: string) {
 
       return getSnapshotFromEvents(events, pageId);
     },
-    staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchInterval: false,
     retry: 1,
+    refetchOnMount: false,
   });
 
   useEffect(() => {

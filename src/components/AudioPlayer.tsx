@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Play, Pause, Volume2, VolumeX, Mic, ExternalLink } from 'lucide-react';
 
@@ -68,7 +68,7 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
-  const speeds = [1, 1.25, 1.5, 1.75, 2] as const;
+  const speeds = useMemo(() => [1, 1.25, 1.5, 1.75, 2] as const, []);
   const [speedIndex, setSpeedIndex] = useState(0);
 
   useEffect(() => {

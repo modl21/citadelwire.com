@@ -142,8 +142,10 @@ export function useTopSupporters(limit: number = 10) {
 
       return aggregateZapSupporters(events).slice(0, limit);
     },
-    staleTime: 60 * 1000,
-    refetchInterval: 2 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
     retry: 1,
+    refetchOnMount: false,
   });
 }

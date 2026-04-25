@@ -8,11 +8,22 @@ export interface RSSEpisode {
   pubDate: string;
 }
 
+async function fetchFeed(feedUrl: string): Promise<Response> {
+  try {
+    const direct = await fetch(feedUrl, { signal: AbortSignal.timeout(5000) });
+    if (direct.ok) return direct;
+  } catch {
+    // Fall back to the configured proxy below.
+  }
+
+  return fetch(`${CORS_PROXY}${encodeURIComponent(feedUrl)}`, { signal: AbortSignal.timeout(8000) });
+}
+
 export function useRSSEpisode(feedUrl: string) {
   return useQuery<RSSEpisode | null>({
     queryKey: ['rss-episode', feedUrl],
     queryFn: async () => {
-      const res = await fetch(`${CORS_PROXY}${encodeURIComponent(feedUrl)}`);
+      const res = await fetchFeed(feedUrl);
       if (!res.ok) throw new Error('Failed to fetch RSS feed');
       const text = await res.text();
 
@@ -33,7 +44,9 @@ export function useRSSEpisode(feedUrl: string) {
 
       return { title, mp3Url, pubDate };
     },
-    staleTime: 5 * 60 * 1000,
-    retry: 2,
+    staleTime: 15 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    retry: 1,
+    refetchOnMount: false,
   });
 }

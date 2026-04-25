@@ -38,6 +38,8 @@ export function useCitadelFeed() {
       return events.sort((a, b) => b.created_at - a.created_at);
     },
     staleTime: 60 * 1000, // 1 minute
-    retry: 3,
+    gcTime: 10 * 60 * 1000,
+    retry: 1,
+    refetchOnMount: false,
   });
 }

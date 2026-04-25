@@ -26,8 +26,10 @@ export function useCoinChart(coinId: string, days: number, enabled: boolean) {
       return data.prices as number[][];
     },
     enabled,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 15 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
     retry: 1,
+    refetchOnMount: false,
   });
 }
 
@@ -108,7 +110,9 @@ export function useCoinStats(coinId: string, enabled: boolean) {
       };
     },
     enabled,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 15 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
     retry: 1,
+    refetchOnMount: false,
   });
 }

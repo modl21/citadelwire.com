@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { useSeoMeta } from '@unhead/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -14,7 +15,13 @@ import { Globe, RefreshCw, Rss, Eye } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { WireSchedule } from '@/components/WireSchedule';
 import { PolymarketSection } from '@/components/PolymarketSection';
-import { BTCSidebarCharts, XAUTSidebarCharts } from '@/components/SidebarCharts';
+
+const BTCSidebarCharts = lazy(() =>
+  import('@/components/SidebarCharts').then((module) => ({ default: module.BTCSidebarCharts })),
+);
+const XAUTSidebarCharts = lazy(() =>
+  import('@/components/SidebarCharts').then((module) => ({ default: module.XAUTSidebarCharts })),
+);
 
 function PostSkeleton() {
   return (
@@ -119,7 +126,9 @@ const Index = () => {
       <div className="flex justify-center gap-6 xl:px-6">
         {/* Left sidebar — BTC charts (widescreen only) */}
         <aside className="hidden xl:block w-[260px] 2xl:w-[300px] shrink-0 sticky top-[130px] self-start max-h-[calc(100vh-150px)] overflow-y-auto py-4 scrollbar-none">
-          <BTCSidebarCharts />
+          <Suspense fallback={null}>
+            <BTCSidebarCharts />
+          </Suspense>
         </aside>
 
         {/* Center column — main content */}
@@ -221,7 +230,9 @@ const Index = () => {
 
         {/* Right sidebar — XAUT charts (widescreen only) */}
         <aside className="hidden xl:block w-[260px] 2xl:w-[300px] shrink-0 sticky top-[130px] self-start max-h-[calc(100vh-150px)] overflow-y-auto py-4 scrollbar-none">
-          <XAUTSidebarCharts />
+          <Suspense fallback={null}>
+            <XAUTSidebarCharts />
+          </Suspense>
         </aside>
       </div>
     </div>

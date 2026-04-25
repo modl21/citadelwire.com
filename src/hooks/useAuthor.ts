@@ -28,7 +28,9 @@ export function useAuthor(pubkey: string | undefined) {
         return { event };
       }
     },
-    staleTime: 5 * 60 * 1000, // Keep cached data fresh for 5 minutes
-    retry: 3,
+    staleTime: 60 * 60 * 1000, // Keep profile data cached for 1 hour
+    gcTime: 24 * 60 * 60 * 1000,
+    retry: 1,
+    refetchOnMount: false,
   });
 }

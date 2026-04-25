@@ -63,8 +63,20 @@ export function WireSchedule() {
   const [state, setState] = useState<ScheduleState>(() => getScheduleState(new Date()));
 
   useEffect(() => {
-    const id = setInterval(() => setState(getScheduleState(new Date())), 1000);
-    return () => clearInterval(id);
+    const update = () => setState(getScheduleState(new Date()));
+    const now = new Date();
+    const msUntilNextSecond = 1000 - now.getMilliseconds();
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+
+    const timeoutId = setTimeout(() => {
+      update();
+      intervalId = setInterval(update, 1000);
+    }, msUntilNextSecond);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
 
   const { nextHour, minutesUntilNext, secondsUntilNext, currentHourIndex } = state;
