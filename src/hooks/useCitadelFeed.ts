@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef } from 'react';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -22,10 +23,11 @@ export const CITADEL_FEED_RELAYS = [
 export function useCitadelFeed() {
   const { nostr } = useNostr();
 
-  return useQuery<NostrEvent[]>({
+  const relayGroup = useMemo(() => nostr.group(CITADEL_FEED_RELAYS), [nostr]);
+
+  const query = useQuery<NostrEvent[]>({
     queryKey: ['citadel-feed', CITADEL_FEED_RELAYS],
     queryFn: async () => {
-      const relayGroup = nostr.group(CITADEL_FEED_RELAYS);
       const events = await relayGroup.query([
         {
           kinds: [1],
@@ -42,4 +44,55 @@ export function useCitadelFeed() {
     retry: 1,
     refetchOnMount: false,
   });
+
+  const newestSeenAtRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    const newestCreatedAt = query.data?.[0]?.created_at;
+    if (newestCreatedAt) {
+      newestSeenAtRef.current = Math.max(newestSeenAtRef.current ?? 0, newestCreatedAt);
+    }
+  }, [query.data]);
+
+  useEffect(() => {
+    const newestSeenAt = newestSeenAtRef.current;
+    if (!newestSeenAt) return;
+
+    const subscription = relayGroup.req([
+      {
+        kinds: [1],
+        authors: [CITADEL_PUBKEY],
+        since: newestSeenAt + 1,
+      },
+    ]);
+    let isActive = true;
+
+    void (async () => {
+      try {
+        for await (const msg of subscription) {
+          if (!isActive) break;
+          if (msg[0] !== 'EVENT') continue;
+
+          const event = msg[2];
+          if (event.kind !== 1 || event.pubkey !== CITADEL_PUBKEY) continue;
+          if (event.created_at <= (newestSeenAtRef.current ?? 0)) continue;
+
+          newestSeenAtRef.current = event.created_at;
+          window.location.reload();
+          break;
+        }
+      } catch (error) {
+        if (isActive) {
+          console.warn('Citadel feed live subscription failed', error);
+        }
+      }
+    })();
+
+    return () => {
+      isActive = false;
+      subscription.close();
+    };
+  }, [relayGroup, query.data]);
+
+  return query;
 }
