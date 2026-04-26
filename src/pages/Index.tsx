@@ -11,7 +11,7 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
 import { TopSupporters } from '@/components/TopSupporters';
 import { usePageViewCount, HOME_PAGE_VIEW_ID } from '@/hooks/usePageViewCount';
-import { Globe, RefreshCw, Rss, Eye } from 'lucide-react';
+import { Globe, RefreshCw, Rss, Eye, Radio } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { WireSchedule } from '@/components/WireSchedule';
 import { PolymarketSection } from '@/components/PolymarketSection';
@@ -90,6 +90,15 @@ const Index = () => {
               <span className="tabular-nums text-foreground/90">
                 {isPageViewsLoading ? '…' : pageViews.toLocaleString('en-US')}
               </span>
+            </div>
+            <div
+              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-400"
+              title="Auto refresh is enabled. New CITADEL WIRE posts refresh the page automatically."
+              aria-label="Auto refresh enabled"
+            >
+              <Radio className="h-3.5 w-3.5 animate-pulse" />
+              <span className="hidden sm:inline">Live</span>
+              <span className="hidden md:inline text-emerald-300/80">Auto-refresh</span>
             </div>
             <a
               href="/feed.xml"
