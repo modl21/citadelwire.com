@@ -104,7 +104,7 @@ const Index = () => {
               href="/feed.xml"
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-full hover:bg-muted/60 transition-colors text-amber-500/60 hover:text-amber-500"
+              className="hidden md:block p-2 rounded-full hover:bg-muted/60 transition-colors text-amber-500/60 hover:text-amber-500"
               title="RSS Feed"
             >
               <Rss className="h-4 w-4" />
