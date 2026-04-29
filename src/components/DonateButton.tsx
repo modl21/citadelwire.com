@@ -166,7 +166,7 @@ function DonateContent({
   const { toast } = useToast();
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
-  const [amount, setAmount] = useState<number | string>(1000);
+  const [amount, setAmount] = useState<number | string>(10000);
   const [memo, setMemo] = useState('');
   const [identityInput, setIdentityInput] = useState(() => user?.pubkey ? nip19.npubEncode(user.pubkey) : '');
   const [resolvedPubkey, setResolvedPubkey] = useState<string | null>(() => user?.pubkey ?? null);
