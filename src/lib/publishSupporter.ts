@@ -51,8 +51,14 @@ export async function publishSupporterEvent(
   nostr: NostrClientLike,
   supporterPubkey: string,
   amountSats: number,
+  bolt11: string,
 ): Promise<void> {
   const user = getVisitorSigner();
+  const normalizedBolt11 = bolt11.trim().toLowerCase();
+
+  if (!normalizedBolt11) {
+    throw new Error('A paid bolt11 invoice is required to track a supporter');
+  }
 
   const signedEvent = await user.signer.signEvent({
     kind: SUPPORTER_KIND,
@@ -60,9 +66,11 @@ export async function publishSupporterEvent(
     tags: [
       ['d', SUPPORTER_SITE_ID],
       ['p', supporterPubkey],
+      ['amount', String(amountSats * 1000)],
+      ['bolt11', normalizedBolt11],
       ['t', 'supporter'],
       ['t', 'citadel-wire'],
-      ['alt', `Citadel Wire supporter donation of ${amountSats} sats`],
+      ['alt', `Citadel Wire supporter zap of ${amountSats} sats`],
     ],
     content: String(amountSats),
   });

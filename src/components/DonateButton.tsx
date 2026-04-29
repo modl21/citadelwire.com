@@ -28,7 +28,14 @@ import QRCode from 'qrcode';
 const LIGHTNING_ADDRESS = 'wire@primal.net';
 const ZAP_POLL_INTERVAL_MS = 3000;
 const ZAP_POLL_MAX_DURATION_MS = 10 * 60 * 1000; // stop polling after 10 minutes
-const ZAP_RELAYS = ['wss://relay.primal.net', 'wss://relay.damus.io', 'wss://relay.ditto.pub'];
+const ZAP_RELAYS = [
+  'wss://relay.primal.net',
+  'wss://relay.damus.io',
+  'wss://relay.ditto.pub',
+  'wss://nos.lol',
+  'wss://relay.nostr.band',
+  'wss://antiprimal.net',
+];
 
 const presetAmounts = [1000, 5000, 10000, 21000, 42000];
 
@@ -69,6 +76,7 @@ async function fetchInvoice(amountSats: number, comment?: string, signer?: NUser
   if (data.allowsNostr && data.nostrPubkey) {
     try {
       const zapSigner = signer ?? getVisitorSigner();
+      const lnurl = `lnurl1${LIGHTNING_ADDRESS}`;
       const zapRequest = await zapSigner.signer.signEvent({
         kind: 9734,
         created_at: Math.floor(Date.now() / 1000),
@@ -76,6 +84,7 @@ async function fetchInvoice(amountSats: number, comment?: string, signer?: NUser
         tags: [
           ['relays', ...ZAP_RELAYS],
           ['amount', String(amountMsat)],
+          ['lnurl', lnurl],
           ['p', CITADEL_PUBKEY],
         ],
       });
@@ -173,11 +182,11 @@ function DonateContent({
   const pollStartRef = useRef<number>(0);
 
   // Define callbacks BEFORE effects that reference them
-  const recordSupporter = useCallback(async (sats: number) => {
+  const recordSupporter = useCallback(async (sats: number, paidInvoice: string) => {
     if (!resolvedPubkey) return;
 
     try {
-      await publishSupporterEvent(nostr, resolvedPubkey, sats);
+      await publishSupporterEvent(nostr, resolvedPubkey, sats, paidInvoice);
     } catch (err) {
       console.warn('Failed to publish supporter event:', err);
     }
@@ -199,7 +208,7 @@ function DonateContent({
           const pr = await fetchInvoice(finalAmount, memo, user);
           await webln.sendPayment(pr);
           toast({ title: 'Donation sent!', description: `You sent ${finalAmount} sats. Thank you!` });
-          await recordSupporter(finalAmount);
+          await recordSupporter(finalAmount, pr);
           onClose();
           return;
         } catch {
@@ -225,8 +234,9 @@ function DonateContent({
   };
 
   const handlePaid = async () => {
+    if (!invoice) return;
     toast({ title: 'Thank you!', description: `Your support means everything.` });
-    await recordSupporter(completedAmount);
+    await recordSupporter(completedAmount, invoice);
     setDonationCompleted(true);
     setTimeout(() => window.location.reload(), 2000);
   };
@@ -300,14 +310,15 @@ function DonateContent({
     if (!zapDetected || donationCompleted) return;
 
     const confirm = async () => {
+      if (!invoice) return;
       toast({ title: 'Payment confirmed!', description: `Zap receipt detected. Thank you!` });
-      await recordSupporter(completedAmount);
+      await recordSupporter(completedAmount, invoice);
       setDonationCompleted(true);
       setTimeout(() => window.location.reload(), 2000);
     };
 
     void confirm();
-  }, [zapDetected, donationCompleted, completedAmount, recordSupporter, toast, onClose]);
+  }, [zapDetected, donationCompleted, completedAmount, invoice, recordSupporter, toast]);
 
   // Generate QR code when invoice changes
   useEffect(() => {

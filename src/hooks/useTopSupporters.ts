@@ -143,12 +143,26 @@ function getSupporterEventPubkey(event: NostrEvent): string | null {
 }
 
 function getSupporterEventAmount(event: NostrEvent): number | null {
+  const amountTag = getTagValue(event, 'amount');
+  if (amountTag) {
+    const msats = Number.parseInt(amountTag, 10);
+    if (Number.isSafeInteger(msats) && msats > 0) {
+      return Math.floor(msats / 1000);
+    }
+  }
+
   const sats = Number.parseInt(event.content.trim(), 10);
   return Number.isSafeInteger(sats) && sats > 0 ? sats : null;
 }
 
+function getTrackingKey(event: NostrEvent): string {
+  const bolt11 = getTagValue(event, 'bolt11')?.trim().toLowerCase();
+  return bolt11 ? `bolt11:${bolt11}` : `event:${event.id}`;
+}
+
 function aggregateSupporters(events: NostrEvent[]): CandidateSupporter[] {
   const map = new Map<string, { totalSats: number; latestAt: number }>();
+  const countedPayments = new Set<string>();
 
   for (const event of events) {
     let sender: string | null = null;
@@ -165,6 +179,10 @@ function aggregateSupporters(events: NostrEvent[]): CandidateSupporter[] {
     if (!sender) continue;
     if (EXCLUDED_PUBKEYS.has(sender)) continue;
     if (!sats || sats <= 0) continue;
+
+    const trackingKey = getTrackingKey(event);
+    if (countedPayments.has(trackingKey)) continue;
+    countedPayments.add(trackingKey);
 
     const existing = map.get(sender);
     if (existing) {
