@@ -24,9 +24,9 @@ const XAUTSidebarCharts = lazy(() =>
 );
 
 const POST_TYPE_FILTERS: { type: PostType; label: string }[] = [
-  { type: 'standard', label: 'Main Wire' },
-  { type: 'live-wire', label: 'Live Wire' },
-  { type: 'code-wire', label: 'Code Wire' },
+  { type: 'standard', label: 'MAIN WIRE' },
+  { type: 'live-wire', label: 'LIVE WIRE' },
+  { type: 'code-wire', label: 'CODE WIRE' },
 ];
 
 function PostSkeleton() {
