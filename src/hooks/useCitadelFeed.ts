@@ -20,6 +20,38 @@ export const CITADEL_FEED_RELAYS = [
   'wss://antiprimal.net',
 ];
 
+export type PostType = 'standard' | 'live-wire' | 'code-wire';
+
+export function getPostType(event: NostrEvent): PostType {
+  const tags = event.tags.map((tag) => tag[1]?.toLowerCase()).filter(Boolean);
+  const firstLine = event.content.split('\n')[0]?.toLowerCase() ?? '';
+  const contentStart = event.content.trimStart().toLowerCase();
+
+  if (
+    tags.includes('code-wire') ||
+    tags.includes('codewire') ||
+    firstLine.includes('code wire') ||
+    firstLine.includes('codewire') ||
+    contentStart.startsWith('code wire') ||
+    contentStart.startsWith('codewire')
+  ) {
+    return 'code-wire';
+  }
+
+  if (
+    tags.includes('live-wire') ||
+    tags.includes('livewire') ||
+    firstLine.includes('live wire') ||
+    firstLine.includes('livewire') ||
+    contentStart.startsWith('live wire') ||
+    contentStart.startsWith('livewire')
+  ) {
+    return 'live-wire';
+  }
+
+  return 'standard';
+}
+
 export function useCitadelFeed() {
   const { nostr } = useNostr();
 

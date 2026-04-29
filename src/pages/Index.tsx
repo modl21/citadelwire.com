@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { useSeoMeta } from '@unhead/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -6,7 +6,7 @@ import { PostCard } from '@/components/PostCard';
 import { PodcastPlayer } from '@/components/PodcastPlayer';
 import { RHRPlayer } from '@/components/RHRPlayer';
 import { TickerBar } from '@/components/TickerBar';
-import { useCitadelFeed, CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
+import { getPostType, useCitadelFeed, CITADEL_PUBKEY, type PostType } from '@/hooks/useCitadelFeed';
 import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
 import { TopSupporters } from '@/components/TopSupporters';
@@ -22,6 +22,12 @@ const BTCSidebarCharts = lazy(() =>
 const XAUTSidebarCharts = lazy(() =>
   import('@/components/SidebarCharts').then((module) => ({ default: module.XAUTSidebarCharts })),
 );
+
+const POST_TYPE_FILTERS: { type: PostType; label: string }[] = [
+  { type: 'standard', label: 'Standard' },
+  { type: 'live-wire', label: 'Live Wire' },
+  { type: 'code-wire', label: 'Code Wire' },
+];
 
 function PostSkeleton() {
   return (
@@ -41,6 +47,9 @@ function PostSkeleton() {
 
 const Index = () => {
   const { data: posts, isLoading, isError, refetch } = useCitadelFeed();
+  const [visiblePostTypes, setVisiblePostTypes] = useState<Set<PostType>>(
+    () => new Set(POST_TYPE_FILTERS.map(({ type }) => type)),
+  );
   const author = useAuthor(CITADEL_PUBKEY);
   const metadata = author.data?.metadata;
   const npub = nip19.npubEncode(CITADEL_PUBKEY);
@@ -48,6 +57,22 @@ const Index = () => {
     HOME_PAGE_VIEW_ID,
     typeof window === 'undefined' ? 'https://wire.shakespeare.wtf/' : window.location.href,
   );
+  const filteredPosts = useMemo(
+    () => posts?.filter((post) => visiblePostTypes.has(getPostType(post))) ?? [],
+    [posts, visiblePostTypes],
+  );
+
+  const togglePostType = (type: PostType) => {
+    setVisiblePostTypes((current) => {
+      const next = new Set(current);
+      if (next.has(type)) {
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
+      return next;
+    });
+  };
 
   useSeoMeta({
     title: 'CITADEL WIRE',
@@ -188,6 +213,31 @@ const Index = () => {
 
           {/* Feed */}
           <main>
+            <div className="px-4 sm:px-6 py-2.5 border-b border-border/30">
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none" aria-label="Post type filters">
+                <span className="shrink-0 text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider mr-1">
+                  Show
+                </span>
+                {POST_TYPE_FILTERS.map(({ type, label }) => {
+                  const isActive = visiblePostTypes.has(type);
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => togglePostType(type)}
+                      aria-pressed={isActive}
+                      className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                        isActive
+                          ? 'border-amber-500/40 bg-amber-500/15 text-amber-300'
+                          : 'border-border/40 bg-muted/20 text-muted-foreground/50 hover:bg-muted/40 hover:text-muted-foreground/80'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             {isLoading ? (
               <div>
                 {Array.from({ length: 8 }).map((_, i) => (
@@ -207,11 +257,19 @@ const Index = () => {
                 </button>
               </div>
             ) : posts && posts.length > 0 ? (
-              <div>
-                {posts.map((post, index) => (
-                  <PostCard key={post.id} event={post} isFirst={index === 0} />
-                ))}
-              </div>
+              filteredPosts.length > 0 ? (
+                <div>
+                  {filteredPosts.map((post, index) => (
+                    <PostCard key={post.id} event={post} isFirst={index === 0} />
+                  ))}
+                </div>
+              ) : (
+                <div className="py-16 px-4 text-center">
+                  <p className="text-muted-foreground text-sm">
+                    No posts match the selected filters.
+                  </p>
+                </div>
+              )
             ) : (
               <div className="py-16 px-4 text-center">
                 <p className="text-muted-foreground text-sm">
