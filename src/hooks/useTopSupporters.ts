@@ -1,4 +1,4 @@
-import type { NostrEvent } from '@nostrify/nostrify';
+import { NSchema as n, type NostrEvent, type NostrMetadata } from '@nostrify/nostrify';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import { CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
@@ -8,7 +8,11 @@ export interface Supporter {
   pubkey: string;
   totalSats: number;
   latestAt: number;
+  metadata: NostrMetadata;
 }
+
+type CandidateSupporter = Omit<Supporter, 'metadata'>;
+type NostrClient = ReturnType<typeof useNostr>['nostr'];
 
 const ZAP_RECEIPT_RELAYS = [
   'wss://relay.primal.net',
@@ -16,6 +20,16 @@ const ZAP_RECEIPT_RELAYS = [
   'wss://relay.ditto.pub',
   'wss://nos.lol',
   'wss://relay.nostr.band',
+  'wss://antiprimal.net',
+];
+
+const PROFILE_RELAYS = [
+  'wss://purplepag.es',
+  'wss://relay.nostr.band',
+  'wss://relay.primal.net',
+  'wss://premium.primal.net',
+  'wss://relay.damus.io',
+  'wss://nos.lol',
   'wss://antiprimal.net',
 ];
 
@@ -31,6 +45,14 @@ function isHexPubkey(value: unknown): value is string {
 
 function getTagValue(event: NostrEvent, tagName: string): string | undefined {
   return event.tags.find(([name]) => name === tagName)?.[1];
+}
+
+function parseMetadata(content: string): NostrMetadata | undefined {
+  try {
+    return n.json().pipe(n.metadata()).parse(content);
+  } catch {
+    return undefined;
+  }
 }
 
 /** Extract the sender pubkey from a kind 9735 zap receipt. */
@@ -125,7 +147,7 @@ function getSupporterEventAmount(event: NostrEvent): number | null {
   return Number.isSafeInteger(sats) && sats > 0 ? sats : null;
 }
 
-function aggregateSupporters(events: NostrEvent[]): Supporter[] {
+function aggregateSupporters(events: NostrEvent[]): CandidateSupporter[] {
   const map = new Map<string, { totalSats: number; latestAt: number }>();
 
   for (const event of events) {
@@ -160,6 +182,49 @@ function aggregateSupporters(events: NostrEvent[]): Supporter[] {
     .sort((a, b) => b.totalSats - a.totalSats);
 }
 
+async function filterEligibleSupporters(
+  nostr: NostrClient,
+  candidates: CandidateSupporter[],
+  limit: number,
+): Promise<Supporter[]> {
+  if (candidates.length === 0) return [];
+
+  const profileRelayGroup = nostr.group(PROFILE_RELAYS);
+  const candidatePubkeys = candidates.map(({ pubkey }) => pubkey);
+
+  const metadataEvents = await profileRelayGroup.query(
+    [{ kinds: [0], authors: candidatePubkeys, limit: candidatePubkeys.length * 3 }],
+    { signal: AbortSignal.timeout(6000) },
+  ).catch(() => []);
+
+  const metadataByPubkey = new Map<string, NostrMetadata>();
+  for (const event of metadataEvents.sort((a, b) => b.created_at - a.created_at)) {
+    if (metadataByPubkey.has(event.pubkey)) continue;
+    const metadata = parseMetadata(event.content);
+    if (metadata?.picture) {
+      metadataByPubkey.set(event.pubkey, metadata);
+    }
+  }
+
+  const pubkeysWithPictures = candidatePubkeys.filter((pubkey) => metadataByPubkey.has(pubkey));
+  if (pubkeysWithPictures.length === 0) return [];
+
+  const postEvents = await profileRelayGroup.query(
+    [{ kinds: [1], authors: pubkeysWithPictures, limit: Math.max(200, pubkeysWithPictures.length * 25) }],
+    { signal: AbortSignal.timeout(6000) },
+  ).catch(() => []);
+  const pubkeysWithPosts = new Set(postEvents.map((event) => event.pubkey));
+
+  return candidates
+    .map((candidate) => {
+      const metadata = metadataByPubkey.get(candidate.pubkey);
+      if (!metadata || !pubkeysWithPosts.has(candidate.pubkey)) return null;
+      return { ...candidate, metadata };
+    })
+    .filter((supporter): supporter is Supporter => supporter !== null)
+    .slice(0, limit);
+}
+
 export function useTopSupporters(limit: number = 10) {
   const { nostr } = useNostr();
 
@@ -192,7 +257,9 @@ export function useTopSupporters(limit: number = 10) {
         dedupedEvents.push(event);
       }
 
-      return aggregateSupporters(dedupedEvents).slice(0, limit);
+      const candidateLimit = Math.max(limit * 5, 30);
+      const candidates = aggregateSupporters(dedupedEvents).slice(0, candidateLimit);
+      return filterEligibleSupporters(nostr, candidates, limit);
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
