@@ -9,51 +9,40 @@ import { Zap } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { cn } from '@/lib/utils';
 
-const EXTRA_PROFILE_RELAYS = ['wss://purplepag.es', 'wss://relay.nostr.band', 'wss://antiprimal.net'];
+const PROFILE_RELAYS = [
+  'wss://purplepag.es',
+  'wss://relay.nostr.band',
+  'wss://relay.primal.net',
+  'wss://premium.primal.net',
+  'wss://relay.damus.io',
+  'wss://nos.lol',
+  'wss://antiprimal.net',
+];
 const DEFAULT_AVATAR = 'https://blossom.ditto.pub/62ead074d0d5a7d1b707b101f7d0db62af97bd66843f4f28c7a1d9007e1e6960.jpeg';
 
-/** Like useAuthor but also checks extra relays for supporter profiles. */
+function parseMetadata(content: string): NostrMetadata | undefined {
+  try {
+    return n.json().pipe(n.metadata()).parse(content);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Like useAuthor but checks profile-focused relays for supporter profiles. */
 function useSupporterProfile(pubkey: string) {
   const { nostr } = useNostr();
 
   return useQuery<{ metadata?: NostrMetadata }>({
     queryKey: ['supporter-profile', pubkey],
     queryFn: async () => {
-      // Query default relays first
-      const [event] = await nostr.query(
+      const relayGroup = nostr.group(PROFILE_RELAYS);
+      const events = await relayGroup.query(
         [{ kinds: [0], authors: [pubkey], limit: 1 }],
-        { signal: AbortSignal.timeout(3000) },
+        { signal: AbortSignal.timeout(5000) },
       );
-
-      if (event) {
-        try {
-          const metadata = n.json().pipe(n.metadata()).parse(event.content);
-          return { metadata };
-        } catch {
-          return {};
-        }
-      }
-
-      // Fall back: query extra profile relays in parallel
-      const extraGroup = nostr.group(EXTRA_PROFILE_RELAYS);
-      try {
-        const [extra] = await extraGroup.query(
-          [{ kinds: [0], authors: [pubkey], limit: 1 }],
-          { signal: AbortSignal.timeout(4000) },
-        );
-        if (extra) {
-          try {
-            const metadata = n.json().pipe(n.metadata()).parse(extra.content);
-            return { metadata };
-          } catch {
-            return {};
-          }
-        }
-      } catch {
-        // Extra relays unreachable
-      }
-
-      return {};
+      const event = events.sort((a, b) => b.created_at - a.created_at)[0];
+      const metadata = event ? parseMetadata(event.content) : undefined;
+      return metadata ? { metadata } : {};
     },
     staleTime: 60 * 60 * 1000,
     gcTime: 24 * 60 * 60 * 1000,
@@ -65,9 +54,9 @@ function useSupporterProfile(pubkey: string) {
 function SupporterAvatar({ pubkey, totalSats, rank }: { pubkey: string; totalSats: number; rank: number }) {
   const profile = useSupporterProfile(pubkey);
   const metadata = profile.data?.metadata;
-  const hasProfile = !!metadata;
   const npub = nip19.npubEncode(pubkey);
-  const displayName = metadata?.display_name || metadata?.name || npub.slice(0, 12) + '...';
+  const displayName = metadata?.display_name || metadata?.name || `${npub.slice(0, 12)}...`;
+  const profileUrl = `https://primal.net/p/${npub}`;
 
   const avatar = (
     <div className="relative">
@@ -90,23 +79,9 @@ function SupporterAvatar({ pubkey, totalSats, rank }: { pubkey: string; totalSat
     </div>
   );
 
-  if (!hasProfile) {
-    return (
-      <div 
-        className="flex flex-col items-center gap-0.5 shrink-0 select-none opacity-60"
-        title={`Anonymous Supporter — ${totalSats.toLocaleString('en-US')} sats`}
-      >
-        {avatar}
-        <span className="text-[7px] text-muted-foreground/60 tabular-nums font-medium">
-          {totalSats >= 1000 ? `${Math.round(totalSats / 1000)}k` : totalSats}
-        </span>
-      </div>
-    );
-  }
-
   return (
     <a
-      href={`https://primal.net/p/${npub}`}
+      href={profileUrl}
       target="_blank"
       rel="noopener noreferrer"
       className="flex flex-col items-center gap-0.5 group shrink-0"
