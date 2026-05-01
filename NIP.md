@@ -52,7 +52,7 @@ This project uses custom regular event kind `9703` to record one confirmed suppo
 
 ### Purpose
 - Provide an append-only audit record for identified donations.
-- Allow the trusted CITADEL WIRE leaderboard publisher to update cumulative supporter totals.
+- Allow clients to aggregate identified donations into Top Supporters rankings.
 - Preserve optional donor identity: anonymous donations are valid payments but are not included in the public leaderboard.
 
 ### Event shape
@@ -80,8 +80,9 @@ This project uses custom regular event kind `9703` to record one confirmed suppo
 - `alt` tag: human-readable description per NIP-31.
 
 ### Notes
-- These records are useful for audit/history but are not used directly for display ranking.
-- Clients should not trust arbitrary kind `9703` events for the leaderboard. The displayed leaderboard is based on kind `36497` events signed by the trusted publisher.
+- These records may be aggregated directly for display ranking.
+- Clients should deduplicate records by normalized `bolt11` value when summing totals.
+- Because Nostr is permissionless, this model is trust-minimized rather than authoritative; it is designed for this site's donation flow and may include user-published records.
 
 ---
 
@@ -92,12 +93,8 @@ This project uses custom addressable event kind `36497` to publish one cumulativ
 ### Purpose
 - Provide a simple, reliable Top Supporters query.
 - Avoid recalculating totals from raw zap receipts on every page load.
-- Make totals authoritative by accepting only events signed by the trusted CITADEL WIRE leaderboard publisher.
-
-### Trusted publisher
-The current trusted publisher is the CITADEL WIRE pubkey:
-
-`01d077c7b21bfee89a6883edabcd408ef324e9ab431f46bf57d5860430bcb97c`
+- Allow any publisher to publish a precomputed cumulative total for a supporter.
+- Let clients prefer the latest addressable total per supporter while still being able to fall back to aggregating kind `9703` donation records.
 
 ### Event shape
 ```json
@@ -136,27 +133,27 @@ The current trusted publisher is the CITADEL WIRE pubkey:
 - `display_name`: supporter display name.
 
 ### Query strategy
-Top Supporters queries relays for kind `36497` events with:
+Top Supporters queries relays for both cumulative total events and donation record events:
 
 ```json
 {
-  "kinds": [36497],
-  "authors": ["01d077c7b21bfee89a6883edabcd408ef324e9ab431f46bf57d5860430bcb97c"],
-  "#t": ["supporter-total"],
-  "limit": 100
+  "kinds": [36497, 9703],
+  "#t": ["supporter-total", "supporter-donation"],
+  "limit": 500
 }
 ```
 
 ### Validation strategy
-1. Only accept events from the trusted publisher pubkey.
-2. Require `d`, `p`, `amount`, and `picture` tags.
-3. Require `d` to equal `p`.
-4. Parse `amount` as millisatoshis.
-5. Keep only the latest event per supporter pubkey.
-6. Sort by total sats descending.
+1. For kind `36497`, require `d`, `p`, and `amount` tags.
+2. Require `d` to equal `p`.
+3. Parse `amount` as millisatoshis.
+4. Keep only the latest kind `36497` event per supporter pubkey.
+5. If no kind `36497` total exists for a supporter, aggregate their kind `9703` records by summing deduplicated `amount` tags.
+6. Fetch profile metadata separately and only display supporters with a profile picture.
+7. Sort by total sats descending.
 
 ### Notes
-- Nostr is permissionless. Author filtering is required for correctness.
+- Nostr is permissionless. This relaxed model does not require a single trusted leaderboard publisher.
 - Anonymous donations are not represented in kind `36497` because there is no supporter pubkey to rank.
 - Updating a supporter total replaces the previous total for that supporter because kind `36497` is addressable by publisher + kind + `d` tag.
 
@@ -167,7 +164,7 @@ Top Supporters queries relays for kind `36497` events with:
 Kind `9633` was previously used by this project for self-reported supporter donation records.
 
 ### Status
-Deprecated. New implementations should use kind `9703` for donation records and kind `36497` for cumulative trusted totals.
+Deprecated. New implementations should use kind `9703` for donation records and kind `36497` for cumulative totals.
 
 ### Notes
 - Kind `9633` events were self-reported and not authoritative.
