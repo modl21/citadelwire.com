@@ -20,7 +20,6 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { publishSupporterEvent, getVisitorSigner } from '@/lib/publishSupporter';
 import { CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
-import { recordLocalSupporterDonation, type SupporterMetadata } from '@/hooks/useTopSupporters';
 import { useNostr } from '@nostrify/react';
 import { nip19 } from 'nostr-tools';
 import type { NUser } from '@nostrify/react/login';
@@ -179,22 +178,13 @@ function DonateContent({
   const [donationCompleted, setDonationCompleted] = useState(false);
   const [completedAmount, setCompletedAmount] = useState(0);
   const [invoiceSupporterPubkey, setInvoiceSupporterPubkey] = useState<string | null>(null);
-  const [invoiceSupporterMetadata, setInvoiceSupporterMetadata] = useState<SupporterMetadata | null>(null);
   const [zapDetected, setZapDetected] = useState(false);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollStartRef = useRef<number>(0);
 
   // Define callbacks BEFORE effects that reference them
-  const recordSupporter = useCallback(async (supporterPubkey: string | null, metadata: SupporterMetadata | null, sats: number, paidInvoice: string) => {
-    if (!supporterPubkey || !metadata) return;
-
-    const paymentKey = paidInvoice.trim().toLowerCase();
-    recordLocalSupporterDonation({
-      pubkey: supporterPubkey,
-      amountSats: sats,
-      paymentKey,
-      metadata,
-    });
+  const recordSupporter = useCallback(async (supporterPubkey: string | null, sats: number, paidInvoice: string) => {
+    if (!supporterPubkey) return;
 
     try {
       await publishSupporterEvent(nostr, supporterPubkey, sats, paidInvoice);
@@ -211,18 +201,10 @@ function DonateContent({
     }
 
     const supporterPubkey = resolvedPubkey;
-    const supporterMetadata = supporterPubkey && identityInput.trim()
-      ? {
-          name: identityInput.trim(),
-          display_name: identityInput.trim(),
-          picture: `https://api.dicebear.com/9.x/identicon/svg?seed=${supporterPubkey}`,
-        }
-      : null;
 
     setIsLoading(true);
     try {
       setInvoiceSupporterPubkey(supporterPubkey);
-      setInvoiceSupporterMetadata(supporterMetadata);
       // Try WebLN first
       if (typeof window !== 'undefined' && 'webln' in window) {
         try {
@@ -231,7 +213,7 @@ function DonateContent({
           const pr = await fetchInvoice(finalAmount, memo, user);
           await webln.sendPayment(pr);
           toast({ title: 'Donation sent!', description: `You sent ${finalAmount} sats. Thank you!` });
-          await recordSupporter(supporterPubkey, supporterMetadata, finalAmount, pr);
+          await recordSupporter(supporterPubkey, finalAmount, pr);
           onClose();
           return;
         } catch {
@@ -246,7 +228,7 @@ function DonateContent({
     } finally {
       setIsLoading(false);
     }
-  }, [amount, identityInput, memo, resolvedPubkey, toast, onClose, recordSupporter]);
+  }, [amount, memo, resolvedPubkey, toast, onClose, recordSupporter]);
 
   const handleCopy = async () => {
     if (!invoice) return;
@@ -259,7 +241,7 @@ function DonateContent({
   const handlePaid = async () => {
     if (!invoice) return;
     toast({ title: 'Thank you!', description: `Your support means everything.` });
-    await recordSupporter(invoiceSupporterPubkey, invoiceSupporterMetadata, completedAmount, invoice);
+    await recordSupporter(invoiceSupporterPubkey, completedAmount, invoice);
     setDonationCompleted(true);
     setTimeout(() => window.location.reload(), 2000);
   };
@@ -335,13 +317,13 @@ function DonateContent({
     const confirm = async () => {
       if (!invoice) return;
       toast({ title: 'Payment confirmed!', description: `Zap receipt detected. Thank you!` });
-      await recordSupporter(invoiceSupporterPubkey, invoiceSupporterMetadata, completedAmount, invoice);
+      await recordSupporter(invoiceSupporterPubkey, completedAmount, invoice);
       setDonationCompleted(true);
       setTimeout(() => window.location.reload(), 2000);
     };
 
     void confirm();
-  }, [zapDetected, donationCompleted, completedAmount, invoice, invoiceSupporterPubkey, invoiceSupporterMetadata, recordSupporter, toast]);
+  }, [zapDetected, donationCompleted, completedAmount, invoice, invoiceSupporterPubkey, recordSupporter, toast]);
 
   // Generate QR code when invoice changes
   useEffect(() => {
@@ -424,7 +406,7 @@ function DonateContent({
         </Button>
 
         <button
-          onClick={() => { setInvoice(null); setInvoiceSupporterPubkey(null); setInvoiceSupporterMetadata(null); setQrCodeUrl(''); setZapDetected(false); }}
+          onClick={() => { setInvoice(null); setInvoiceSupporterPubkey(null); setQrCodeUrl(''); setZapDetected(false); }}
           className="text-xs text-muted-foreground/50 hover:text-muted-foreground w-full text-center transition-colors"
         >
           Change amount

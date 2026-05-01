@@ -1,4 +1,7 @@
-import { useEffect, useState } from 'react';
+import type { NostrEvent } from '@nostrify/nostrify';
+import { useNostr } from '@nostrify/react';
+import { useQuery } from '@tanstack/react-query';
+import { CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 
 export interface SupporterMetadata {
   name?: string;
@@ -11,138 +14,102 @@ export interface Supporter {
   totalSats: number;
   latestAt: number;
   metadata: SupporterMetadata;
-  paymentKeys: string[];
 }
 
-interface StoredSupporterLeaderboard {
-  version: 1;
-  supporters: Supporter[];
-}
+export const SUPPORTER_TOTAL_KIND = 36497;
+export const SUPPORTER_DONATION_KIND = 9703;
+export const SUPPORTER_TOTAL_PUBLISHER_PUBKEY = CITADEL_PUBKEY;
 
-export interface LocalSupporterDonation {
-  pubkey: string;
-  amountSats: number;
-  paymentKey: string;
-  metadata: SupporterMetadata;
-}
-
-const LOCAL_SUPPORTERS_STORAGE_KEY = 'citadel-wire:top-supporters:v1';
-const LOCAL_SUPPORTERS_UPDATED_EVENT = 'citadel-wire:top-supporters-updated';
+const SUPPORTER_TOTAL_RELAYS = [
+  'wss://premium.primal.net',
+  'wss://relay.primal.net',
+  'wss://relay.ditto.pub',
+  'wss://relay.damus.io',
+  'wss://nos.lol',
+  'wss://relay.nostr.band',
+  'wss://antiprimal.net',
+];
 
 function isHexPubkey(value: unknown): value is string {
   return typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
 }
 
-function isSupporterMetadata(value: unknown): value is SupporterMetadata {
-  if (!value || typeof value !== 'object') return false;
-  const metadata = value as Partial<SupporterMetadata>;
-  return typeof metadata.picture === 'string' && metadata.picture.length > 0;
+function getTagValue(event: NostrEvent, tagName: string): string | undefined {
+  return event.tags.find(([name]) => name === tagName)?.[1];
 }
 
-function isSupporter(value: unknown): value is Supporter {
-  if (!value || typeof value !== 'object') return false;
-  const supporter = value as Partial<Supporter>;
-  return (
-    isHexPubkey(supporter.pubkey) &&
-    typeof supporter.totalSats === 'number' &&
-    Number.isFinite(supporter.totalSats) &&
-    supporter.totalSats > 0 &&
-    typeof supporter.latestAt === 'number' &&
-    Number.isFinite(supporter.latestAt) &&
-    isSupporterMetadata(supporter.metadata) &&
-    Array.isArray(supporter.paymentKeys) &&
-    supporter.paymentKeys.every((paymentKey) => typeof paymentKey === 'string')
-  );
-}
+function validateSupporterTotalEvent(event: NostrEvent): Supporter | null {
+  if (event.kind !== SUPPORTER_TOTAL_KIND) return null;
+  if (event.pubkey !== SUPPORTER_TOTAL_PUBLISHER_PUBKEY) return null;
 
-function readStoredLeaderboard(): Supporter[] {
-  if (typeof window === 'undefined') return [];
+  const d = getTagValue(event, 'd');
+  const supporterPubkey = getTagValue(event, 'p');
+  if (!isHexPubkey(d) || !isHexPubkey(supporterPubkey) || d !== supporterPubkey) return null;
 
-  try {
-    const raw = window.localStorage.getItem(LOCAL_SUPPORTERS_STORAGE_KEY);
-    if (!raw) return [];
+  const amountTag = getTagValue(event, 'amount');
+  if (!amountTag) return null;
 
-    const parsed = JSON.parse(raw) as Partial<StoredSupporterLeaderboard>;
-    if (parsed.version !== 1 || !Array.isArray(parsed.supporters)) return [];
+  const millisats = Number.parseInt(amountTag, 10);
+  if (!Number.isSafeInteger(millisats) || millisats <= 0) return null;
 
-    return parsed.supporters
-      .filter(isSupporter)
-      .sort((a, b) => b.totalSats - a.totalSats);
-  } catch (error) {
-    console.warn('Failed to read local top supporters:', error);
-    return [];
-  }
-}
+  const picture = getTagValue(event, 'picture');
+  if (!picture) return null;
 
-function writeStoredLeaderboard(supporters: Supporter[]): void {
-  if (typeof window === 'undefined') return;
-
-  const leaderboard: StoredSupporterLeaderboard = {
-    version: 1,
-    supporters: supporters.sort((a, b) => b.totalSats - a.totalSats),
+  const metadata: SupporterMetadata = {
+    name: getTagValue(event, 'name'),
+    display_name: getTagValue(event, 'display_name'),
+    picture,
   };
 
-  window.localStorage.setItem(LOCAL_SUPPORTERS_STORAGE_KEY, JSON.stringify(leaderboard));
-  window.dispatchEvent(new Event(LOCAL_SUPPORTERS_UPDATED_EVENT));
+  return {
+    pubkey: supporterPubkey,
+    totalSats: Math.floor(millisats / 1000),
+    latestAt: Number.parseInt(getTagValue(event, 'last_payment_at') ?? String(event.created_at), 10) || event.created_at,
+    metadata,
+  };
 }
 
-export function getLocalTopSupporters(limit: number = 10): Supporter[] {
-  return readStoredLeaderboard().slice(0, limit);
-}
+function getLatestSupporterTotals(events: NostrEvent[]): Supporter[] {
+  const latestByPubkey = new Map<string, NostrEvent>();
 
-export function recordLocalSupporterDonation(donation: LocalSupporterDonation): void {
-  if (!isHexPubkey(donation.pubkey)) return;
-  if (!Number.isFinite(donation.amountSats) || donation.amountSats <= 0) return;
-  if (!donation.paymentKey.trim()) return;
-  if (!isSupporterMetadata(donation.metadata)) return;
+  for (const event of events) {
+    const supporterPubkey = getTagValue(event, 'p');
+    if (!isHexPubkey(supporterPubkey)) continue;
 
-  const paymentKey = donation.paymentKey.trim().toLowerCase();
-  const supporters = readStoredLeaderboard();
-  const existing = supporters.find((supporter) => supporter.pubkey === donation.pubkey);
-  const now = Math.floor(Date.now() / 1000);
-
-  if (existing) {
-    if (existing.paymentKeys.includes(paymentKey)) return;
-
-    existing.totalSats += donation.amountSats;
-    existing.latestAt = now;
-    existing.metadata = donation.metadata;
-    existing.paymentKeys = [...existing.paymentKeys, paymentKey].slice(-200);
-  } else {
-    supporters.push({
-      pubkey: donation.pubkey,
-      totalSats: donation.amountSats,
-      latestAt: now,
-      metadata: donation.metadata,
-      paymentKeys: [paymentKey],
-    });
+    const current = latestByPubkey.get(supporterPubkey);
+    if (!current || event.created_at > current.created_at) {
+      latestByPubkey.set(supporterPubkey, event);
+    }
   }
 
-  writeStoredLeaderboard(supporters);
+  return Array.from(latestByPubkey.values())
+    .map(validateSupporterTotalEvent)
+    .filter((supporter): supporter is Supporter => supporter !== null)
+    .sort((a, b) => b.totalSats - a.totalSats);
 }
 
 export function useTopSupporters(limit: number = 10) {
-  const [supporters, setSupporters] = useState<Supporter[]>(() => getLocalTopSupporters(limit));
+  const { nostr } = useNostr();
 
-  useEffect(() => {
-    const refreshSupporters = () => setSupporters(getLocalTopSupporters(limit));
+  return useQuery<Supporter[]>({
+    queryKey: ['top-supporters', SUPPORTER_TOTAL_KIND, SUPPORTER_TOTAL_PUBLISHER_PUBKEY, limit],
+    queryFn: async () => {
+      const relayGroup = nostr.group(SUPPORTER_TOTAL_RELAYS);
+      const events = await relayGroup.query([
+        {
+          kinds: [SUPPORTER_TOTAL_KIND],
+          authors: [SUPPORTER_TOTAL_PUBLISHER_PUBKEY],
+          '#t': ['supporter-total'],
+          limit: 100,
+        },
+      ]);
 
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === LOCAL_SUPPORTERS_STORAGE_KEY) refreshSupporters();
-    };
-
-    window.addEventListener(LOCAL_SUPPORTERS_UPDATED_EVENT, refreshSupporters);
-    window.addEventListener('storage', handleStorage);
-    refreshSupporters();
-
-    return () => {
-      window.removeEventListener(LOCAL_SUPPORTERS_UPDATED_EVENT, refreshSupporters);
-      window.removeEventListener('storage', handleStorage);
-    };
-  }, [limit]);
-
-  return {
-    data: supporters,
-    isLoading: false,
-  };
+      return getLatestSupporterTotals(events).slice(0, limit);
+    },
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: 60 * 1000,
+    retry: 1,
+    refetchOnMount: false,
+  });
 }

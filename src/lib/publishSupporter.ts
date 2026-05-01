@@ -1,8 +1,8 @@
 import { NLogin, NUser } from '@nostrify/react/login';
 import { generateSecretKey, nip19 } from 'nostr-tools';
+import { SUPPORTER_DONATION_KIND } from '@/hooks/useTopSupporters';
 
-export const SUPPORTER_KIND = 9633;
-export const SUPPORTER_SITE_ID = 'com.citadelwire.supporters';
+export const LEGACY_SUPPORTER_KIND = 9633;
 
 const VISITOR_SECRET_STORAGE_KEY = 'citadel-wire:page-view-visitor-secret';
 
@@ -61,18 +61,18 @@ export async function publishSupporterEvent(
   }
 
   const signedEvent = await user.signer.signEvent({
-    kind: SUPPORTER_KIND,
+    kind: SUPPORTER_DONATION_KIND,
     created_at: Math.floor(Date.now() / 1000),
     tags: [
-      ['d', SUPPORTER_SITE_ID],
       ['p', supporterPubkey],
       ['amount', String(amountSats * 1000)],
       ['bolt11', normalizedBolt11],
-      ['t', 'supporter'],
+      ['currency', 'msat'],
       ['t', 'citadel-wire'],
-      ['alt', `Citadel Wire supporter zap of ${amountSats} sats`],
+      ['t', 'supporter-donation'],
+      ['alt', `CITADEL WIRE confirmed supporter donation of ${amountSats} sats`],
     ],
-    content: String(amountSats),
+    content: '',
   });
 
   await nostr.event(signedEvent, { signal: AbortSignal.timeout(5000) });

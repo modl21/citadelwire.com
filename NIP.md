@@ -46,46 +46,129 @@ Query relays for the 10 most recent kind `3927` events filtered by the `d` tag f
 
 ---
 
-## Kind 9633: Supporter donation record
+## Kind 9703: CITADEL WIRE supporter donation record
 
-This project uses custom regular event kind `9633` to record supporter donations to the site.
+This project uses custom regular event kind `9703` to record one confirmed supporter donation.
 
 ### Purpose
-- Record that a Nostr user donated a specific amount of sats to the site.
-- Aggregate donations per pubkey to produce a ranked "Top Supporters" leaderboard.
-- Published by the visitor's ephemeral key after completing a Lightning donation.
+- Provide an append-only audit record for identified donations.
+- Allow the trusted CITADEL WIRE leaderboard publisher to update cumulative supporter totals.
+- Preserve optional donor identity: anonymous donations are valid payments but are not included in the public leaderboard.
 
 ### Event shape
 ```json
 {
-  "kind": 9633,
-  "content": "5000",
+  "kind": 9703,
+  "content": "",
   "tags": [
-    ["d", "com.citadelwire.supporters"],
     ["p", "<supporter-pubkey-hex>"],
-    ["t", "supporter"],
+    ["amount", "25000000"],
+    ["bolt11", "<paid-bolt11-invoice-or-normalized-payment-key>"],
+    ["currency", "msat"],
     ["t", "citadel-wire"],
-    ["alt", "Citadel Wire supporter donation of 5000 sats"]
+    ["t", "supporter-donation"],
+    ["alt", "CITADEL WIRE confirmed supporter donation of 25000 sats"]
   ]
 }
 ```
 
 ### Required fields
-- `content`: a base-10 positive integer string representing the donation amount in sats.
-- `d` tag: site identifier (`com.citadelwire.supporters`).
 - `p` tag: the 64-character hex pubkey of the supporter.
+- `amount` tag: the donation amount in millisatoshis.
+- `bolt11` tag: normalized invoice/payment key used for deduplication.
+- `currency` tag: must be `msat`.
 - `alt` tag: human-readable description per NIP-31.
 
-### Query strategy
-Query relays for up to 200 kind `9633` events filtered by the `d` tag for `com.citadelwire.supporters`.
+### Notes
+- These records are useful for audit/history but are not used directly for display ranking.
+- Clients should not trust arbitrary kind `9703` events for the leaderboard. The displayed leaderboard is based on kind `36497` events signed by the trusted publisher.
 
-### Aggregation strategy
-1. Group events by the `p` tag (supporter pubkey).
-2. Sum the `content` amounts for each supporter.
-3. Sort by total sats descending.
-4. Display the top 10.
+---
+
+## Kind 36497: CITADEL WIRE cumulative supporter total
+
+This project uses custom addressable event kind `36497` to publish one cumulative supporter total per supporter.
+
+### Purpose
+- Provide a simple, reliable Top Supporters query.
+- Avoid recalculating totals from raw zap receipts on every page load.
+- Make totals authoritative by accepting only events signed by the trusted CITADEL WIRE leaderboard publisher.
+
+### Trusted publisher
+The current trusted publisher is the CITADEL WIRE pubkey:
+
+`01d077c7b21bfee89a6883edabcd408ef324e9ab431f46bf57d5860430bcb97c`
+
+### Event shape
+```json
+{
+  "kind": 36497,
+  "content": "",
+  "tags": [
+    ["d", "<supporter-pubkey-hex>"],
+    ["p", "<supporter-pubkey-hex>"],
+    ["amount", "25610000"],
+    ["currency", "msat"],
+    ["donations", "2"],
+    ["last_payment_at", "1777130000"],
+    ["name", "MAV21"],
+    ["display_name", "MAV21"],
+    ["picture", "https://m.primal.net/NIJT.jpg"],
+    ["t", "citadel-wire"],
+    ["t", "supporter-total"],
+    ["alt", "CITADEL WIRE cumulative supporter total"]
+  ]
+}
+```
+
+### Required fields
+- `d` tag: supporter pubkey. This makes the event replaceable per supporter.
+- `p` tag: supporter pubkey. Must match `d`.
+- `amount` tag: cumulative amount in millisatoshis.
+- `currency` tag: must be `msat`.
+- `picture` tag: supporter avatar URL used by the leaderboard.
+- `alt` tag: human-readable description per NIP-31.
+
+### Optional fields
+- `donations`: total number of confirmed identified donations.
+- `last_payment_at`: Unix timestamp of the latest counted donation.
+- `name`: supporter profile name.
+- `display_name`: supporter display name.
+
+### Query strategy
+Top Supporters queries relays for kind `36497` events with:
+
+```json
+{
+  "kinds": [36497],
+  "authors": ["01d077c7b21bfee89a6883edabcd408ef324e9ab431f46bf57d5860430bcb97c"],
+  "#t": ["supporter-total"],
+  "limit": 100
+}
+```
+
+### Validation strategy
+1. Only accept events from the trusted publisher pubkey.
+2. Require `d`, `p`, `amount`, and `picture` tags.
+3. Require `d` to equal `p`.
+4. Parse `amount` as millisatoshis.
+5. Keep only the latest event per supporter pubkey.
+6. Sort by total sats descending.
 
 ### Notes
-- The donation amount is self-reported and not cryptographically verified.
-- Because Nostr is permissionless, anyone can publish fake supporter events.
-- This leaderboard is approximate and trust-based.
+- Nostr is permissionless. Author filtering is required for correctness.
+- Anonymous donations are not represented in kind `36497` because there is no supporter pubkey to rank.
+- Updating a supporter total replaces the previous total for that supporter because kind `36497` is addressable by publisher + kind + `d` tag.
+
+---
+
+## Legacy kind 9633: Supporter donation record
+
+Kind `9633` was previously used by this project for self-reported supporter donation records.
+
+### Status
+Deprecated. New implementations should use kind `9703` for donation records and kind `36497` for cumulative trusted totals.
+
+### Notes
+- Kind `9633` events were self-reported and not authoritative.
+- Because anyone could publish them, they must not be used for the public leaderboard without additional trust filtering.
