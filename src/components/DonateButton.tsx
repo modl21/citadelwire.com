@@ -21,6 +21,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { publishSupporterEvent, getVisitorSigner } from '@/lib/publishSupporter';
 import { CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 import { useNostr } from '@nostrify/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { nip19 } from 'nostr-tools';
 import type { NUser } from '@nostrify/react/login';
 import QRCode from 'qrcode';
@@ -165,6 +166,7 @@ function DonateContent({
 }) {
   const { toast } = useToast();
   const { nostr } = useNostr();
+  const queryClient = useQueryClient();
   const { user } = useCurrentUser();
   const [amount, setAmount] = useState<number | string>(10000);
   const [memo, setMemo] = useState('');
@@ -187,10 +189,11 @@ function DonateContent({
 
     try {
       await publishSupporterEvent(nostr, resolvedPubkey, sats, paidInvoice);
+      await queryClient.invalidateQueries({ queryKey: ['top-supporters'] });
     } catch (err) {
       console.warn('Failed to publish supporter event:', err);
     }
-  }, [nostr, resolvedPubkey]);
+  }, [nostr, queryClient, resolvedPubkey]);
 
   const handleGetInvoice = useCallback(async () => {
     const finalAmount = typeof amount === 'string' ? parseInt(amount, 10) : amount;

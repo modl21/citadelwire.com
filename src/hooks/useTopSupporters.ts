@@ -228,8 +228,8 @@ async function filterEligibleSupporters(
   if (pubkeysWithPictures.length === 0) return [];
 
   const postEvents = await profileRelayGroup.query(
-    [{ kinds: [1], authors: pubkeysWithPictures, limit: Math.max(200, pubkeysWithPictures.length * 25) }],
-    { signal: AbortSignal.timeout(6000) },
+    [{ kinds: [1], authors: pubkeysWithPictures, limit: Math.max(500, pubkeysWithPictures.length * 50) }],
+    { signal: AbortSignal.timeout(8000) },
   ).catch(() => []);
   const pubkeysWithPosts = new Set(postEvents.map((event) => event.pubkey));
 
