@@ -8,6 +8,14 @@ export interface RSSEpisode {
   pubDate: string;
 }
 
+const MAX_EPISODE_AGE_MS = 3 * 24 * 60 * 60 * 1000;
+
+function isOlderThanThreeDays(pubDate: string): boolean {
+  const publishedAt = new Date(pubDate).getTime();
+  if (!Number.isFinite(publishedAt)) return true;
+  return Date.now() - publishedAt > MAX_EPISODE_AGE_MS;
+}
+
 async function fetchFeed(feedUrl: string): Promise<Response> {
   try {
     const direct = await fetch(feedUrl, { signal: AbortSignal.timeout(5000) });
@@ -41,6 +49,7 @@ export function useRSSEpisode(feedUrl: string) {
       const mp3Url = enclosure?.getAttribute('url') ?? '';
 
       if (!mp3Url) return null;
+      if (!pubDate || isOlderThanThreeDays(pubDate)) return null;
 
       return { title, mp3Url, pubDate };
     },
