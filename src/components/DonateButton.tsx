@@ -451,7 +451,7 @@ function DonateContent({
       <div className="relative">
         <Input
           type="text"
-          placeholder="Nostr username for leaderboard (optional)"
+          placeholder="nostr username (ex: odell@primal.net) (optional)"
           value={identityInput}
           onChange={(e) => {
             setIdentityInput(e.target.value);
