@@ -443,7 +443,7 @@ function DonateContent({
 
       <Input
         type="text"
-        placeholder="Add a memo (optional)"
+        placeholder="add a message (optional)"
         value={memo}
         onChange={(e) => setMemo(e.target.value)}
       />
