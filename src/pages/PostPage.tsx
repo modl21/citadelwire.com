@@ -57,8 +57,10 @@ interface PostLocationState {
   event?: NostrEvent;
 }
 
-function isMatchingInitialEvent(event: NostrEvent | undefined, pointerId: string | undefined): event is NostrEvent {
-  return Boolean(event && pointerId && event.id === pointerId);
+function isMatchingInitialEvent(event: NostrEvent | undefined, pointer: ReturnType<typeof parsePostPointer>): event is NostrEvent {
+  if (!event || !pointer) return false;
+  if (pointer.id) return event.id === pointer.id;
+  return Boolean(pointer.idPrefix && event.id.startsWith(pointer.idPrefix));
 }
 
 export default function PostPage() {
@@ -66,7 +68,7 @@ export default function PostPage() {
   const location = useLocation();
   const pointer = useMemo(() => parsePostPointer(identifier), [identifier]);
   const locationState = location.state as PostLocationState | null;
-  const initialEvent = isMatchingInitialEvent(locationState?.event, pointer?.id) ? locationState.event : undefined;
+  const initialEvent = isMatchingInitialEvent(locationState?.event, pointer) ? locationState.event : undefined;
   const { data: event, isLoading, isError } = useNostrEvent(pointer, initialEvent);
   const [replyOpen, setReplyOpen] = useState(false);
   const author = useAuthor(event?.pubkey);

@@ -3,24 +3,43 @@ import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
 import { nip19 } from 'nostr-tools';
-import { CITADEL_FEED_RELAYS } from '@/hooks/useCitadelFeed';
+import { CITADEL_FEED_RELAYS, CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
+
+const POST_ID_PREFIX_LENGTH = 16;
+const HEX_EVENT_ID_RE = /^[0-9a-f]{8,64}$/i;
 
 export interface PostPointer {
   id?: string;
+  idPrefix?: string;
   author?: string;
   relays: string[];
 }
 
+export function getPostIdPrefix(event: NostrEvent): string {
+  return event.id.slice(0, POST_ID_PREFIX_LENGTH);
+}
+
 export function encodePostPath(event: NostrEvent): string {
-  return `/posts/${nip19.neventEncode({
-    id: event.id,
-    author: event.pubkey,
-    relays: CITADEL_FEED_RELAYS,
-  })}`;
+  return `/posts/${getPostIdPrefix(event)}`;
 }
 
 export function parsePostPointer(identifier: string | undefined): PostPointer | null {
   if (!identifier) return null;
+
+  if (HEX_EVENT_ID_RE.test(identifier)) {
+    const normalized = identifier.toLowerCase();
+    return normalized.length === 64
+      ? {
+          id: normalized,
+          author: CITADEL_PUBKEY,
+          relays: CITADEL_FEED_RELAYS,
+        }
+      : {
+          idPrefix: normalized,
+          author: CITADEL_PUBKEY,
+          relays: CITADEL_FEED_RELAYS,
+        };
+  }
 
   try {
     const decoded = nip19.decode(identifier);
@@ -100,20 +119,25 @@ export function getEventTitle(event: NostrEvent): string {
 export function useNostrEvent(pointer: PostPointer | null, initialEvent?: NostrEvent) {
   const { nostr } = useNostr();
   const relayListKey = pointer?.relays?.join('|') ?? '';
+  const lookupKey = pointer?.id ?? pointer?.idPrefix ?? '';
   const relayGroup = useMemo(() => {
     const relays = pointer?.relays && pointer.relays.length > 0 ? pointer.relays : CITADEL_FEED_RELAYS;
     return nostr.group(Array.from(new Set([...relays, ...CITADEL_FEED_RELAYS])));
   }, [nostr, relayListKey]);
 
   return useQuery<NostrEvent | null>({
-    queryKey: ['nostr', 'event', pointer?.id ?? '', pointer?.author ?? '', relayListKey],
+    queryKey: ['nostr', 'event', lookupKey, pointer?.author ?? '', relayListKey],
     queryFn: async () => {
-      if (!pointer?.id) return initialEvent ?? null;
+      if (!pointer?.id && !pointer?.idPrefix) return initialEvent ?? null;
 
       const filter: NostrFilter = {
-        ids: [pointer.id],
-        limit: 1,
+        kinds: [1],
+        limit: pointer.id ? 1 : 100,
       };
+
+      if (pointer.id) {
+        filter.ids = [pointer.id];
+      }
 
       if (pointer.author) {
         filter.authors = [pointer.author];
@@ -121,7 +145,10 @@ export function useNostrEvent(pointer: PostPointer | null, initialEvent?: NostrE
 
       try {
         const events = await relayGroup.query([filter], { signal: AbortSignal.timeout(10000) });
-        return events[0] ?? initialEvent ?? null;
+        const event = pointer.id
+          ? events.find((candidate) => candidate.id === pointer.id)
+          : events.find((candidate) => candidate.id.startsWith(pointer.idPrefix ?? ''));
+        return event ?? initialEvent ?? null;
       } catch (error) {
         if (initialEvent) {
           console.warn('Falling back to cached post event after relay query failed', error);
@@ -130,7 +157,7 @@ export function useNostrEvent(pointer: PostPointer | null, initialEvent?: NostrE
         throw error;
       }
     },
-    enabled: Boolean(pointer?.id),
+    enabled: Boolean(pointer?.id || pointer?.idPrefix),
     initialData: initialEvent,
     staleTime: initialEvent ? 10 * 1000 : 60 * 1000,
     gcTime: 10 * 60 * 1000,
