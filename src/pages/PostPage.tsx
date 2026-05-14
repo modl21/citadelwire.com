@@ -1,0 +1,296 @@
+import { useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { useSeoMeta } from '@unhead/react';
+import { format } from 'date-fns';
+import { nip19 } from 'nostr-tools';
+import { ArrowLeft, ExternalLink, Heart, MessageCircle, Radio, Repeat2, Zap } from 'lucide-react';
+import type { NostrMetadata } from '@nostrify/nostrify';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NoteContent } from '@/components/NoteContent';
+import { PostActionBar } from '@/components/PostActionBar';
+import { ReplyComposer } from '@/components/ReplyComposer';
+import { MiniEventCard } from '@/components/MiniEventCard';
+import { CommentsSection } from '@/components/comments/CommentsSection';
+import { TickerBar } from '@/components/TickerBar';
+import { DonateButton } from '@/components/DonateButton';
+import { useAuthor } from '@/hooks/useAuthor';
+import { usePostEngagement } from '@/hooks/usePostEngagement';
+import { getPostType } from '@/hooks/useCitadelFeed';
+import { genUserName } from '@/lib/genUserName';
+import { getEventTitle, parsePostPointer, useNostrEvent } from '@/lib/nostrPost';
+import NotFound from '@/pages/NotFound';
+
+function PostPageSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
+      <Skeleton className="mb-6 h-10 w-36" />
+      <Card className="overflow-hidden border-border/60 bg-card/70">
+        <CardContent className="space-y-5 p-5 sm:p-7">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-12 w-12 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-3 w-56" />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-11/12" />
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-5 w-3/4" />
+          </div>
+          <Skeleton className="h-12 w-full rounded-full" />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function formatStat(count: number): string {
+  return count.toLocaleString('en-US');
+}
+
+export default function PostPage() {
+  const { identifier } = useParams<{ identifier: string }>();
+  const pointer = useMemo(() => parsePostPointer(identifier), [identifier]);
+  const { data: event, isLoading, isError } = useNostrEvent(pointer);
+  const [replyOpen, setReplyOpen] = useState(false);
+  const author = useAuthor(event?.pubkey);
+  const engagement = usePostEngagement(event);
+
+  const metadata: NostrMetadata | undefined = author.data?.metadata;
+  const displayName = metadata?.display_name ?? metadata?.name ?? (event ? genUserName(event.pubkey) : 'CITADEL WIRE');
+  const avatar = metadata?.picture;
+  const npub = event ? nip19.npubEncode(event.pubkey) : undefined;
+  const nevent = event ? nip19.neventEncode({ id: event.id, author: event.pubkey, relays: pointer?.relays }) : undefined;
+  const title = event ? getEventTitle(event) : 'CITADEL WIRE post';
+  const postType = event ? getPostType(event) : 'standard';
+  const published = event ? format(new Date(event.created_at * 1000), 'MMMM d, yyyy · h:mm a') : '';
+
+  useSeoMeta({
+    title: `${title} · CITADEL WIRE`,
+    description: event?.content.slice(0, 160) ?? 'CITADEL WIRE post with Nostr comments, likes, reposts and zaps.',
+    ogTitle: `${title} · CITADEL WIRE`,
+    ogDescription: event?.content.slice(0, 160) ?? 'CITADEL WIRE post with Nostr comments, likes, reposts and zaps.',
+    twitterCard: 'summary',
+    twitterTitle: `${title} · CITADEL WIRE`,
+    twitterDescription: event?.content.slice(0, 160) ?? 'CITADEL WIRE post with Nostr comments, likes, reposts and zaps.',
+  });
+
+  if (!pointer) return <NotFound />;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <PostDetailHeader />
+        <PostPageSkeleton />
+      </div>
+    );
+  }
+
+  if (isError || !event) {
+    return (
+      <div className="min-h-screen bg-background">
+        <PostDetailHeader />
+        <div className="mx-auto max-w-2xl px-4 py-16 text-center">
+          <Card className="border-dashed bg-card/50">
+            <CardContent className="p-8">
+              <p className="text-lg font-semibold">Post not found</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                This event was not available on the configured relays. Try again in a moment or open it in another Nostr client.
+              </p>
+              <Link to="/" className="mt-5 inline-flex text-sm font-semibold text-amber-300 hover:underline">
+                Back to CITADEL WIRE
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  const replies = engagement.data?.replies ?? [];
+  const quoteReposts = engagement.data?.quoteReposts ?? [];
+  const zaps = engagement.data?.zaps ?? [];
+  const likes = engagement.data?.likes ?? [];
+  const reposts = engagement.data?.reposts ?? [];
+  const totalZapSats = engagement.data?.totalZapSats ?? 0;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <PostDetailHeader />
+
+      <main className="relative mx-auto w-full max-w-3xl px-4 py-5 sm:px-6 sm:py-8">
+        <div className="pointer-events-none absolute inset-x-0 top-0 -z-0 h-80 bg-[radial-gradient(circle_at_50%_0%,rgba(245,158,11,0.09),transparent_58%)]" />
+
+        <Link
+          to="/"
+          className="relative z-10 mb-4 inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/60 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to wire
+        </Link>
+
+        <article className="relative z-10 overflow-hidden rounded-[28px] border border-border/60 bg-card/72 shadow-2xl shadow-black/20 backdrop-blur-xl">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/60 to-transparent" />
+          <div className="p-5 sm:p-7">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <a href={npub ? `/${npub}` : '#'} className="flex min-w-0 items-center gap-3 group">
+                <Avatar className="h-12 w-12 border border-amber-300/20 ring-4 ring-amber-300/5">
+                  <AvatarImage src={avatar} alt={displayName} />
+                  <AvatarFallback className="bg-amber-400/10 text-xs font-black text-amber-200">
+                    {displayName.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <div className="truncate text-base font-black tracking-[-0.02em] group-hover:text-amber-200">
+                    {displayName}
+                  </div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {published}
+                  </div>
+                </div>
+              </a>
+
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="border-amber-400/25 bg-amber-400/10 text-amber-200">
+                  {postType.replace('-', ' ').toUpperCase()}
+                </Badge>
+                {nevent && (
+                  <a
+                    href={`https://primal.net/e/${nevent}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/50 bg-muted/20 text-muted-foreground transition-colors hover:text-foreground"
+                    title="Open on Primal"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                )}
+              </div>
+            </div>
+
+            <NoteContent event={event} className="text-[17px] leading-8 text-foreground/95 sm:text-[18px]" />
+
+            <div className="mt-6 grid grid-cols-2 gap-2 border-y border-border/40 py-4 sm:grid-cols-4">
+              <Stat icon={MessageCircle} label="Comments" value={formatStat(replies.length + (engagement.data?.comments.length ?? 0))} />
+              <Stat icon={Heart} label="Likes" value={formatStat(likes.length)} />
+              <Stat icon={Repeat2} label="Reposts" value={formatStat(reposts.length)} />
+              <Stat icon={Zap} label="Zapped" value={totalZapSats > 0 ? `${formatStat(totalZapSats)} sats` : formatStat(zaps.length)} />
+            </div>
+
+            <PostActionBar event={event} expanded onComment={() => setReplyOpen(true)} className="mt-3 justify-around" />
+          </div>
+        </article>
+
+        {replyOpen && (
+          <div className="relative z-10 mt-4">
+            <ReplyComposer root={event} onCancel={() => setReplyOpen(false)} onSuccess={() => setReplyOpen(false)} />
+          </div>
+        )}
+
+        <section className="relative z-10 mt-6">
+          <Tabs defaultValue="comments" className="w-full">
+            <TabsList className="grid h-auto w-full grid-cols-4 rounded-2xl border border-border/50 bg-card/70 p-1 backdrop-blur">
+              <TabsTrigger value="comments" className="rounded-xl py-2 text-xs sm:text-sm">Comments</TabsTrigger>
+              <TabsTrigger value="likes" className="rounded-xl py-2 text-xs sm:text-sm">Likes</TabsTrigger>
+              <TabsTrigger value="reposts" className="rounded-xl py-2 text-xs sm:text-sm">Reposts</TabsTrigger>
+              <TabsTrigger value="zaps" className="rounded-xl py-2 text-xs sm:text-sm">Zaps</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="comments" className="mt-4 space-y-4">
+              <CommentsSection
+                root={event}
+                title="Nostr comments"
+                emptyStateMessage="No comments yet"
+                emptyStateSubtitle="Start the conversation with a signed Nostr comment."
+                className="border-border/50 bg-card/70"
+              />
+              <EngagementCard title="Thread replies" empty="No kind 1 replies yet.">
+                {replies.map((reply) => <MiniEventCard key={reply.id} event={reply} />)}
+              </EngagementCard>
+            </TabsContent>
+
+            <TabsContent value="likes" className="mt-4">
+              <EngagementCard title="People who liked this" empty="No likes found yet.">
+                {likes.map((like) => <MiniEventCard key={like.id} event={like} label="Like" />)}
+              </EngagementCard>
+            </TabsContent>
+
+            <TabsContent value="reposts" className="mt-4">
+              <EngagementCard title="Reposts and quotes" empty="No reposts found yet.">
+                {quoteReposts.map((quote) => <MiniEventCard key={quote.id} event={quote} label="Quote" />)}
+                {reposts.slice(0, 30).map((repost) => <MiniEventCard key={repost.id} event={repost} label="Repost" />)}
+              </EngagementCard>
+            </TabsContent>
+
+            <TabsContent value="zaps" className="mt-4">
+              <EngagementCard title="Lightning zaps" empty="No zap receipts found yet.">
+                {zaps.map((zap) => <MiniEventCard key={zap.id} event={zap} label="Zap" />)}
+              </EngagementCard>
+            </TabsContent>
+          </Tabs>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function PostDetailHeader() {
+  return (
+    <header className="sticky top-0 z-50 border-b border-border/40 bg-background/82 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <Link to="/" className="flex items-center gap-2 text-sm font-black tracking-[-0.02em] hover:opacity-80">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-400 text-[11px] font-black text-black shadow-lg shadow-amber-400/20">
+            CW
+          </div>
+          CITADEL WIRE
+        </Link>
+        <div className="min-w-0 flex-1 px-2">
+          <TickerBar />
+        </div>
+        <DonateButton />
+      </div>
+    </header>
+  );
+}
+
+function Stat({ icon: Icon, label, value }: { icon: typeof MessageCircle; label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-muted/20 p-3">
+      <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+        <Icon className="h-3.5 w-3.5 text-amber-300/80" />
+        {label}
+      </div>
+      <div className="text-base font-black text-foreground">{value}</div>
+    </div>
+  );
+}
+
+function EngagementCard({ title, empty, children }: { title: string; empty: string; children: React.ReactNode }) {
+  const items = Array.isArray(children) ? children.filter(Boolean) : children;
+  const hasItems = Array.isArray(items) ? items.length > 0 : Boolean(items);
+
+  return (
+    <Card className="border-border/50 bg-card/70">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Radio className="h-4 w-4 text-amber-300" />
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {hasItems ? (
+          <div className="space-y-3">{items}</div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border/60 p-8 text-center text-sm text-muted-foreground">
+            {empty}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

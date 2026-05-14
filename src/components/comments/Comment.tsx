@@ -4,8 +4,10 @@ import { NostrEvent } from '@nostrify/nostrify';
 import { nip19 } from 'nostr-tools';
 import { useAuthor } from '@/hooks/useAuthor';
 import { useComments } from '@/hooks/useComments';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { CommentForm } from './CommentForm';
 import { NoteContent } from '@/components/NoteContent';
+import { ActionLoginDialog } from '@/components/auth/ActionLoginDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -26,6 +28,8 @@ interface CommentProps {
 export function Comment({ root, comment, depth = 0, maxDepth = 3, limit }: CommentProps) {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [showReplies, setShowReplies] = useState(depth < 2); // Auto-expand first 2 levels
+  const [loginOpen, setLoginOpen] = useState(false);
+  const { user } = useCurrentUser();
   
   const author = useAuthor(comment.pubkey);
   const { data: commentsData } = useComments(root, limit);
@@ -77,7 +81,13 @@ export function Comment({ root, comment, depth = 0, maxDepth = 3, limit }: Comme
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowReplyForm(!showReplyForm)}
+                  onClick={() => {
+                    if (!user) {
+                      setLoginOpen(true);
+                      return;
+                    }
+                    setShowReplyForm(!showReplyForm);
+                  }}
                   className="h-8 px-2 text-xs"
                 >
                   <MessageSquare className="h-3 w-3 mr-1" />
@@ -148,6 +158,12 @@ export function Comment({ root, comment, depth = 0, maxDepth = 3, limit }: Comme
           </CollapsibleContent>
         </Collapsible>
       )}
+
+      <ActionLoginDialog
+        open={loginOpen}
+        onOpenChange={setLoginOpen}
+        action="reply to this comment"
+      />
     </div>
   );
 }

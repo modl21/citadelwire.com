@@ -1,8 +1,10 @@
 import { type NostrEvent } from '@nostrify/nostrify';
-import { nip19 } from 'nostr-tools';
+import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow, format } from 'date-fns';
 import { NoteContent } from '@/components/NoteContent';
+import { PostActionBar } from '@/components/PostActionBar';
 import { cn } from '@/lib/utils';
+import { encodePostPath } from '@/lib/nostrPost';
 
 interface PostCardProps {
   event: NostrEvent;
@@ -17,24 +19,35 @@ function formatTimestamp(unixTimestamp: number): { relative: string; absolute: s
   };
 }
 
-function getNeventUrl(event: NostrEvent): string {
-  const nevent = nip19.neventEncode({ id: event.id, author: event.pubkey });
-  return `https://primal.net/e/${nevent}`;
+function isInteractiveElement(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest('a, button, input, textarea, select, [role="button"]'));
 }
 
 export function PostCard({ event, isFirst }: PostCardProps) {
+  const navigate = useNavigate();
   const { relative, absolute } = formatTimestamp(event.created_at);
-  const neventUrl = getNeventUrl(event);
+  const postPath = encodePostPath(event);
+
+  const openPost = () => navigate(postPath);
 
   return (
-    <a
-      href={neventUrl}
-      target="_blank"
-      rel="noopener noreferrer"
+    <article
+      role="link"
+      tabIndex={0}
+      onClick={(clickEvent) => {
+        if (isInteractiveElement(clickEvent.target)) return;
+        openPost();
+      }}
+      onKeyDown={(keyboardEvent) => {
+        if (keyboardEvent.key !== 'Enter' && keyboardEvent.key !== ' ') return;
+        keyboardEvent.preventDefault();
+        openPost();
+      }}
       className={cn(
-        'group relative block py-4 sm:py-5 px-4 sm:px-6 transition-colors duration-200 hover:bg-muted/40',
+        'group relative block cursor-pointer py-4 sm:py-5 px-4 sm:px-6 transition-colors duration-200 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40',
         !isFirst && 'border-t border-border/40',
       )}
+      aria-label="Open post discussion"
     >
       {/* Timestamp */}
       <div className="flex items-center gap-1.5 mb-2">
@@ -54,6 +67,8 @@ export function PostCard({ event, isFirst }: PostCardProps) {
         event={event}
         className="text-[15px] sm:text-[15px] text-foreground/95 leading-[1.75] tracking-[-0.01em]"
       />
-    </a>
+
+      <PostActionBar event={event} className="mt-3 justify-start gap-1 opacity-80 transition-opacity group-hover:opacity-100" onComment={openPost} />
+    </article>
   );
 }

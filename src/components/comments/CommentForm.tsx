@@ -4,7 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { usePostComment } from '@/hooks/usePostComment';
-import { LoginArea } from '@/components/auth/LoginArea';
+import { ActionLoginDialog } from '@/components/auth/ActionLoginDialog';
 import { NostrEvent } from '@nostrify/nostrify';
 import { MessageSquare, Send } from 'lucide-react';
 
@@ -24,6 +24,7 @@ export function CommentForm({
   compact = false 
 }: CommentFormProps) {
   const [content, setContent] = useState('');
+  const [loginOpen, setLoginOpen] = useState(false);
   const { user } = useCurrentUser();
   const { mutate: postComment, isPending } = usePostComment();
 
@@ -45,17 +46,26 @@ export function CommentForm({
 
   if (!user) {
     return (
-      <Card className={compact ? "border-dashed" : ""}>
-        <CardContent className={compact ? "p-4" : "p-6"}>
-          <div className="text-center space-y-4">
-            <div className="flex items-center justify-center space-x-2 text-muted-foreground">
-              <MessageSquare className="h-5 w-5" />
-              <span>Sign in to {reply ? 'reply' : 'comment'}</span>
+      <>
+        <Card className={compact ? "border-dashed" : ""}>
+          <CardContent className={compact ? "p-4" : "p-6"}>
+            <div className="text-center space-y-4">
+              <div className="flex items-center justify-center space-x-2 text-muted-foreground">
+                <MessageSquare className="h-5 w-5" />
+                <span>Sign in to {reply ? 'reply' : 'comment'}</span>
+              </div>
+              <Button type="button" onClick={() => setLoginOpen(true)} className="rounded-full">
+                Get started
+              </Button>
             </div>
-            <LoginArea />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        <ActionLoginDialog
+          open={loginOpen}
+          onOpenChange={setLoginOpen}
+          action={reply ? 'reply to this comment' : 'comment on this post'}
+        />
+      </>
     );
   }
 
