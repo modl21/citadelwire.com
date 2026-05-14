@@ -14,6 +14,7 @@ interface CommentsSectionProps {
   emptyStateSubtitle?: string;
   className?: string;
   limit?: number;
+  footer?: React.ReactNode;
 }
 
 export function CommentsSection({ 
@@ -23,6 +24,7 @@ export function CommentsSection({
   emptyStateSubtitle = "Be the first to share your thoughts!",
   className,
   limit = 500,
+  footer,
 }: CommentsSectionProps) {
   const { data: commentsData, isLoading, error } = useComments(root, limit);
   const comments = commentsData?.topLevelComments || [];
@@ -94,6 +96,7 @@ export function CommentsSection({
             ))}
           </div>
         )}
+        {footer ? <div className="border-t border-border/40 pt-6">{footer}</div> : null}
       </CardContent>
     </Card>
   );

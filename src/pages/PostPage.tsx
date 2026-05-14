@@ -19,7 +19,7 @@ import { TickerBar } from '@/components/TickerBar';
 import { DonateButton } from '@/components/DonateButton';
 import { useAuthor } from '@/hooks/useAuthor';
 import { usePostEngagement } from '@/hooks/usePostEngagement';
-import { getPostType } from '@/hooks/useCitadelFeed';
+import { CITADEL_PUBKEY, getPostType } from '@/hooks/useCitadelFeed';
 import { genUserName } from '@/lib/genUserName';
 import { getEventTitle, parsePostPointer, useNostrEvent } from '@/lib/nostrPost';
 import NotFound from '@/pages/NotFound';
@@ -218,14 +218,14 @@ export default function PostPage() {
             <TabsContent value="comments" className="mt-4 space-y-4">
               <CommentsSection
                 root={event}
-                title="Nostr comments"
-                emptyStateMessage="No comments yet"
+                title="Discussion"
+                emptyStateMessage="No Nostr comments yet"
                 emptyStateSubtitle="Start the conversation with a signed Nostr comment."
                 className="border-border/50 bg-card/70"
+                footer={
+                  <ThreadRepliesSection replies={replies} />
+                }
               />
-              <EngagementCard title="Thread replies" empty="No kind 1 replies yet.">
-                {replies.map((reply) => <MiniEventCard key={reply.id} event={reply} />)}
-              </EngagementCard>
             </TabsContent>
 
             <TabsContent value="likes" className="mt-4">
@@ -254,19 +254,27 @@ export default function PostPage() {
 }
 
 function PostDetailHeader() {
+  const author = useAuthor(CITADEL_PUBKEY);
+  const metadata = author.data?.metadata;
+
   return (
     <header className="sticky top-0 z-50 border-b border-border/40 bg-background/82 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-        <Link to="/" className="flex items-center gap-2 text-sm font-black tracking-[-0.02em] hover:opacity-80">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-400 text-[11px] font-black text-black shadow-lg shadow-amber-400/20">
-            CW
-          </div>
-          CITADEL WIRE
-        </Link>
-        <div className="min-w-0 flex-1 px-2">
+      <div className="mx-auto flex max-w-3xl flex-col gap-2 px-4 py-3 sm:px-6">
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2 text-sm font-black tracking-[-0.02em] hover:opacity-80">
+            <Avatar className="h-8 w-8 shrink-0 ring-2 ring-border/40">
+              {metadata?.picture ? (
+                <AvatarImage src={metadata.picture} alt={metadata.display_name ?? metadata.name ?? 'CITADEL WIRE'} />
+              ) : null}
+              <AvatarFallback className="text-[10px] font-bold bg-primary text-primary-foreground">CW</AvatarFallback>
+            </Avatar>
+            <span className="hidden xs:inline sm:inline">CITADEL WIRE</span>
+          </Link>
+          <DonateButton />
+        </div>
+        <div className="min-w-0 overflow-x-auto pb-0.5 scrollbar-none">
           <TickerBar />
         </div>
-        <DonateButton />
       </div>
     </header>
   );
@@ -280,6 +288,33 @@ function Stat({ icon: Icon, label, value }: { icon: typeof MessageCircle; label:
         {label}
       </div>
       <div className="text-base font-black text-foreground">{value}</div>
+    </div>
+  );
+}
+
+function ThreadRepliesSection({ replies }: { replies: NostrEvent[] }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-base font-semibold text-foreground">Thread replies</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Kind 1 replies are shown here alongside NIP-22 comments above.
+          </p>
+        </div>
+        <span className="rounded-full border border-border/50 bg-muted/30 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+          {replies.length}
+        </span>
+      </div>
+      {replies.length > 0 ? (
+        <div className="space-y-3">
+          {replies.map((reply) => <MiniEventCard key={reply.id} event={reply} />)}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
+          No kind 1 replies yet.
+        </div>
+      )}
     </div>
   );
 }
