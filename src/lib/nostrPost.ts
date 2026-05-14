@@ -7,7 +7,7 @@ import { CITADEL_FEED_RELAYS, CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 
 const POST_ID_PREFIX_LENGTH = 16;
 const HEX_EVENT_ID_RE = /^[0-9a-f]{8,64}$/i;
-const UTC_POST_SLUG_RE = /^(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})(\d{2})z$/i;
+const UTC_POST_SLUG_RE = /^(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})(\d{2})$/;
 
 export interface PostPointer {
   id?: string;
@@ -34,7 +34,7 @@ export function getPostUtcSlug(event: NostrEvent): string {
   const minute = padUtcPart(date.getUTCMinutes());
   const second = padUtcPart(date.getUTCSeconds());
 
-  return `${year}-${month}-${day}-${hour}${minute}${second}z`;
+  return `${year}-${month}-${day}-${hour}${minute}${second}`;
 }
 
 export function encodePostPath(event: NostrEvent): string {
