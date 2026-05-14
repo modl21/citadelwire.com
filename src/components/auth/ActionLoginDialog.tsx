@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { AlertTriangle, ArrowRight, Check, KeyRound, Radio, Shield, Sparkles, Upload } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, ArrowUpRight, Check, QrCode, Rabbit, Shield, Sparkles, UserRoundPlus } from 'lucide-react';
+import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
+import QRCode from 'qrcode';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useLoginActions } from '@/hooks/useLoginActions';
-import { cn } from '@/lib/utils';
+import { useNostrPublish } from '@/hooks/useNostrPublish';
 
 interface ActionLoginDialogProps {
   open: boolean;
@@ -14,221 +14,270 @@ interface ActionLoginDialogProps {
   action?: string;
 }
 
-const validateNsec = (nsec: string) => /^nsec1[a-zA-Z0-9]{58}$/.test(nsec.trim());
-const validateBunkerUri = (uri: string) => uri.trim().startsWith('bunker://');
+const GUEST_NSEC_STORAGE_KEY = 'citadel-wire:guest-nsec';
+const GUEST_NAME_STORAGE_KEY = 'citadel-wire:guest-name';
+const PRIMAL_DOWNLOAD_URL = 'https://primal.net/downloads';
+const NOSTR_CONNECT_RELAYS = [
+  'wss://relay.primal.net',
+  'wss://relay.ditto.pub',
+  'wss://relay.damus.io',
+];
+const GUEST_ANIMALS = [
+  'Aardvark',
+  'Albatross',
+  'Badger',
+  'Bison',
+  'Bobcat',
+  'Caribou',
+  'Cobra',
+  'Condor',
+  'Coyote',
+  'Falcon',
+  'Fox',
+  'Gecko',
+  'Heron',
+  'Jaguar',
+  'Kestrel',
+  'Lynx',
+  'Marmot',
+  'Ocelot',
+  'Otter',
+  'Panther',
+  'Peregrine',
+  'Raven',
+  'Salmon',
+  'Snowcat',
+  'Sparrow',
+  'Stallion',
+  'Viper',
+  'Wolf',
+];
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function randomHex(byteLength: number): string {
+  const bytes = new Uint8Array(byteLength);
+  crypto.getRandomValues(bytes);
+  return bytesToHex(bytes);
+}
+
+function generateGuestName(): string {
+  const animal = GUEST_ANIMALS[Math.floor(Math.random() * GUEST_ANIMALS.length)];
+  const suffix = randomHex(2).toUpperCase();
+  return `Citadel ${animal} ${suffix}`;
+}
+
+function getOrCreateGuestAccount(): { nsec: string; name: string } {
+  const existingNsec = localStorage.getItem(GUEST_NSEC_STORAGE_KEY);
+  const existingName = localStorage.getItem(GUEST_NAME_STORAGE_KEY);
+
+  if (existingNsec && existingName) {
+    return { nsec: existingNsec, name: existingName };
+  }
+
+  const secretKey = generateSecretKey();
+  const nsec = nip19.nsecEncode(secretKey);
+  const name = existingName ?? generateGuestName();
+
+  localStorage.setItem(GUEST_NSEC_STORAGE_KEY, nsec);
+  localStorage.setItem(GUEST_NAME_STORAGE_KEY, name);
+
+  return { nsec, name };
+}
+
+function createNostrConnectUri(): string {
+  const clientSecretKey = generateSecretKey();
+  const clientPubkey = getPublicKey(clientSecretKey);
+  const secret = randomHex(16);
+  const params = new URLSearchParams();
+
+  NOSTR_CONNECT_RELAYS.forEach((relay) => params.append('relay', relay));
+  params.set('secret', secret);
+  params.set('name', 'CITADEL WIRE');
+  params.set('perms', [
+    'get_public_key',
+    'sign_event:1',
+    'sign_event:6',
+    'sign_event:7',
+    'sign_event:1111',
+    'sign_event:9734',
+  ].join(','));
+
+  if (typeof window !== 'undefined') {
+    params.set('url', window.location.origin);
+  }
+
+  return `nostrconnect://${clientPubkey}?${params.toString()}`;
+}
 
 export function ActionLoginDialog({ open, onOpenChange, action = 'interact' }: ActionLoginDialogProps) {
   const login = useLoginActions();
-  const [nsec, setNsec] = useState('');
-  const [bunkerUri, setBunkerUri] = useState('');
+  const { mutateAsync: publishEvent } = useNostrPublish();
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const hasExtension = typeof window !== 'undefined' && 'nostr' in window;
+  const [isCreatingGuest, setIsCreatingGuest] = useState(false);
+  const [guestName, setGuestName] = useState<string | null>(null);
+  const nostrConnectUri = useMemo(() => createNostrConnectUri(), [open]);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+
+    void QRCode.toDataURL(nostrConnectUri, {
+      width: 384,
+      margin: 2,
+      color: {
+        dark: '#020617',
+        light: '#ffffff',
+      },
+    }).then((url) => {
+      if (!cancelled) setQrCodeUrl(url);
+    }).catch(() => {
+      if (!cancelled) setError('Could not generate the Primal sign-in QR code.');
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nostrConnectUri, open]);
+
+  useEffect(() => {
+    if (!open) {
+      setError(null);
+      setIsCreatingGuest(false);
+    }
+  }, [open]);
 
   const closeAfterLogin = () => {
-    setIsLoading(false);
     setError(null);
-    setNsec('');
-    setBunkerUri('');
+    setIsCreatingGuest(false);
     onOpenChange(false);
   };
 
-  const handleNsecLogin = () => {
-    if (!validateNsec(nsec)) {
-      setError('Enter a valid nsec secret key beginning with nsec1.');
-      return;
-    }
-
-    setIsLoading(true);
+  const handleCreateGuest = async () => {
+    setIsCreatingGuest(true);
     setError(null);
 
     try {
-      login.nsec(nsec.trim());
-      closeAfterLogin();
-    } catch {
-      setError('That secret key could not be used. Check it and try again.');
-      setIsLoading(false);
-    }
-  };
+      const account = getOrCreateGuestAccount();
+      setGuestName(account.name);
+      login.nsec(account.nsec);
 
-  const handleBunkerLogin = async () => {
-    if (!validateBunkerUri(bunkerUri)) {
-      setError('Enter a valid bunker:// remote signer URI.');
-      return;
-    }
+      try {
+        await publishEvent({
+          kind: 0,
+          content: JSON.stringify({
+            name: account.name,
+            display_name: account.name,
+            about: 'Guest CITADEL WIRE account stored locally in this browser.',
+          }),
+          tags: [],
+        });
+      } catch (profileError) {
+        console.warn('Guest profile publish failed', profileError);
+      }
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      await login.bunker(bunkerUri.trim());
-      closeAfterLogin();
-    } catch {
-      setError('Could not connect to that bunker. Check the URI and approve the request in your signer.');
-      setIsLoading(false);
-    }
-  };
-
-  const handleExtensionLogin = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      await login.extension();
       closeAfterLogin();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Extension login failed.');
-      setIsLoading(false);
+      setError(err instanceof Error ? err.message : 'Could not create a guest account.');
+      setIsCreatingGuest(false);
     }
-  };
-
-  const handleFileUpload = (file: File | undefined) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const value = String(reader.result ?? '').trim();
-      setNsec(value);
-      if (validateNsec(value)) {
-        try {
-          login.nsec(value);
-          closeAfterLogin();
-        } catch {
-          setError('The uploaded key could not be used.');
-        }
-      } else {
-        setError('That file does not contain a valid nsec secret key.');
-      }
-    };
-    reader.onerror = () => setError('Could not read that file.');
-    reader.readAsText(file);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden border-white/10 bg-[#080b12]/95 p-0 text-white shadow-2xl shadow-amber-500/10 backdrop-blur-2xl sm:max-w-[460px] sm:rounded-[28px]">
+      <DialogContent className="overflow-hidden border-white/10 bg-[#080b12]/95 p-0 text-white shadow-2xl shadow-amber-500/10 backdrop-blur-2xl sm:max-w-[520px] sm:rounded-[28px]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(245,158,11,0.26),transparent_38%),radial-gradient(circle_at_12%_18%,rgba(56,189,248,0.14),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.06),transparent_36%)]" />
         <div className="relative p-6 sm:p-7">
           <DialogHeader className="items-center text-center">
             <div className="relative mb-3 flex h-20 w-20 items-center justify-center rounded-full border border-amber-300/20 bg-amber-300/10 shadow-[0_0_60px_rgba(245,158,11,0.18)]">
               <div className="absolute inset-2 rounded-full border border-white/10" />
-              <KeyRound className="h-9 w-9 text-amber-200" />
+              <Shield className="h-9 w-9 text-amber-200" />
             </div>
             <DialogTitle className="text-2xl font-black tracking-[-0.04em] text-white">
               Join CITADEL WIRE
             </DialogTitle>
             <DialogDescription className="max-w-sm text-sm leading-6 text-white/62">
-              Sign in with your Nostr key to {action}. Your identity stays under your control and every action is signed locally or by your bunker.
+              Choose how you want to {action}. Start instantly with a browser-only guest key, or scan with Primal for your real Nostr identity.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="mt-6 grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/[0.035] p-2 text-[11px] font-semibold text-white/64">
-            <div className="flex items-center justify-center gap-1.5 rounded-xl bg-white/[0.04] px-2 py-2">
-              <Shield className="h-3.5 w-3.5 text-emerald-300" />
-              Sovereign
-            </div>
-            <div className="flex items-center justify-center gap-1.5 rounded-xl bg-white/[0.04] px-2 py-2">
-              <Radio className="h-3.5 w-3.5 text-sky-300" />
-              Nostr
-            </div>
-            <div className="flex items-center justify-center gap-1.5 rounded-xl bg-white/[0.04] px-2 py-2">
-              <Sparkles className="h-3.5 w-3.5 text-amber-200" />
-              Live
-            </div>
-          </div>
-
           {error && (
-            <Alert className="mt-4 border-red-400/30 bg-red-500/10 text-red-100">
+            <Alert className="mt-5 border-red-400/30 bg-red-500/10 text-red-100">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
-          {hasExtension && (
-            <Button
-              type="button"
-              onClick={handleExtensionLogin}
-              disabled={isLoading}
-              className="mt-5 h-12 w-full rounded-2xl bg-gradient-to-r from-amber-300 to-orange-500 text-sm font-black text-black shadow-lg shadow-amber-500/20 hover:from-amber-200 hover:to-orange-400"
-            >
-              {isLoading ? 'Opening signer…' : 'Continue with extension'}
-              {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
-            </Button>
-          )}
-
-          <Tabs defaultValue="bunker" className="mt-5 w-full">
-            <TabsList className="grid h-11 w-full grid-cols-2 rounded-2xl border border-white/10 bg-black/30 p-1 text-white/52">
-              <TabsTrigger value="bunker" className="rounded-xl data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none">
-                Bunker
-              </TabsTrigger>
-              <TabsTrigger value="nsec" className="rounded-xl data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none">
-                nsec
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="bunker" className="mt-4 space-y-3">
-              <div className="space-y-2">
-                <Input
-                  value={bunkerUri}
-                  onChange={(event) => {
-                    setBunkerUri(event.target.value);
-                    setError(null);
-                  }}
-                  placeholder="bunker://..."
-                  autoComplete="off"
-                  className="h-12 rounded-2xl border-white/10 bg-white/[0.055] font-mono text-sm text-white placeholder:text-white/28 focus-visible:ring-amber-300/40"
-                />
-                <p className="text-xs leading-5 text-white/42">
-                  Best for daily use: approve signatures from a remote signer without pasting your secret key.
-                </p>
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="rounded-[24px] border border-white/10 bg-white/[0.045] p-4 shadow-xl shadow-black/10">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-300/12 text-emerald-200">
+                  <UserRoundPlus className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black tracking-[-0.02em]">Create guest account</h3>
+                  <p className="text-xs text-white/48">Instant browser-cached nsec</p>
+                </div>
               </div>
+              <p className="mt-4 text-sm leading-6 text-white/60">
+                Generates a temporary Nostr key in this browser cache and gives you a unique name like Citadel Falcon.
+              </p>
+              {guestName && (
+                <div className="mt-3 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-xs font-semibold text-emerald-100">
+                  <Check className="mr-1 inline h-3.5 w-3.5" />
+                  {guestName}
+                </div>
+              )}
               <Button
                 type="button"
-                onClick={handleBunkerLogin}
-                disabled={isLoading || !bunkerUri.trim()}
-                className="h-11 w-full rounded-2xl bg-white text-sm font-black text-black hover:bg-amber-100"
+                onClick={handleCreateGuest}
+                disabled={isCreatingGuest}
+                className="mt-5 h-11 w-full rounded-2xl bg-gradient-to-r from-emerald-300 to-amber-300 text-sm font-black text-black shadow-lg shadow-emerald-500/10 hover:from-emerald-200 hover:to-amber-200"
               >
-                {isLoading ? 'Connecting…' : 'Connect bunker'}
+                {isCreatingGuest ? 'Creating…' : 'Create guest account'}
               </Button>
-            </TabsContent>
+            </div>
 
-            <TabsContent value="nsec" className="mt-4 space-y-3">
-              <div className="space-y-2">
-                <Input
-                  type="password"
-                  value={nsec}
-                  onChange={(event) => {
-                    setNsec(event.target.value);
-                    setError(null);
-                  }}
-                  placeholder="nsec1..."
-                  autoComplete="off"
-                  className="h-12 rounded-2xl border-white/10 bg-white/[0.055] font-mono text-sm text-white placeholder:text-white/28 focus-visible:ring-amber-300/40"
-                />
-                <p className="text-xs leading-5 text-white/42">
-                  Use only on a device you trust. The key is kept in this browser so the app can sign Nostr events.
-                </p>
+            <div className="rounded-[24px] border border-white/10 bg-white/[0.045] p-4 shadow-xl shadow-black/10">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-300/12 text-sky-200">
+                  <QrCode className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black tracking-[-0.02em]">Sign in with Primal</h3>
+                  <p className="text-xs text-white/48">Scan nsecbunker QR</p>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  onClick={handleNsecLogin}
-                  disabled={isLoading || !nsec.trim()}
-                  className="h-11 flex-1 rounded-2xl bg-white text-sm font-black text-black hover:bg-amber-100"
-                >
-                  {isLoading ? 'Verifying…' : 'Unlock'}
-                  {!isLoading && <Check className="ml-2 h-4 w-4" />}
-                </Button>
-                <label className={cn(
-                  'inline-flex h-11 cursor-pointer items-center justify-center rounded-2xl border border-white/10 bg-white/[0.055] px-4 text-white/72 transition hover:bg-white/10',
-                  isLoading && 'pointer-events-none opacity-50',
-                )}>
-                  <Upload className="h-4 w-4" />
-                  <span className="sr-only">Upload nsec text file</span>
-                  <input type="file" accept=".txt" className="hidden" onChange={(event) => handleFileUpload(event.target.files?.[0])} />
-                </label>
+              <div className="mt-4 rounded-[20px] border border-white/10 bg-white p-3">
+                {qrCodeUrl ? (
+                  <img src={qrCodeUrl} alt="Primal Nostr Connect sign-in QR code" className="aspect-square w-full rounded-2xl" />
+                ) : (
+                  <div className="aspect-square w-full animate-pulse rounded-2xl bg-slate-200" />
+                )}
               </div>
-            </TabsContent>
-          </Tabs>
+              <p className="mt-3 text-xs leading-5 text-white/52">
+                Open Primal on your phone and scan this QR to approve CITADEL WIRE as a remote signer client.
+              </p>
+              <a
+                href={PRIMAL_DOWNLOAD_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-amber-200 underline underline-offset-4 hover:text-amber-100"
+              >
+                Download Primal
+                <ArrowUpRight className="h-4 w-4" />
+              </a>
+            </div>
+          </div>
+
+          <div className="mt-5 flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-xs font-medium text-white/48">
+            <Rabbit className="h-4 w-4 text-amber-200/70" />
+            Guest keys live only in this browser. Clear browser storage and they are gone.
+            <Sparkles className="h-4 w-4 text-sky-200/70" />
+          </div>
         </div>
       </DialogContent>
     </Dialog>
