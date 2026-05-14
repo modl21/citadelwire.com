@@ -12,8 +12,15 @@ export function useCurrentUser() {
     switch (login.type) {
       case 'nsec': // Nostr login with secret key
         return NUser.fromNsecLogin(login);
-      case 'bunker': // Nostr login with NIP-46 "bunker://" URI
-        return NUser.fromBunkerLogin(login, nostr);
+      case 'bunker': { // Nostr login with NIP-46 "bunker://" URI
+        const user = NUser.fromBunkerLogin(login, nostr);
+        return new NUser('bunker', login.pubkey, {
+          getPublicKey: async () => login.pubkey,
+          signEvent: (event) => user.signer.signEvent(event),
+          nip04: user.signer.nip04,
+          nip44: user.signer.nip44,
+        });
+      }
       case 'extension': // Nostr login with NIP-07 browser extension
         return NUser.fromExtensionLogin(login);
       // Other login types can be defined here
