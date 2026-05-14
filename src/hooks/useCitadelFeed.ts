@@ -122,7 +122,11 @@ export function useCitadelFeed() {
 
     return () => {
       isActive = false;
-      subscription.close();
+      try {
+        subscription.close();
+      } catch (error) {
+        console.warn('Citadel feed live subscription cleanup failed', error);
+      }
     };
   }, [relayGroup, query.data]);
 

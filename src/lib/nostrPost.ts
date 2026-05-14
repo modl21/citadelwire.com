@@ -97,17 +97,18 @@ export function getEventTitle(event: NostrEvent): string {
   return firstLine.length > 92 ? `${firstLine.slice(0, 89)}…` : firstLine;
 }
 
-export function useNostrEvent(pointer: PostPointer | null) {
+export function useNostrEvent(pointer: PostPointer | null, initialEvent?: NostrEvent) {
   const { nostr } = useNostr();
+  const relayListKey = pointer?.relays?.join('|') ?? '';
   const relayGroup = useMemo(() => {
     const relays = pointer?.relays && pointer.relays.length > 0 ? pointer.relays : CITADEL_FEED_RELAYS;
     return nostr.group(Array.from(new Set([...relays, ...CITADEL_FEED_RELAYS])));
-  }, [nostr, pointer?.relays]);
+  }, [nostr, relayListKey]);
 
   return useQuery<NostrEvent | null>({
-    queryKey: ['nostr', 'event', pointer?.id ?? '', pointer?.author ?? '', pointer?.relays ?? []],
+    queryKey: ['nostr', 'event', pointer?.id ?? '', pointer?.author ?? '', relayListKey],
     queryFn: async () => {
-      if (!pointer?.id) return null;
+      if (!pointer?.id) return initialEvent ?? null;
 
       const filter: NostrFilter = {
         ids: [pointer.id],
@@ -118,12 +119,22 @@ export function useNostrEvent(pointer: PostPointer | null) {
         filter.authors = [pointer.author];
       }
 
-      const events = await relayGroup.query([filter], { signal: AbortSignal.timeout(7000) });
-      return events[0] ?? null;
+      try {
+        const events = await relayGroup.query([filter], { signal: AbortSignal.timeout(10000) });
+        return events[0] ?? initialEvent ?? null;
+      } catch (error) {
+        if (initialEvent) {
+          console.warn('Falling back to cached post event after relay query failed', error);
+          return initialEvent;
+        }
+        throw error;
+      }
     },
     enabled: Boolean(pointer?.id),
-    staleTime: 60 * 1000,
+    initialData: initialEvent,
+    staleTime: initialEvent ? 10 * 1000 : 60 * 1000,
     gcTime: 10 * 60 * 1000,
-    retry: 1,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 4000),
   });
 }

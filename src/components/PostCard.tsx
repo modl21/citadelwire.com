@@ -1,9 +1,11 @@
 import { type NostrEvent } from '@nostrify/nostrify';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow, format } from 'date-fns';
 import { NoteContent } from '@/components/NoteContent';
 import { PostActionBar } from '@/components/PostActionBar';
 import { cn } from '@/lib/utils';
+import { CITADEL_FEED_RELAYS } from '@/hooks/useCitadelFeed';
 import { encodePostPath } from '@/lib/nostrPost';
 
 interface PostCardProps {
@@ -25,10 +27,14 @@ function isInteractiveElement(target: EventTarget | null): boolean {
 
 export function PostCard({ event, isFirst }: PostCardProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { relative, absolute } = formatTimestamp(event.created_at);
   const postPath = encodePostPath(event);
 
-  const openPost = () => navigate(postPath);
+  const openPost = () => {
+    queryClient.setQueryData(['nostr', 'event', event.id, event.pubkey, CITADEL_FEED_RELAYS.join('|')], event);
+    navigate(postPath, { state: { event } });
+  };
 
   return (
     <article

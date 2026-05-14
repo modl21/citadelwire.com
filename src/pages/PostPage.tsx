@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
 import { format } from 'date-fns';
 import { nip19 } from 'nostr-tools';
 import { ArrowLeft, ExternalLink, Heart, MessageCircle, Radio, Repeat2, Zap } from 'lucide-react';
-import type { NostrMetadata } from '@nostrify/nostrify';
+import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,10 +53,21 @@ function formatStat(count: number): string {
   return count.toLocaleString('en-US');
 }
 
+interface PostLocationState {
+  event?: NostrEvent;
+}
+
+function isMatchingInitialEvent(event: NostrEvent | undefined, pointerId: string | undefined): event is NostrEvent {
+  return Boolean(event && pointerId && event.id === pointerId);
+}
+
 export default function PostPage() {
   const { identifier } = useParams<{ identifier: string }>();
+  const location = useLocation();
   const pointer = useMemo(() => parsePostPointer(identifier), [identifier]);
-  const { data: event, isLoading, isError } = useNostrEvent(pointer);
+  const locationState = location.state as PostLocationState | null;
+  const initialEvent = isMatchingInitialEvent(locationState?.event, pointer?.id) ? locationState.event : undefined;
+  const { data: event, isLoading, isError } = useNostrEvent(pointer, initialEvent);
   const [replyOpen, setReplyOpen] = useState(false);
   const author = useAuthor(event?.pubkey);
   const engagement = usePostEngagement(event);
