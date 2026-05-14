@@ -1,5 +1,5 @@
 import { useNostr } from '@nostrify/react';
-import { NLogin, useNostrLogin, type NLoginType } from '@nostrify/react/login';
+import { NLogin, useNostrLogin } from '@nostrify/react/login';
 
 // NOTE: This file should not be edited except for adding new login methods.
 
@@ -16,10 +16,6 @@ export function useLoginActions() {
     // Login with a NIP-46 "bunker://" URI
     async bunker(uri: string): Promise<void> {
       const login = await NLogin.fromBunker(uri, nostr);
-      addLogin(login);
-    },
-    // Add a preconstructed Nostr login object.
-    add(login: NLoginType): void {
       addLogin(login);
     },
     // Login with a NIP-07 browser extension

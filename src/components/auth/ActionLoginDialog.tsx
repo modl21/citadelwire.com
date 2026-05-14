@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, ArrowUpRight, Check, Copy, QrCode, Rabbit, Shield, Sparkles, UserRoundPlus } from 'lucide-react';
 import { generateSecretKey, getPublicKey, nip19, nip44 } from 'nostr-tools';
-import { NLogin, type NLoginType } from '@nostrify/react/login';
 import type { NostrEvent } from '@nostrify/nostrify';
 import QRCode from 'qrcode';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -215,12 +214,7 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
 
           hasCompletedPrimalLogin.current = true;
           cancelled = true;
-          const primalLogin = new NLogin('bunker', event.pubkey, {
-            bunkerPubkey: event.pubkey,
-            clientNsec: nostrConnectSession.clientNsec,
-            relays: NOSTR_CONNECT_RELAYS,
-          }) as NLoginType;
-          login.add(primalLogin);
+          login.nsec(nostrConnectSession.clientNsec);
           sockets.forEach((item) => item.close());
           setTimeout(() => window.location.reload(), 150);
         } catch (err) {
