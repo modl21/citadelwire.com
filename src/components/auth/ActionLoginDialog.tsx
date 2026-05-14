@@ -297,13 +297,13 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden border-white/10 bg-[#080b12]/95 p-0 text-white shadow-2xl shadow-amber-500/10 backdrop-blur-2xl sm:max-w-[440px] sm:rounded-[28px]">
+      <DialogContent className="max-h-[92dvh] overflow-hidden border-white/10 bg-[#080b12]/95 p-0 text-white shadow-2xl shadow-amber-500/10 backdrop-blur-2xl sm:max-w-[440px] sm:rounded-[28px]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(245,158,11,0.26),transparent_38%),radial-gradient(circle_at_12%_18%,rgba(56,189,248,0.14),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.06),transparent_36%)]" />
-        <div className="relative p-6 sm:p-7">
+        <div className="relative max-h-[92dvh] overflow-y-auto p-4 sm:p-7">
           <DialogHeader className="items-center text-center">
-            <div className="relative mb-1 flex h-16 w-16 items-center justify-center rounded-full border border-amber-300/20 bg-amber-300/10 shadow-[0_0_60px_rgba(245,158,11,0.18)]">
+            <div className="relative mb-1 flex h-12 w-12 items-center justify-center rounded-full border border-amber-300/20 bg-amber-300/10 shadow-[0_0_60px_rgba(245,158,11,0.18)] sm:h-16 sm:w-16">
               <div className="absolute inset-2 rounded-full border border-white/10" />
-              <Shield className="h-7 w-7 text-amber-200" />
+              <Shield className="h-5 w-5 text-amber-200 sm:h-7 sm:w-7" />
             </div>
             <DialogTitle className="sr-only">Sign in</DialogTitle>
             <DialogDescription className="sr-only">Choose a sign in method.</DialogDescription>
@@ -316,14 +316,14 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
             </Alert>
           )}
 
-          <div className="mt-6 flex flex-col gap-4">
-            <div className="rounded-[24px] border border-white/10 bg-white/[0.045] p-4 shadow-xl shadow-black/10">
+          <div className="mt-4 flex flex-col gap-3 sm:mt-6 sm:gap-4">
+            <div className="rounded-[20px] border border-white/10 bg-white/[0.045] p-3 shadow-xl shadow-black/10 sm:rounded-[24px] sm:p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-300/12 text-emerald-200">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-300/12 text-emerald-200 sm:h-11 sm:w-11">
                   <UserRoundPlus className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black tracking-[-0.02em]">Create guest account</h3>
+                  <h3 className="text-sm font-black tracking-[-0.02em] sm:text-base">Create guest account</h3>
                 </div>
               </div>
               {guestName && (
@@ -336,37 +336,37 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
                 type="button"
                 onClick={handleCreateGuest}
                 disabled={isCreatingGuest}
-                className="mt-5 h-11 w-full rounded-2xl bg-gradient-to-r from-emerald-300 to-amber-300 text-sm font-black text-black shadow-lg shadow-emerald-500/10 hover:from-emerald-200 hover:to-amber-200"
+                className="mt-3 h-10 w-full rounded-2xl bg-gradient-to-r from-emerald-300 to-amber-300 text-sm font-black text-black shadow-lg shadow-emerald-500/10 hover:from-emerald-200 hover:to-amber-200 sm:mt-5 sm:h-11"
               >
                 {isCreatingGuest ? 'Creating…' : 'Create guest account'}
               </Button>
             </div>
 
-            <div className="rounded-[24px] border border-white/10 bg-white/[0.045] p-4 shadow-xl shadow-black/10">
+            <div className="rounded-[20px] border border-white/10 bg-white/[0.045] p-3 shadow-xl shadow-black/10 sm:rounded-[24px] sm:p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-300/12 text-sky-200">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-300/12 text-sky-200 sm:h-11 sm:w-11">
                   <QrCode className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black tracking-[-0.02em]">Sign in with Primal</h3>
+                  <h3 className="text-sm font-black tracking-[-0.02em] sm:text-base">Sign in with Primal</h3>
                   <p className="text-xs text-white/48">Scan nsecbunker QR</p>
                 </div>
               </div>
-              <div className="mt-4 rounded-[20px] border border-white/10 bg-white p-3">
+              <div className="mt-3 rounded-[18px] border border-white/10 bg-white p-2 sm:mt-4 sm:rounded-[20px] sm:p-3">
                 {qrCodeUrl ? (
-                  <img src={qrCodeUrl} alt="Primal Nostr Connect sign-in QR code" className="mx-auto aspect-square w-full max-w-64 rounded-2xl" />
+                  <img src={qrCodeUrl} alt="Primal Nostr Connect sign-in QR code" className="mx-auto aspect-square w-full max-w-44 rounded-2xl sm:max-w-64" />
                 ) : (
-                  <div className="mx-auto aspect-square w-full max-w-64 animate-pulse rounded-2xl bg-slate-200" />
+                  <div className="mx-auto aspect-square w-full max-w-44 animate-pulse rounded-2xl bg-slate-200 sm:max-w-64" />
                 )}
               </div>
-              <p className="mt-3 text-xs leading-5 text-white/52">
+              <p className="mt-2 text-[11px] leading-4 text-white/52 sm:mt-3 sm:text-xs sm:leading-5">
                 Open Primal on your phone and scan this QR to approve CITADEL WIRE as a remote signer client.
               </p>
               <a
                 href={PRIMAL_DOWNLOAD_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-amber-200 underline underline-offset-4 hover:text-amber-100"
+                className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-amber-200 underline underline-offset-4 hover:text-amber-100 sm:mt-3 sm:text-sm"
               >
                 Download Primal
                 <ArrowUpRight className="h-4 w-4" />
@@ -375,7 +375,7 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
           </div>
 
           {eventIdentifier && (
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+            <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.035] p-2.5 sm:mt-5 sm:p-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/38">Open elsewhere</p>
@@ -395,7 +395,7 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
             </div>
           )}
 
-          <div className="mt-5 flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-xs font-medium text-white/48">
+          <div className="mt-3 flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-[11px] font-medium leading-4 text-white/48 sm:mt-5 sm:text-xs">
             <Rabbit className="h-4 w-4 text-amber-200/70" />
             Guest keys live only in this browser. Clear browser storage and they are gone.
             <Sparkles className="h-4 w-4 text-sky-200/70" />

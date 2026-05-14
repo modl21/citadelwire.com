@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow, format } from 'date-fns';
 import { NoteContent } from '@/components/NoteContent';
-import { PostActionBar } from '@/components/PostActionBar';
 import { cn } from '@/lib/utils';
 import { CITADEL_FEED_RELAYS } from '@/hooks/useCitadelFeed';
 import { encodePostPath, getPostIdPrefix, getPostUtcSlug } from '@/lib/nostrPost';
@@ -78,7 +77,6 @@ export function PostCard({ event, isFirst }: PostCardProps) {
         className="text-[15px] sm:text-[15px] text-foreground/95 leading-[1.75] tracking-[-0.01em]"
       />
 
-      <PostActionBar event={event} className="mt-3 justify-start gap-1 opacity-80 transition-opacity group-hover:opacity-100" onComment={openPost} />
     </article>
   );
 }
