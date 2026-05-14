@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowUpRight, Check, Copy, QrCode, Rabbit, Shield, Sparkles, UserRoundPlus } from 'lucide-react';
-import { generateSecretKey, getPublicKey, nip19, nip44 } from 'nostr-tools';
+import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import QRCode from 'qrcode';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -96,12 +96,6 @@ interface NostrConnectSession {
   secret: string;
 }
 
-interface NostrConnectResponsePayload {
-  id?: string;
-  result?: string;
-  error?: string;
-}
-
 function createNostrConnectSession(): NostrConnectSession {
   const clientSecretKey = generateSecretKey();
   const clientNsec = nip19.nsecEncode(clientSecretKey);
@@ -142,7 +136,6 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
   const [copiedEventId, setCopiedEventId] = useState(false);
   const nostrConnectSession = useMemo(() => createNostrConnectSession(), [open]);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
-  const hasCompletedPrimalLogin = useRef(false);
   const eventIdentifier = useMemo(() => event ? nip19.neventEncode({ id: event.id, author: event.pubkey, relays: NOSTR_CONNECT_RELAYS }) : undefined, [event]);
 
   useEffect(() => {
@@ -174,72 +167,9 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
       setError(null);
       setIsCreatingGuest(false);
       setCopiedEventId(false);
-      hasCompletedPrimalLogin.current = false;
     }
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    const since = Math.floor(Date.now() / 1000) - 10;
-    const sockets = NOSTR_CONNECT_RELAYS.map((relay) => {
-      const socket = new WebSocket(relay);
-      const subscriptionId = `primal-login-${randomHex(4)}`;
-
-      socket.addEventListener('open', () => {
-        socket.send(JSON.stringify([
-          'REQ',
-          subscriptionId,
-          {
-            kinds: [24133],
-            '#p': [nostrConnectSession.clientPubkey],
-            since,
-          },
-        ]));
-      });
-
-      socket.addEventListener('message', (message) => {
-        if (cancelled || hasCompletedPrimalLogin.current) return;
-
-        try {
-          const relayMessage = JSON.parse(String(message.data));
-          if (!Array.isArray(relayMessage) || relayMessage[0] !== 'EVENT') return;
-          const event = relayMessage[2] as { pubkey?: string; content?: string };
-          if (!event?.pubkey || typeof event.content !== 'string') return;
-          const clientSecretKey = (nip19.decode(nostrConnectSession.clientNsec) as { type: 'nsec'; data: Uint8Array }).data;
-          const conversationKey = nip44.v2.utils.getConversationKey(clientSecretKey, event.pubkey);
-          const decryptedContent = nip44.v2.decrypt(event.content, conversationKey);
-          const payload = JSON.parse(decryptedContent) as NostrConnectResponsePayload;
-          if (payload.result !== nostrConnectSession.secret) return;
-
-          hasCompletedPrimalLogin.current = true;
-          cancelled = true;
-          login.nsec(nostrConnectSession.clientNsec);
-          sockets.forEach((item) => item.close());
-          setTimeout(() => window.location.reload(), 150);
-        } catch (err) {
-          console.warn('Ignored invalid Nostr Connect response', err);
-        }
-      });
-
-      socket.addEventListener('error', () => {
-        // Other relays may still receive the authorization response.
-      });
-
-      return socket;
-    });
-
-    return () => {
-      cancelled = true;
-      sockets.forEach((socket) => {
-        try {
-          socket.close();
-        } catch {
-          // Ignore cleanup errors.
-        }
-      });
-    };
-  }, [login, nostrConnectSession, open]);
 
   const closeAfterLogin = () => {
     setError(null);
