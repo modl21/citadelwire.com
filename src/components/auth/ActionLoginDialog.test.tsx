@@ -31,7 +31,7 @@ describe('ActionLoginDialog', () => {
     );
 
     expect(screen.getByText('Create guest account')).toBeInTheDocument();
-    expect(screen.getByText('Sign in with Primal')).toBeInTheDocument();
+    expect(screen.queryByText('Sign in with Primal')).not.toBeInTheDocument();
     expect(screen.queryByText('Join CITADEL WIRE')).not.toBeInTheDocument();
     expect(screen.queryByText(/Choose how you want/)).not.toBeInTheDocument();
   });

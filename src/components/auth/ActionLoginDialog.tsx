@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowUpRight, Check, Copy, QrCode, Rabbit, Shield, Sparkles, UserRoundPlus } from 'lucide-react';
-import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
+import { AlertTriangle, ArrowUpRight, Check, Copy, Rabbit, Shield, Sparkles, UserRoundPlus } from 'lucide-react';
+import { generateSecretKey, nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
-import QRCode from 'qrcode';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useLoginActions } from '@/hooks/useLoginActions';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { CITADEL_FEED_RELAYS } from '@/hooks/useCitadelFeed';
 
 interface ActionLoginDialogProps {
   open: boolean;
@@ -19,11 +19,6 @@ interface ActionLoginDialogProps {
 const GUEST_NSEC_STORAGE_KEY = 'citadel-wire:guest-nsec';
 const GUEST_NAME_STORAGE_KEY = 'citadel-wire:guest-name';
 const PRIMAL_DOWNLOAD_URL = 'https://primal.net/downloads';
-const NOSTR_CONNECT_RELAYS = [
-  'wss://relay.primal.net',
-  'wss://relay.ditto.pub',
-  'wss://relay.damus.io',
-];
 const GUEST_ANIMALS = [
   'Aardvark',
   'Albatross',
@@ -89,43 +84,6 @@ function getOrCreateGuestAccount(): { nsec: string; name: string } {
   return { nsec, name };
 }
 
-interface NostrConnectSession {
-  uri: string;
-  clientNsec: `nsec1${string}`;
-  clientPubkey: string;
-  secret: string;
-}
-
-function createNostrConnectSession(): NostrConnectSession {
-  const clientSecretKey = generateSecretKey();
-  const clientNsec = nip19.nsecEncode(clientSecretKey);
-  const clientPubkey = getPublicKey(clientSecretKey);
-  const secret = randomHex(16);
-  const params = new URLSearchParams();
-
-  NOSTR_CONNECT_RELAYS.forEach((relay) => params.append('relay', relay));
-  params.set('secret', secret);
-  params.set('name', 'CITADEL WIRE');
-  params.set('perms', [
-    'get_public_key',
-    'sign_event:1',
-    'sign_event:6',
-    'sign_event:7',
-    'sign_event:1111',
-    'sign_event:9734',
-  ].join(','));
-
-  if (typeof window !== 'undefined') {
-    params.set('url', window.location.origin);
-  }
-
-  return {
-    uri: `nostrconnect://${clientPubkey}?${params.toString()}`,
-    clientNsec,
-    clientPubkey,
-    secret,
-  };
-}
 
 export function ActionLoginDialog({ open, onOpenChange, action = 'interact', event }: ActionLoginDialogProps) {
   const login = useLoginActions();
@@ -134,33 +92,9 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
   const [isCreatingGuest, setIsCreatingGuest] = useState(false);
   const [guestName, setGuestName] = useState<string | null>(null);
   const [copiedEventId, setCopiedEventId] = useState(false);
-  const nostrConnectSession = useMemo(() => createNostrConnectSession(), [open]);
-  const [qrCodeUrl, setQrCodeUrl] = useState('');
-  const eventIdentifier = useMemo(() => event ? nip19.neventEncode({ id: event.id, author: event.pubkey, relays: NOSTR_CONNECT_RELAYS }) : undefined, [event]);
+  const eventIdentifier = useMemo(() => event ? nip19.neventEncode({ id: event.id, author: event.pubkey, relays: CITADEL_FEED_RELAYS }) : undefined, [event]);
+  const eventDeepLink = eventIdentifier ? `nostr:${eventIdentifier}` : undefined;
 
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-
-    setQrCodeUrl('');
-
-    void QRCode.toDataURL(nostrConnectSession.uri, {
-      width: 384,
-      margin: 2,
-      color: {
-        dark: '#020617',
-        light: '#ffffff',
-      },
-    }).then((url) => {
-      if (!cancelled) setQrCodeUrl(url);
-    }).catch(() => {
-      if (!cancelled) setError('Could not generate the Primal sign-in QR code.');
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [nostrConnectSession.uri, open]);
 
   useEffect(() => {
     if (!open) {
@@ -266,63 +200,54 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
               </Button>
             </div>
 
-            <div className="rounded-[20px] border border-white/10 bg-white/[0.045] p-3 shadow-xl shadow-black/10 sm:rounded-[24px] sm:p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-300/12 text-sky-200 sm:h-11 sm:w-11">
-                  <QrCode className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black tracking-[-0.02em] sm:text-base">Sign in with Primal</h3>
-                  <p className="text-xs text-white/48">Scan nsecbunker QR</p>
-                </div>
-              </div>
-              <div className="mt-3 rounded-[18px] border border-white/10 bg-white p-2 sm:mt-4 sm:rounded-[20px] sm:p-3">
-                {qrCodeUrl ? (
-                  <img src={qrCodeUrl} alt="Primal Nostr Connect sign-in QR code" className="mx-auto aspect-square w-full max-w-44 rounded-2xl sm:max-w-64" />
-                ) : (
-                  <div className="mx-auto aspect-square w-full max-w-44 animate-pulse rounded-2xl bg-slate-200 sm:max-w-64" />
-                )}
-              </div>
-              <p className="mt-2 text-[11px] leading-4 text-white/52 sm:mt-3 sm:text-xs sm:leading-5">
-                Open Primal on your phone and scan this QR to approve CITADEL WIRE as a remote signer client.
-              </p>
-              <a
-                href={PRIMAL_DOWNLOAD_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-amber-200 underline underline-offset-4 hover:text-amber-100 sm:mt-3 sm:text-sm"
-              >
-                Download Primal
-                <ArrowUpRight className="h-4 w-4" />
-              </a>
-            </div>
           </div>
 
           {eventIdentifier && (
             <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.035] p-2.5 sm:mt-5 sm:p-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/38">Open elsewhere</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/38">Open in any Nostr app</p>
                   <p className="mt-1 truncate font-mono text-[11px] text-white/58">{eventIdentifier}</p>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCopyEventId}
-                  className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-white/72 hover:bg-white/10 hover:text-white"
-                >
-                  {copiedEventId ? <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-200" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
-                  {copiedEventId ? 'Copied' : 'Copy'}
-                </Button>
+                <div className="flex shrink-0 items-center gap-2">
+                  {eventDeepLink && (
+                    <a
+                      href={eventDeepLink}
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/72 hover:bg-white/10 hover:text-white"
+                    >
+                      Open
+                    </a>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopyEventId}
+                    className="rounded-xl border border-white/10 bg-white/[0.04] px-3 text-white/72 hover:bg-white/10 hover:text-white"
+                  >
+                    {copiedEventId ? <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-200" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                    {copiedEventId ? 'Copied' : 'Copy'}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
 
-          <div className="mt-3 flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-[11px] font-medium leading-4 text-white/48 sm:mt-5 sm:text-xs">
-            <Rabbit className="h-4 w-4 text-amber-200/70" />
-            Guest keys live only in this browser. Clear browser storage and they are gone.
-            <Sparkles className="h-4 w-4 text-sky-200/70" />
+          <div className="mt-3 space-y-2 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-center text-[11px] font-medium leading-4 text-white/48 sm:mt-5 sm:text-xs">
+            <div className="flex items-center justify-center gap-2">
+              <Rabbit className="h-4 w-4 text-amber-200/70" />
+              Guest keys live only in this browser. Clear browser storage and they are gone.
+              <Sparkles className="h-4 w-4 text-sky-200/70" />
+            </div>
+            <a
+              href={PRIMAL_DOWNLOAD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 font-bold text-amber-200 underline underline-offset-4 hover:text-amber-100"
+            >
+              Need a Nostr app?
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </a>
           </div>
         </div>
       </DialogContent>
