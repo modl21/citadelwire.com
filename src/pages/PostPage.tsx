@@ -3,7 +3,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
 import { format } from 'date-fns';
 import { nip19 } from 'nostr-tools';
-import { ArrowLeft, ExternalLink, Heart, MessageCircle, Radio, Repeat2, Zap } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Radio } from 'lucide-react';
 import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -47,10 +47,6 @@ function PostPageSkeleton() {
       </Card>
     </div>
   );
-}
-
-function formatStat(count: number): string {
-  return count.toLocaleString('en-US');
 }
 
 interface PostLocationState {
@@ -130,7 +126,6 @@ export default function PostPage() {
   const zaps = engagement.data?.zaps ?? [];
   const likes = engagement.data?.likes ?? [];
   const reposts = engagement.data?.reposts ?? [];
-  const totalZapSats = engagement.data?.totalZapSats ?? 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -188,14 +183,7 @@ export default function PostPage() {
 
             <NoteContent event={event} className="text-[17px] leading-8 text-foreground/95 sm:text-[18px]" />
 
-            <div className="mt-6 grid grid-cols-2 gap-2 border-y border-border/40 py-4 sm:grid-cols-4">
-              <Stat icon={MessageCircle} label="Comments" value={formatStat(replies.length + (engagement.data?.comments.length ?? 0))} />
-              <Stat icon={Heart} label="Likes" value={formatStat(likes.length)} />
-              <Stat icon={Repeat2} label="Reposts" value={formatStat(reposts.length)} />
-              <Stat icon={Zap} label="Zapped" value={totalZapSats > 0 ? `${formatStat(totalZapSats)} sats` : formatStat(zaps.length)} />
-            </div>
-
-            <PostActionBar event={event} expanded onComment={() => setReplyOpen(true)} className="mt-3 justify-around" />
+            <PostActionBar event={event} expanded onComment={() => setReplyOpen(true)} className="mt-6 justify-around border-y border-border/40 py-3" />
           </div>
         </article>
 
@@ -277,18 +265,6 @@ function PostDetailHeader() {
         </div>
       </div>
     </header>
-  );
-}
-
-function Stat({ icon: Icon, label, value }: { icon: typeof MessageCircle; label: string; value: string }) {
-  return (
-    <div className="rounded-2xl bg-muted/20 p-3">
-      <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-        <Icon className="h-3.5 w-3.5 text-amber-300/80" />
-        {label}
-      </div>
-      <div className="text-base font-black text-foreground">{value}</div>
-    </div>
   );
 }
 
