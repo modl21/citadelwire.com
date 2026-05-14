@@ -156,6 +156,7 @@ export function Comment({ root, comment, depth = 0, maxDepth = 3, limit }: Comme
         open={loginOpen}
         onOpenChange={setLoginOpen}
         action="reply to this comment"
+        event={comment}
       />
     </div>
   );

@@ -28,6 +28,10 @@ export function CommentForm({
   const { user } = useCurrentUser();
   const { mutate: postComment, isPending } = usePostComment();
 
+  const loginEvent = reply instanceof URL || typeof reply === 'string'
+    ? undefined
+    : reply ?? (root instanceof URL || typeof root === 'string' ? undefined : root);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -64,6 +68,7 @@ export function CommentForm({
           open={loginOpen}
           onOpenChange={setLoginOpen}
           action={reply ? 'reply to this comment' : 'comment on this post'}
+          event={loginEvent}
         />
       </>
     );

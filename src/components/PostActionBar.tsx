@@ -216,6 +216,7 @@ export function PostActionBar({ event, onComment, className, expanded = false }:
         open={loginOpen}
         onOpenChange={setLoginOpen}
         action={actionText(loginAction)}
+        event={event}
       />
     </>
   );

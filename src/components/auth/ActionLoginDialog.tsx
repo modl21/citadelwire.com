@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ArrowUpRight, Check, QrCode, Rabbit, Shield, Sparkles, UserRoundPlus } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Check, Copy, QrCode, Rabbit, Shield, Sparkles, UserRoundPlus } from 'lucide-react';
 import { generateSecretKey, getPublicKey, nip19, nip44 } from 'nostr-tools';
 import { NLogin, type NLoginType } from '@nostrify/react/login';
+import type { NostrEvent } from '@nostrify/nostrify';
 import QRCode from 'qrcode';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ interface ActionLoginDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   action?: string;
+  event?: NostrEvent;
 }
 
 const GUEST_NSEC_STORAGE_KEY = 'citadel-wire:guest-nsec';
@@ -132,15 +134,17 @@ function createNostrConnectSession(): NostrConnectSession {
   };
 }
 
-export function ActionLoginDialog({ open, onOpenChange, action = 'interact' }: ActionLoginDialogProps) {
+export function ActionLoginDialog({ open, onOpenChange, action = 'interact', event }: ActionLoginDialogProps) {
   const login = useLoginActions();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const [error, setError] = useState<string | null>(null);
   const [isCreatingGuest, setIsCreatingGuest] = useState(false);
   const [guestName, setGuestName] = useState<string | null>(null);
+  const [copiedEventId, setCopiedEventId] = useState(false);
   const nostrConnectSession = useMemo(() => createNostrConnectSession(), [open]);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const hasCompletedPrimalLogin = useRef(false);
+  const eventIdentifier = useMemo(() => event ? nip19.neventEncode({ id: event.id, author: event.pubkey, relays: NOSTR_CONNECT_RELAYS }) : undefined, [event]);
 
   useEffect(() => {
     if (!open) return;
@@ -170,6 +174,7 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact' }: A
     if (!open) {
       setError(null);
       setIsCreatingGuest(false);
+      setCopiedEventId(false);
       hasCompletedPrimalLogin.current = false;
     }
   }, [open]);
@@ -246,6 +251,18 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact' }: A
     setError(null);
     setIsCreatingGuest(false);
     onOpenChange(false);
+  };
+
+  const handleCopyEventId = async () => {
+    if (!eventIdentifier) return;
+
+    try {
+      await navigator.clipboard.writeText(eventIdentifier);
+      setCopiedEventId(true);
+      setTimeout(() => setCopiedEventId(false), 1800);
+    } catch {
+      setError('Could not copy the event ID.');
+    }
   };
 
   const handleCreateGuest = async () => {
@@ -356,6 +373,27 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact' }: A
               </a>
             </div>
           </div>
+
+          {eventIdentifier && (
+            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/38">Open elsewhere</p>
+                  <p className="mt-1 truncate font-mono text-[11px] text-white/58">{eventIdentifier}</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCopyEventId}
+                  className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-white/72 hover:bg-white/10 hover:text-white"
+                >
+                  {copiedEventId ? <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-200" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                  {copiedEventId ? 'Copied' : 'Copy'}
+                </Button>
+              </div>
+            </div>
+          )}
 
           <div className="mt-5 flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-xs font-medium text-white/48">
             <Rabbit className="h-4 w-4 text-amber-200/70" />
