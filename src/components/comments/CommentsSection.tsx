@@ -15,6 +15,7 @@ interface CommentsSectionProps {
   className?: string;
   limit?: number;
   footer?: React.ReactNode;
+  showCommentForm?: boolean;
 }
 
 export function CommentsSection({ 
@@ -25,6 +26,7 @@ export function CommentsSection({
   className,
   limit = 500,
   footer,
+  showCommentForm = true,
 }: CommentsSectionProps) {
   const { data: commentsData, isLoading, error } = useComments(root, limit);
   const comments = commentsData?.topLevelComments || [];
@@ -57,7 +59,7 @@ export function CommentsSection({
       </CardHeader>
       <CardContent className="px-2 pb-6 pt-4 sm:p-6 sm:pt-0 space-y-6">
         {/* Comment Form */}
-        <CommentForm root={root} />
+        {showCommentForm && <CommentForm root={root} />}
 
         {/* Comments List */}
         {isLoading ? (

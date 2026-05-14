@@ -221,6 +221,7 @@ export default function PostPage() {
                 emptyStateMessage="No Nostr comments yet"
                 emptyStateSubtitle="Start the conversation with a signed Nostr comment."
                 className="border-border/50 bg-card/70"
+                showCommentForm={false}
                 footer={
                   <ThreadRepliesSection replies={replies} />
                 }
