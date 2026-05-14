@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, ArrowUpRight, Check, QrCode, Rabbit, Shield, Sparkles, UserRoundPlus } from 'lucide-react';
-import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
+import { generateSecretKey, getPublicKey, nip19, nip44 } from 'nostr-tools';
+import { NLogin, type NLoginType } from '@nostrify/react/login';
 import QRCode from 'qrcode';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -87,8 +88,22 @@ function getOrCreateGuestAccount(): { nsec: string; name: string } {
   return { nsec, name };
 }
 
-function createNostrConnectUri(): string {
+interface NostrConnectSession {
+  uri: string;
+  clientNsec: `nsec1${string}`;
+  clientPubkey: string;
+  secret: string;
+}
+
+interface NostrConnectResponsePayload {
+  id?: string;
+  result?: string;
+  error?: string;
+}
+
+function createNostrConnectSession(): NostrConnectSession {
   const clientSecretKey = generateSecretKey();
+  const clientNsec = nip19.nsecEncode(clientSecretKey);
   const clientPubkey = getPublicKey(clientSecretKey);
   const secret = randomHex(16);
   const params = new URLSearchParams();
@@ -109,7 +124,12 @@ function createNostrConnectUri(): string {
     params.set('url', window.location.origin);
   }
 
-  return `nostrconnect://${clientPubkey}?${params.toString()}`;
+  return {
+    uri: `nostrconnect://${clientPubkey}?${params.toString()}`,
+    clientNsec,
+    clientPubkey,
+    secret,
+  };
 }
 
 export function ActionLoginDialog({ open, onOpenChange, action = 'interact' }: ActionLoginDialogProps) {
@@ -118,14 +138,17 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact' }: A
   const [error, setError] = useState<string | null>(null);
   const [isCreatingGuest, setIsCreatingGuest] = useState(false);
   const [guestName, setGuestName] = useState<string | null>(null);
-  const nostrConnectUri = useMemo(() => createNostrConnectUri(), [open]);
+  const nostrConnectSession = useMemo(() => createNostrConnectSession(), [open]);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const hasCompletedPrimalLogin = useRef(false);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
 
-    void QRCode.toDataURL(nostrConnectUri, {
+    setQrCodeUrl('');
+
+    void QRCode.toDataURL(nostrConnectSession.uri, {
       width: 384,
       margin: 2,
       color: {
@@ -141,14 +164,83 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact' }: A
     return () => {
       cancelled = true;
     };
-  }, [nostrConnectUri, open]);
+  }, [nostrConnectSession.uri, open]);
 
   useEffect(() => {
     if (!open) {
       setError(null);
       setIsCreatingGuest(false);
+      hasCompletedPrimalLogin.current = false;
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    const since = Math.floor(Date.now() / 1000) - 10;
+    const sockets = NOSTR_CONNECT_RELAYS.map((relay) => {
+      const socket = new WebSocket(relay);
+      const subscriptionId = `primal-login-${randomHex(4)}`;
+
+      socket.addEventListener('open', () => {
+        socket.send(JSON.stringify([
+          'REQ',
+          subscriptionId,
+          {
+            kinds: [24133],
+            '#p': [nostrConnectSession.clientPubkey],
+            since,
+          },
+        ]));
+      });
+
+      socket.addEventListener('message', (message) => {
+        if (cancelled || hasCompletedPrimalLogin.current) return;
+
+        try {
+          const relayMessage = JSON.parse(String(message.data));
+          if (!Array.isArray(relayMessage) || relayMessage[0] !== 'EVENT') return;
+          const event = relayMessage[2] as { pubkey?: string; content?: string };
+          if (!event?.pubkey || typeof event.content !== 'string') return;
+          const clientSecretKey = (nip19.decode(nostrConnectSession.clientNsec) as { type: 'nsec'; data: Uint8Array }).data;
+          const conversationKey = nip44.v2.utils.getConversationKey(clientSecretKey, event.pubkey);
+          const decryptedContent = nip44.v2.decrypt(event.content, conversationKey);
+          const payload = JSON.parse(decryptedContent) as NostrConnectResponsePayload;
+          if (payload.result !== nostrConnectSession.secret) return;
+
+          hasCompletedPrimalLogin.current = true;
+          cancelled = true;
+          const primalLogin = new NLogin('bunker', event.pubkey, {
+            bunkerPubkey: event.pubkey,
+            clientNsec: nostrConnectSession.clientNsec,
+            relays: NOSTR_CONNECT_RELAYS,
+          }) as NLoginType;
+          login.add(primalLogin);
+          sockets.forEach((item) => item.close());
+          setTimeout(() => window.location.reload(), 150);
+        } catch (err) {
+          console.warn('Ignored invalid Nostr Connect response', err);
+        }
+      });
+
+      socket.addEventListener('error', () => {
+        // Other relays may still receive the authorization response.
+      });
+
+      return socket;
+    });
+
+    return () => {
+      cancelled = true;
+      sockets.forEach((socket) => {
+        try {
+          socket.close();
+        } catch {
+          // Ignore cleanup errors.
+        }
+      });
+    };
+  }, [login, nostrConnectSession, open]);
 
   const closeAfterLogin = () => {
     setError(null);
@@ -192,16 +284,12 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact' }: A
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(245,158,11,0.26),transparent_38%),radial-gradient(circle_at_12%_18%,rgba(56,189,248,0.14),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.06),transparent_36%)]" />
         <div className="relative p-6 sm:p-7">
           <DialogHeader className="items-center text-center">
-            <div className="relative mb-3 flex h-20 w-20 items-center justify-center rounded-full border border-amber-300/20 bg-amber-300/10 shadow-[0_0_60px_rgba(245,158,11,0.18)]">
+            <div className="relative mb-1 flex h-16 w-16 items-center justify-center rounded-full border border-amber-300/20 bg-amber-300/10 shadow-[0_0_60px_rgba(245,158,11,0.18)]">
               <div className="absolute inset-2 rounded-full border border-white/10" />
-              <Shield className="h-9 w-9 text-amber-200" />
+              <Shield className="h-7 w-7 text-amber-200" />
             </div>
-            <DialogTitle className="text-2xl font-black tracking-[-0.04em] text-white">
-              Join CITADEL WIRE
-            </DialogTitle>
-            <DialogDescription className="max-w-sm text-sm leading-6 text-white/62">
-              Choose how you want to {action}. Start instantly with a browser-only guest key, or scan with Primal for your real Nostr identity.
-            </DialogDescription>
+            <DialogTitle className="sr-only">Sign in</DialogTitle>
+            <DialogDescription className="sr-only">Choose a sign in method.</DialogDescription>
           </DialogHeader>
 
           {error && (
