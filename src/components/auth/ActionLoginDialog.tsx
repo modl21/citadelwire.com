@@ -188,7 +188,7 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact' }: A
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden border-white/10 bg-[#080b12]/95 p-0 text-white shadow-2xl shadow-amber-500/10 backdrop-blur-2xl sm:max-w-[520px] sm:rounded-[28px]">
+      <DialogContent className="overflow-hidden border-white/10 bg-[#080b12]/95 p-0 text-white shadow-2xl shadow-amber-500/10 backdrop-blur-2xl sm:max-w-[440px] sm:rounded-[28px]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(245,158,11,0.26),transparent_38%),radial-gradient(circle_at_12%_18%,rgba(56,189,248,0.14),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.06),transparent_36%)]" />
         <div className="relative p-6 sm:p-7">
           <DialogHeader className="items-center text-center">
@@ -211,7 +211,7 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact' }: A
             </Alert>
           )}
 
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="mt-6 flex flex-col gap-4">
             <div className="rounded-[24px] border border-white/10 bg-white/[0.045] p-4 shadow-xl shadow-black/10">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-300/12 text-emerald-200">
@@ -249,9 +249,9 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact' }: A
               </div>
               <div className="mt-4 rounded-[20px] border border-white/10 bg-white p-3">
                 {qrCodeUrl ? (
-                  <img src={qrCodeUrl} alt="Primal Nostr Connect sign-in QR code" className="aspect-square w-full rounded-2xl" />
+                  <img src={qrCodeUrl} alt="Primal Nostr Connect sign-in QR code" className="mx-auto aspect-square w-full max-w-64 rounded-2xl" />
                 ) : (
-                  <div className="aspect-square w-full animate-pulse rounded-2xl bg-slate-200" />
+                  <div className="mx-auto aspect-square w-full max-w-64 animate-pulse rounded-2xl bg-slate-200" />
                 )}
               </div>
               <p className="mt-3 text-xs leading-5 text-white/52">
