@@ -78,7 +78,6 @@ export default function PostPage() {
   const metadata: NostrMetadata | undefined = author.data?.metadata;
   const displayName = metadata?.display_name ?? metadata?.name ?? (event ? genUserName(event.pubkey) : 'CITADEL WIRE');
   const avatar = metadata?.picture;
-  const npub = event ? nip19.npubEncode(event.pubkey) : undefined;
   const nevent = event ? nip19.neventEncode({ id: event.id, author: event.pubkey, relays: pointer?.relays }) : undefined;
   const title = event ? getEventTitle(event) : 'CITADEL WIRE post';
   const postType = event ? getPostType(event) : 'standard';
@@ -152,7 +151,7 @@ export default function PostPage() {
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/60 to-transparent" />
           <div className="p-5 sm:p-7">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <a href={npub ? `/${npub}` : '#'} className="flex min-w-0 items-center gap-3 group">
+              <div className="flex min-w-0 items-center gap-3">
                 <Avatar className="h-12 w-12 border border-amber-300/20 ring-4 ring-amber-300/5">
                   <AvatarImage src={avatar} alt={displayName} />
                   <AvatarFallback className="bg-amber-400/10 text-xs font-black text-amber-200">
@@ -160,14 +159,14 @@ export default function PostPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <div className="truncate text-base font-black tracking-[-0.02em] group-hover:text-amber-200">
+                  <div className="truncate text-base font-black tracking-[-0.02em]">
                     {displayName}
                   </div>
                   <div className="truncate text-xs text-muted-foreground">
                     {published}
                   </div>
                 </div>
-              </a>
+              </div>
 
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="border-amber-400/25 bg-amber-400/10 text-amber-200">

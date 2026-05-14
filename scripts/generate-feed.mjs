@@ -1,5 +1,5 @@
 import WebSocket from 'ws';
-import { writeFileSync } from 'fs';
+import { writeFileSync, mkdirSync, copyFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { nip19 } from 'nostr-tools';
@@ -11,6 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const CITADEL_PUBKEY = '01d077c7b21bfee89a6883edabcd408ef324e9ab431f46bf57d5860430bcb97c';
 const SITE_URL = 'https://citadelwire.com';
+const OG_IMAGE = 'https://blossom.primal.net/7e50fc1128859dfdc43d504e2cafec4a1e1e5067b5c6245232a11ee75fdc84d7.jpg';
 const RELAYS = [
   'wss://premium.primal.net',
   'wss://relay.primal.net',
@@ -35,6 +36,10 @@ function escapeHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function escapeAttribute(str) {
+  return escapeHtml(str).replace(/'/g, '&#39;');
 }
 
 function escapeCdata(str) {
@@ -89,6 +94,35 @@ function renderNoteContentHtml(content) {
 
 function toRFC822(ts) {
   return new Date(ts * 1000).toUTCString();
+}
+
+function padUtcPart(value) {
+  return value.toString().padStart(2, '0');
+}
+
+function getPostUtcSlug(event) {
+  const date = new Date(event.created_at * 1000);
+  return `${date.getUTCFullYear()}-${padUtcPart(date.getUTCMonth() + 1)}-${padUtcPart(date.getUTCDate())}-${padUtcPart(date.getUTCHours())}${padUtcPart(date.getUTCMinutes())}${padUtcPart(date.getUTCSeconds())}`;
+}
+
+function getPostUrl(event) {
+  return `${SITE_URL}/posts/${getPostUtcSlug(event)}`;
+}
+
+function getPostTitle(event) {
+  const firstLine = event.content
+    .split('\n')
+    .map((line) => line.trim())
+    .find(Boolean);
+
+  if (!firstLine) return 'CITADEL WIRE post';
+  return firstLine.length > 92 ? `${firstLine.slice(0, 89)}…` : firstLine;
+}
+
+function getPostDescription(event) {
+  const normalized = event.content.replace(/\s+/g, ' ').trim();
+  if (!normalized) return 'CITADEL WIRE post with Nostr discussion, likes, reposts, and zaps.';
+  return normalized.length > 220 ? `${normalized.slice(0, 217)}…` : normalized;
 }
 
 function queryRelay(url, filter) {
@@ -173,10 +207,8 @@ async function fetchPosts() {
 
 function buildRSS(posts) {
   const items = posts.map((event) => {
-    const nevent = nip19.neventEncode({ id: event.id, author: event.pubkey });
-    const link = `https://primal.net/e/${nevent}`;
-    const firstLine = event.content.split('\n')[0].slice(0, 100) || 'Note';
-    const title = escapeXml(firstLine);
+    const link = getPostUrl(event);
+    const title = escapeXml(getPostTitle(event));
     const formattedContent = renderNoteContentHtml(event.content);
     const cdataContent = escapeCdata(formattedContent);
 
@@ -200,13 +232,83 @@ function buildRSS(posts) {
     <lastBuildDate>${posts.length > 0 ? toRFC822(posts[0].created_at) : new Date().toUTCString()}</lastBuildDate>
     <atom:link href="${SITE_URL}/feed.xml" rel="self" type="application/rss+xml"/>
     <image>
-      <url>https://blossom.primal.net/7e50fc1128859dfdc43d504e2cafec4a1e1e5067b5c6245232a11ee75fdc84d7.jpg</url>
+      <url>${OG_IMAGE}</url>
       <title>CITADEL WIRE</title>
       <link>${SITE_URL}</link>
     </image>
 ${items}
   </channel>
 </rss>`;
+}
+
+function buildPostHtml(event) {
+  const title = `${getPostTitle(event)} · CITADEL WIRE`;
+  const description = getPostDescription(event);
+  const url = getPostUrl(event);
+  const escapedTitle = escapeAttribute(title);
+  const escapedDescription = escapeAttribute(description);
+  const escapedUrl = escapeAttribute(url);
+  const appEntry = '/src/main.tsx';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escapedTitle}</title>
+    <meta name="description" content="${escapedDescription}" />
+    <link rel="alternate" type="application/rss+xml" title="CITADEL WIRE RSS" href="/feed.xml" />
+    <meta property="og:title" content="${escapedTitle}" />
+    <meta property="og:description" content="${escapedDescription}" />
+    <meta property="og:image" content="${OG_IMAGE}" />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="${escapedUrl}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escapedTitle}" />
+    <meta name="twitter:description" content="${escapedDescription}" />
+    <meta name="twitter:image" content="${OG_IMAGE}" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta http-equiv="content-security-policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-src 'self' https:; font-src 'self'; base-uri 'self'; manifest-src 'self'; connect-src 'self' blob: https: wss:; img-src 'self' data: blob: https:; media-src 'self' https:">
+    <link rel="manifest" href="/manifest.webmanifest">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="${appEntry}"></script>
+  </body>
+</html>
+`;
+}
+
+function writePostPreviewPages(posts) {
+  const postsDir = resolve(__dirname, '..', 'public', 'posts');
+  mkdirSync(postsDir, { recursive: true });
+
+  for (const event of posts) {
+    const slug = getPostUtcSlug(event);
+    const postDir = resolve(postsDir, slug);
+    mkdirSync(postDir, { recursive: true });
+    writeFileSync(resolve(postDir, 'index.html'), buildPostHtml(event), 'utf-8');
+  }
+}
+
+function syncPostPreviewPagesToDist(posts) {
+  const distDir = resolve(__dirname, '..', 'dist');
+  if (!existsSync(distDir)) return;
+  const publicPostsDir = resolve(__dirname, '..', 'public', 'posts');
+  const postsDir = resolve(distDir, 'posts');
+  mkdirSync(postsDir, { recursive: true });
+
+  for (const event of posts) {
+    const slug = getPostUtcSlug(event);
+    const sourcePath = resolve(publicPostsDir, slug, 'index.html');
+    if (!existsSync(sourcePath)) continue;
+    const postDir = resolve(postsDir, slug);
+    mkdirSync(postDir, { recursive: true });
+    copyFileSync(sourcePath, resolve(postDir, 'index.html'));
+  }
 }
 
 async function main() {
@@ -217,7 +319,9 @@ async function main() {
   const xml = buildRSS(posts);
   const outPath = resolve(__dirname, '..', 'public', 'feed.xml');
   writeFileSync(outPath, xml, 'utf-8');
-  console.log(`RSS feed written to ${outPath}`);
+  writePostPreviewPages(posts);
+  syncPostPreviewPagesToDist(posts);
+  console.log(`RSS feed and ${posts.length} post previews written`);
 }
 
 main().catch((err) => {

@@ -219,12 +219,8 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact' }: A
                 </div>
                 <div>
                   <h3 className="text-base font-black tracking-[-0.02em]">Create guest account</h3>
-                  <p className="text-xs text-white/48">Instant browser-cached nsec</p>
                 </div>
               </div>
-              <p className="mt-4 text-sm leading-6 text-white/60">
-                Generates a temporary Nostr key in this browser cache and gives you a unique name like Citadel Falcon.
-              </p>
               {guestName && (
                 <div className="mt-3 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-xs font-semibold text-emerald-100">
                   <Check className="mr-1 inline h-3.5 w-3.5" />

@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { NostrEvent } from '@nostrify/nostrify';
-import { nip19 } from 'nostr-tools';
 import { useAuthor } from '@/hooks/useAuthor';
 import { useComments } from '@/hooks/useComments';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -50,21 +48,16 @@ export function Comment({ root, comment, depth = 0, maxDepth = 3, limit }: Comme
             {/* Comment Header */}
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-3">
-                <Link to={`/${nip19.npubEncode(comment.pubkey)}`}>
-                  <Avatar className="h-8 w-8 hover:ring-2 hover:ring-primary/30 transition-all cursor-pointer">
-                    <AvatarImage src={metadata?.picture} />
-                    <AvatarFallback className="text-xs">
-                      {displayName.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                </Link>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={metadata?.picture} />
+                  <AvatarFallback className="text-xs">
+                    {displayName.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
                 <div>
-                  <Link 
-                    to={`/${nip19.npubEncode(comment.pubkey)}`}
-                    className="font-medium text-sm hover:text-primary transition-colors"
-                  >
+                  <div className="font-medium text-sm">
                     {displayName}
-                  </Link>
+                  </div>
                   <p className="text-xs text-muted-foreground">{timeAgo}</p>
                 </div>
               </div>
