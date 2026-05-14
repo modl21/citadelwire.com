@@ -60,6 +60,7 @@ interface PostLocationState {
 function isMatchingInitialEvent(event: NostrEvent | undefined, pointer: ReturnType<typeof parsePostPointer>): event is NostrEvent {
   if (!event || !pointer) return false;
   if (pointer.id) return event.id === pointer.id;
+  if (pointer.createdAt) return event.created_at === pointer.createdAt;
   return Boolean(pointer.idPrefix && event.id.startsWith(pointer.idPrefix));
 }
 

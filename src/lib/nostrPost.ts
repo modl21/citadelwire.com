@@ -7,24 +7,61 @@ import { CITADEL_FEED_RELAYS, CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 
 const POST_ID_PREFIX_LENGTH = 16;
 const HEX_EVENT_ID_RE = /^[0-9a-f]{8,64}$/i;
+const UTC_POST_SLUG_RE = /^(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})(\d{2})z$/i;
 
 export interface PostPointer {
   id?: string;
   idPrefix?: string;
+  createdAt?: number;
   author?: string;
   relays: string[];
+}
+
+function padUtcPart(value: number): string {
+  return value.toString().padStart(2, '0');
 }
 
 export function getPostIdPrefix(event: NostrEvent): string {
   return event.id.slice(0, POST_ID_PREFIX_LENGTH);
 }
 
+export function getPostUtcSlug(event: NostrEvent): string {
+  const date = new Date(event.created_at * 1000);
+  const year = date.getUTCFullYear();
+  const month = padUtcPart(date.getUTCMonth() + 1);
+  const day = padUtcPart(date.getUTCDate());
+  const hour = padUtcPart(date.getUTCHours());
+  const minute = padUtcPart(date.getUTCMinutes());
+  const second = padUtcPart(date.getUTCSeconds());
+
+  return `${year}-${month}-${day}-${hour}${minute}${second}z`;
+}
+
 export function encodePostPath(event: NostrEvent): string {
-  return `/posts/${getPostIdPrefix(event)}`;
+  return `/posts/${getPostUtcSlug(event)}`;
 }
 
 export function parsePostPointer(identifier: string | undefined): PostPointer | null {
   if (!identifier) return null;
+
+  const utcSlug = identifier.match(UTC_POST_SLUG_RE);
+  if (utcSlug) {
+    const [, year, month, day, hour, minute, second] = utcSlug;
+    const createdAt = Math.floor(Date.UTC(
+      Number.parseInt(year, 10),
+      Number.parseInt(month, 10) - 1,
+      Number.parseInt(day, 10),
+      Number.parseInt(hour, 10),
+      Number.parseInt(minute, 10),
+      Number.parseInt(second, 10),
+    ) / 1000);
+
+    return {
+      createdAt,
+      author: CITADEL_PUBKEY,
+      relays: CITADEL_FEED_RELAYS,
+    };
+  }
 
   if (HEX_EVENT_ID_RE.test(identifier)) {
     const normalized = identifier.toLowerCase();
@@ -119,7 +156,7 @@ export function getEventTitle(event: NostrEvent): string {
 export function useNostrEvent(pointer: PostPointer | null, initialEvent?: NostrEvent) {
   const { nostr } = useNostr();
   const relayListKey = pointer?.relays?.join('|') ?? '';
-  const lookupKey = pointer?.id ?? pointer?.idPrefix ?? '';
+  const lookupKey = pointer?.id ?? pointer?.idPrefix ?? (pointer?.createdAt ? `utc:${pointer.createdAt}` : '');
   const relayGroup = useMemo(() => {
     const relays = pointer?.relays && pointer.relays.length > 0 ? pointer.relays : CITADEL_FEED_RELAYS;
     return nostr.group(Array.from(new Set([...relays, ...CITADEL_FEED_RELAYS])));
@@ -128,7 +165,7 @@ export function useNostrEvent(pointer: PostPointer | null, initialEvent?: NostrE
   return useQuery<NostrEvent | null>({
     queryKey: ['nostr', 'event', lookupKey, pointer?.author ?? '', relayListKey],
     queryFn: async () => {
-      if (!pointer?.id && !pointer?.idPrefix) return initialEvent ?? null;
+      if (!pointer?.id && !pointer?.idPrefix && !pointer?.createdAt) return initialEvent ?? null;
 
       const filter: NostrFilter = {
         kinds: [1],
@@ -139,6 +176,12 @@ export function useNostrEvent(pointer: PostPointer | null, initialEvent?: NostrE
         filter.ids = [pointer.id];
       }
 
+      if (pointer.createdAt) {
+        filter.since = pointer.createdAt;
+        filter.until = pointer.createdAt;
+        filter.limit = 20;
+      }
+
       if (pointer.author) {
         filter.authors = [pointer.author];
       }
@@ -147,7 +190,9 @@ export function useNostrEvent(pointer: PostPointer | null, initialEvent?: NostrE
         const events = await relayGroup.query([filter], { signal: AbortSignal.timeout(10000) });
         const event = pointer.id
           ? events.find((candidate) => candidate.id === pointer.id)
-          : events.find((candidate) => candidate.id.startsWith(pointer.idPrefix ?? ''));
+          : pointer.createdAt
+            ? events.find((candidate) => candidate.created_at === pointer.createdAt)
+            : events.find((candidate) => candidate.id.startsWith(pointer.idPrefix ?? ''));
         return event ?? initialEvent ?? null;
       } catch (error) {
         if (initialEvent) {
@@ -157,7 +202,7 @@ export function useNostrEvent(pointer: PostPointer | null, initialEvent?: NostrE
         throw error;
       }
     },
-    enabled: Boolean(pointer?.id || pointer?.idPrefix),
+    enabled: Boolean(pointer?.id || pointer?.idPrefix || pointer?.createdAt),
     initialData: initialEvent,
     staleTime: initialEvent ? 10 * 1000 : 60 * 1000,
     gcTime: 10 * 60 * 1000,

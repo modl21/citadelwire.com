@@ -6,7 +6,7 @@ import { NoteContent } from '@/components/NoteContent';
 import { PostActionBar } from '@/components/PostActionBar';
 import { cn } from '@/lib/utils';
 import { CITADEL_FEED_RELAYS } from '@/hooks/useCitadelFeed';
-import { encodePostPath, getPostIdPrefix } from '@/lib/nostrPost';
+import { encodePostPath, getPostIdPrefix, getPostUtcSlug } from '@/lib/nostrPost';
 
 interface PostCardProps {
   event: NostrEvent;
@@ -33,6 +33,8 @@ export function PostCard({ event, isFirst }: PostCardProps) {
 
   const openPost = () => {
     const relayListKey = CITADEL_FEED_RELAYS.join('|');
+    queryClient.setQueryData(['nostr', 'event', `utc:${event.created_at}`, event.pubkey, relayListKey], event);
+    queryClient.setQueryData(['nostr', 'event', getPostUtcSlug(event), event.pubkey, relayListKey], event);
     queryClient.setQueryData(['nostr', 'event', getPostIdPrefix(event), event.pubkey, relayListKey], event);
     queryClient.setQueryData(['nostr', 'event', event.id, event.pubkey, relayListKey], event);
     navigate(postPath, { state: { event } });
