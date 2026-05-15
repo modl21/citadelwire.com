@@ -165,7 +165,7 @@ export default function PostPage() {
 
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="border-amber-400/25 bg-amber-400/10 text-amber-200">
-                  {postType.replace('-', ' ').toUpperCase()}
+                  {postType === 'standard' ? 'MAIN WIRE' : postType.replace('-', ' ').toUpperCase()}
                 </Badge>
                 {nevent && (
                   <a
