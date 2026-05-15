@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowUpRight, Check, Copy, Rabbit, Shield, Sparkles, UserRoundPlus } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Check, Copy, Rabbit, Shield, Sparkles } from 'lucide-react';
 import { generateSecretKey, nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -176,14 +176,6 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
 
           <div className="mt-4 flex flex-col gap-3 sm:mt-6 sm:gap-4">
             <div className="rounded-[20px] border border-white/10 bg-white/[0.045] p-3 shadow-xl shadow-black/10 sm:rounded-[24px] sm:p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-300/12 text-emerald-200 sm:h-11 sm:w-11">
-                  <UserRoundPlus className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black tracking-[-0.02em] sm:text-base">Create ANON ACCOUNT</h3>
-                </div>
-              </div>
               {guestName && (
                 <div className="mt-3 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-xs font-semibold text-emerald-100">
                   <Check className="mr-1 inline h-3.5 w-3.5" />
@@ -196,7 +188,7 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
                 disabled={isCreatingGuest}
                 className="mt-3 h-10 w-full rounded-2xl bg-gradient-to-r from-emerald-300 to-amber-300 text-sm font-black text-black shadow-lg shadow-emerald-500/10 hover:from-emerald-200 hover:to-amber-200 sm:mt-5 sm:h-11"
               >
-                {isCreatingGuest ? 'Creating…' : 'Create ANON ACCOUNT'}
+                {isCreatingGuest ? 'Creating…' : 'ANON ACCOUNT'}
               </Button>
             </div>
 
