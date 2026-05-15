@@ -255,7 +255,7 @@ export function ZapDialog({ target, children, className, onZapSuccess }: ZapDial
 
   useEffect(() => {
     if (target) {
-      setComment('Zapped with MKStack!');
+      setComment('');
     }
   }, [target]);
 
