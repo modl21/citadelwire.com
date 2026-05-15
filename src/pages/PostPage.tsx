@@ -24,7 +24,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLoginActions } from '@/hooks/useLoginActions';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { usePostEngagement } from '@/hooks/usePostEngagement';
-import { CITADEL_PUBKEY, getPostType } from '@/hooks/useCitadelFeed';
+import { CITADEL_FEED_RELAYS, CITADEL_PUBKEY, getPostType } from '@/hooks/useCitadelFeed';
 import { genUserName } from '@/lib/genUserName';
 import { getEventTitle, parsePostPointer, useNostrEvent } from '@/lib/nostrPost';
 import { cn } from '@/lib/utils';
