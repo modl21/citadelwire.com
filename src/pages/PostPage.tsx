@@ -18,7 +18,7 @@ import { ReplyComposer } from '@/components/ReplyComposer';
 import { MiniEventCard } from '@/components/MiniEventCard';
 import { TickerBar } from '@/components/TickerBar';
 import { DonateButton } from '@/components/DonateButton';
-import { getOrCreateGuestAccount, PRIMAL_DOWNLOAD_URL } from '@/components/auth/ActionLoginDialog';
+import { clearStoredGuestAccount, getOrCreateGuestAccount, getStoredGuestPubkey, PRIMAL_DOWNLOAD_URL } from '@/components/auth/ActionLoginDialog';
 import { useAuthor } from '@/hooks/useAuthor';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLoginActions } from '@/hooks/useLoginActions';
@@ -75,6 +75,7 @@ export default function PostPage() {
   const { data: event, isLoading, isError } = useNostrEvent(pointer, initialEvent);
   const [replyOpen, setReplyOpen] = useState(false);
   const { user } = useCurrentUser();
+  const isAnonAccount = Boolean(user && getStoredGuestPubkey() === user.pubkey);
   const author = useAuthor(event?.pubkey);
   const engagement = usePostEngagement(event);
 
@@ -196,6 +197,7 @@ export default function PostPage() {
         )}
 
         {!user && <InlineAnonAccountPanel event={event} className="relative z-10 mt-4" />}
+        {isAnonAccount && <AnonAccountStatusPanel className="relative z-10 mt-4" />}
 
         <section className="relative z-10 mt-6">
           <Tabs defaultValue="replies" className="w-full">
@@ -232,6 +234,43 @@ export default function PostPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+function AnonAccountStatusPanel({ className }: { className?: string }) {
+  const login = useLoginActions();
+
+  const handleSignOut = async () => {
+    clearStoredGuestAccount();
+    await login.logout();
+    window.location.reload();
+  };
+
+  return (
+    <Card className={cn(
+      'overflow-hidden border-emerald-300/15 bg-emerald-300/[0.055] text-white shadow-xl shadow-emerald-500/5 backdrop-blur-xl',
+      className,
+    )}>
+      <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-emerald-300/20 bg-emerald-300/10">
+            <Shield className="h-5 w-5 text-emerald-200" />
+          </div>
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200/80">ANON ACCOUNT active</p>
+            <p className="mt-1 text-sm text-white/58">Signed in with a locally stored browser account.</p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={handleSignOut}
+          className="h-10 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-white/72 hover:bg-white/10 hover:text-white"
+        >
+          Sign out
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

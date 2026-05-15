@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowUpRight, Check, Copy, Rabbit, Shield, Sparkles } from 'lucide-react';
-import { generateSecretKey, nip19 } from 'nostr-tools';
+import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,8 @@ interface ActionLoginDialogProps {
   event?: NostrEvent;
 }
 
-const GUEST_NSEC_STORAGE_KEY = 'citadel-wire:guest-nsec';
-const GUEST_NAME_STORAGE_KEY = 'citadel-wire:guest-name';
+export const GUEST_NSEC_STORAGE_KEY = 'citadel-wire:guest-nsec';
+export const GUEST_NAME_STORAGE_KEY = 'citadel-wire:guest-name';
 export const PRIMAL_DOWNLOAD_URL = 'https://primal.net/downloads';
 const GUEST_ANIMALS = [
   'Aardvark',
@@ -64,6 +64,24 @@ function generateGuestName(): string {
   const animal = GUEST_ANIMALS[Math.floor(Math.random() * GUEST_ANIMALS.length)];
   const suffix = randomHex(2).toUpperCase();
   return `Citadel ${animal} ${suffix}`;
+}
+
+export function getStoredGuestPubkey(): string | null {
+  const nsec = localStorage.getItem(GUEST_NSEC_STORAGE_KEY);
+  if (!nsec) return null;
+
+  try {
+    const decoded = nip19.decode(nsec);
+    if (decoded.type !== 'nsec') return null;
+    return getPublicKey(decoded.data);
+  } catch {
+    return null;
+  }
+}
+
+export function clearStoredGuestAccount(): void {
+  localStorage.removeItem(GUEST_NSEC_STORAGE_KEY);
+  localStorage.removeItem(GUEST_NAME_STORAGE_KEY);
 }
 
 export function getOrCreateGuestAccount(): { nsec: string; name: string } {
