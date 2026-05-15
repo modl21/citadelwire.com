@@ -42,12 +42,14 @@ interface ZapDialogProps {
   onZapSuccess?: () => void;
 }
 
+const DEFAULT_ZAP_AMOUNT = 5000;
+
 const presetAmounts = [
-  { amount: 1, icon: Sparkle },
-  { amount: 50, icon: Sparkles },
-  { amount: 100, icon: Zap },
-  { amount: 250, icon: Star },
-  { amount: 1000, icon: Rocket },
+  { amount: 1000, label: '1k', icon: Sparkle },
+  { amount: 2000, label: '2k', icon: Sparkles },
+  { amount: 5000, label: '5k', icon: Zap },
+  { amount: 10000, label: '10k', icon: Star },
+  { amount: 21000, label: '21k', icon: Rocket },
 ];
 
 interface ZapContentProps {
@@ -184,14 +186,14 @@ const ZapContent = forwardRef<HTMLDivElement, ZapContentProps>(({
             }}
             className="grid grid-cols-5 gap-1 w-full"
           >
-            {presetAmounts.map(({ amount: presetAmount, icon: Icon }) => (
+            {presetAmounts.map(({ amount: presetAmount, label, icon: Icon }) => (
               <ToggleGroupItem
                 key={presetAmount}
                 value={String(presetAmount)}
                 className="flex flex-col h-auto min-w-0 text-xs px-1 py-2"
               >
                 <Icon className="h-4 w-4 mb-1" />
-                <span className="truncate">{presetAmount}</span>
+                <span className="truncate">{label}</span>
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
@@ -246,7 +248,7 @@ export function ZapDialog({ target, children, className, onZapSuccess }: ZapDial
     setOpen(false);
     onZapSuccess?.();
   });
-  const [amount, setAmount] = useState<number | string>(100);
+  const [amount, setAmount] = useState<number | string>(DEFAULT_ZAP_AMOUNT);
   const [comment, setComment] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
@@ -317,13 +319,13 @@ export function ZapDialog({ target, children, className, onZapSuccess }: ZapDial
 
   useEffect(() => {
     if (open) {
-      setAmount(100);
+      setAmount(DEFAULT_ZAP_AMOUNT);
       setInvoice(null);
       setCopied(false);
       setQrCodeUrl('');
     } else {
       // Clean up state when dialog closes
-      setAmount(100);
+      setAmount(DEFAULT_ZAP_AMOUNT);
       setInvoice(null);
       setCopied(false);
       setQrCodeUrl('');
