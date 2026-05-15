@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 interface PostActionBarProps {
   event: NostrEvent;
   onComment?: () => void;
+  onActionSuccess?: () => void;
   className?: string;
   expanded?: boolean;
 }
@@ -40,7 +41,7 @@ function formatCount(count: number): string {
   return `${(count / 1_000_000).toFixed(1)}M`;
 }
 
-export function PostActionBar({ event, onComment, className, expanded = false }: PostActionBarProps) {
+export function PostActionBar({ event, onComment, onActionSuccess, className, expanded = false }: PostActionBarProps) {
   const { user } = useCurrentUser();
   const author = useAuthor(event.pubkey);
   const engagement = usePostEngagement(event, expanded);
@@ -76,7 +77,9 @@ export function PostActionBar({ event, onComment, className, expanded = false }:
       return;
     }
     if (liked || likePost.isPending) return;
-    likePost.mutate(event);
+    likePost.mutate(event, {
+      onSuccess: () => onActionSuccess?.(),
+    });
   };
 
   const handleRepost = () => {
@@ -85,7 +88,9 @@ export function PostActionBar({ event, onComment, className, expanded = false }:
       return;
     }
     if (reposted || repostPost.isPending) return;
-    repostPost.mutate(event);
+    repostPost.mutate(event, {
+      onSuccess: () => onActionSuccess?.(),
+    });
   };
 
   const stopClickPropagation = (clickEvent: React.MouseEvent) => {
@@ -132,7 +137,7 @@ export function PostActionBar({ event, onComment, className, expanded = false }:
 
     return (
       <div onClick={stopClickPropagation}>
-        <ZapDialog target={event}>
+        <ZapDialog target={event} onZapSuccess={onActionSuccess}>
           <Button
             type="button"
             variant="ghost"

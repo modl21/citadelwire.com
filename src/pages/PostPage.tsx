@@ -182,7 +182,13 @@ export default function PostPage() {
 
             <NoteContent event={event} className="text-[17px] leading-8 text-foreground/95 sm:text-[18px]" />
 
-            <PostActionBar event={event} expanded onComment={() => setReplyOpen(true)} className="mt-6 justify-around border-y border-border/40 py-3" />
+            <PostActionBar
+              event={event}
+              expanded
+              onComment={() => setReplyOpen(true)}
+              onActionSuccess={() => window.location.reload()}
+              className="mt-6 justify-around border-y border-border/40 py-3"
+            />
           </div>
         </article>
 
