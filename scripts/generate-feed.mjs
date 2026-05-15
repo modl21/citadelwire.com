@@ -1,5 +1,5 @@
 import WebSocket from 'ws';
-import { writeFileSync, mkdirSync, copyFileSync, existsSync } from 'fs';
+import { writeFileSync, mkdirSync, existsSync, readFileSync, readdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { nip19 } from 'nostr-tools';
@@ -241,73 +241,108 @@ ${items}
 </rss>`;
 }
 
-function buildPostHtml(event) {
-  const title = `${getPostTitle(event)} · CITADEL WIRE`;
-  const description = getPostDescription(event);
-  const url = getPostUrl(event);
+function replaceOrInsertHeadTag(html, pattern, replacement) {
+  return pattern.test(html)
+    ? html.replace(pattern, replacement)
+    : html.replace('</head>', `    ${replacement}\n  </head>`);
+}
+
+function applyPostMeta(appHtml, { title, description, url }) {
   const escapedTitle = escapeAttribute(title);
   const escapedDescription = escapeAttribute(description);
   const escapedUrl = escapeAttribute(url);
-  const appEntry = '/src/main.tsx';
 
-  return `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapedTitle}</title>
-    <meta name="description" content="${escapedDescription}" />
-    <link rel="alternate" type="application/rss+xml" title="CITADEL WIRE RSS" href="/feed.xml" />
-    <meta property="og:title" content="${escapedTitle}" />
-    <meta property="og:description" content="${escapedDescription}" />
-    <meta property="og:image" content="${OG_IMAGE}" />
-    <meta property="og:type" content="article" />
-    <meta property="og:url" content="${escapedUrl}" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="${escapedTitle}" />
-    <meta name="twitter:description" content="${escapedDescription}" />
-    <meta name="twitter:image" content="${OG_IMAGE}" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-touch-icon.png" />
-    <meta http-equiv="content-security-policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-src 'self' https:; font-src 'self'; base-uri 'self'; manifest-src 'self'; connect-src 'self' blob: https: wss:; img-src 'self' data: blob: https:; media-src 'self' https:">
-    <link rel="manifest" href="/manifest.webmanifest">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="${appEntry}"></script>
-  </body>
-</html>
-`;
+  const htmlWithTitle = replaceOrInsertHeadTag(appHtml, /<title>.*?<\/title>/s, `<title>${escapedTitle}</title>`);
+  const metaReplacements = [
+    [/<meta name="description" content="[^"]*"\s*\/?>(?![\s\S]*<meta name="description")/, `<meta name="description" content="${escapedDescription}" />`],
+    [/<meta property="og:title" content="[^"]*"\s*\/?>(?![\s\S]*<meta property="og:title")/, `<meta property="og:title" content="${escapedTitle}" />`],
+    [/<meta property="og:description" content="[^"]*"\s*\/?>(?![\s\S]*<meta property="og:description")/, `<meta property="og:description" content="${escapedDescription}" />`],
+    [/<meta property="og:type" content="[^"]*"\s*\/?>(?![\s\S]*<meta property="og:type")/, '<meta property="og:type" content="article" />'],
+    [/<meta property="og:url" content="[^"]*"\s*\/?>(?![\s\S]*<meta property="og:url")/, `<meta property="og:url" content="${escapedUrl}" />`],
+    [/<meta name="twitter:card" content="[^"]*"\s*\/?>(?![\s\S]*<meta name="twitter:card")/, '<meta name="twitter:card" content="summary_large_image" />'],
+    [/<meta name="twitter:title" content="[^"]*"\s*\/?>(?![\s\S]*<meta name="twitter:title")/, `<meta name="twitter:title" content="${escapedTitle}" />`],
+    [/<meta name="twitter:description" content="[^"]*"\s*\/?>(?![\s\S]*<meta name="twitter:description")/, `<meta name="twitter:description" content="${escapedDescription}" />`],
+  ];
+
+  return metaReplacements.reduce(
+    (html, [pattern, replacement]) => replaceOrInsertHeadTag(html, pattern, replacement),
+    htmlWithTitle,
+  );
+}
+
+function getMetaContent(html, pattern) {
+  return pattern.exec(html)?.[1];
+}
+
+function buildPostHtml(event, appHtml) {
+  return applyPostMeta(appHtml, {
+    title: `${getPostTitle(event)} · CITADEL WIRE`,
+    description: getPostDescription(event),
+    url: getPostUrl(event),
+  });
+}
+
+function buildPostHtmlFromPreview(slug, previewHtml, appHtml) {
+  const title = getMetaContent(previewHtml, /<title>(.*?)<\/title>/s) ?? 'CITADEL WIRE post · CITADEL WIRE';
+  const description = getMetaContent(previewHtml, /<meta name="description" content="([^"]*)"\s*\/?>(?![\s\S]*<meta name="description")/) ?? 'CITADEL WIRE post with Nostr discussion, likes, reposts, and zaps.';
+  const url = getMetaContent(previewHtml, /<meta property="og:url" content="([^"]*)"\s*\/?>(?![\s\S]*<meta property="og:url")/) ?? `${SITE_URL}/posts/${slug}`;
+
+  return applyPostMeta(appHtml, { title, description, url });
 }
 
 function writePostPreviewPages(posts) {
+  const indexPath = resolve(__dirname, '..', 'index.html');
+  const appHtml = readFileSync(indexPath, 'utf-8');
   const postsDir = resolve(__dirname, '..', 'public', 'posts');
   mkdirSync(postsDir, { recursive: true });
+  const seenSlugs = new Set();
 
   for (const event of posts) {
     const slug = getPostUtcSlug(event);
+    seenSlugs.add(slug);
     const postDir = resolve(postsDir, slug);
     mkdirSync(postDir, { recursive: true });
-    writeFileSync(resolve(postDir, 'index.html'), buildPostHtml(event), 'utf-8');
+    writeFileSync(resolve(postDir, 'index.html'), buildPostHtml(event, appHtml), 'utf-8');
   }
+
+  return seenSlugs;
 }
 
-function syncPostPreviewPagesToDist(posts) {
+function getExistingPostSlugs() {
+  const postsDir = resolve(__dirname, '..', 'public', 'posts');
+  if (!existsSync(postsDir)) return [];
+
+  return readdirSync(postsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(resolve(postsDir, entry.name, 'index.html')))
+    .map((entry) => entry.name);
+}
+
+function syncPostPreviewPagesToDist(posts, extraSlugs = []) {
   const distDir = resolve(__dirname, '..', 'dist');
   if (!existsSync(distDir)) return;
-  const publicPostsDir = resolve(__dirname, '..', 'public', 'posts');
+  const indexPath = resolve(distDir, 'index.html');
+  if (!existsSync(indexPath)) return;
+
+  const appHtml = readFileSync(indexPath, 'utf-8');
   const postsDir = resolve(distDir, 'posts');
   mkdirSync(postsDir, { recursive: true });
+  const seenSlugs = new Set(extraSlugs);
 
   for (const event of posts) {
     const slug = getPostUtcSlug(event);
-    const sourcePath = resolve(publicPostsDir, slug, 'index.html');
-    if (!existsSync(sourcePath)) continue;
+    seenSlugs.add(slug);
     const postDir = resolve(postsDir, slug);
     mkdirSync(postDir, { recursive: true });
-    copyFileSync(sourcePath, resolve(postDir, 'index.html'));
+    writeFileSync(resolve(postDir, 'index.html'), buildPostHtml(event, appHtml), 'utf-8');
+  }
+
+  for (const slug of seenSlugs) {
+    const publicPostPath = resolve(__dirname, '..', 'public', 'posts', slug, 'index.html');
+    if (!existsSync(publicPostPath)) continue;
+    const postDir = resolve(postsDir, slug);
+    mkdirSync(postDir, { recursive: true });
+    const previewHtml = readFileSync(publicPostPath, 'utf-8');
+    writeFileSync(resolve(postDir, 'index.html'), buildPostHtmlFromPreview(slug, previewHtml, appHtml), 'utf-8');
   }
 }
 
@@ -319,8 +354,9 @@ async function main() {
   const xml = buildRSS(posts);
   const outPath = resolve(__dirname, '..', 'public', 'feed.xml');
   writeFileSync(outPath, xml, 'utf-8');
-  writePostPreviewPages(posts);
-  syncPostPreviewPagesToDist(posts);
+  const existingSlugs = getExistingPostSlugs();
+  const generatedSlugs = writePostPreviewPages(posts);
+  syncPostPreviewPagesToDist(posts, [...existingSlugs, ...generatedSlugs]);
   console.log(`RSS feed and ${posts.length} post previews written`);
 }
 

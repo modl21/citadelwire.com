@@ -177,8 +177,11 @@ export function useNostrEvent(pointer: PostPointer | null, initialEvent?: NostrE
       }
 
       if (pointer.createdAt) {
-        filter.since = pointer.createdAt;
-        filter.until = pointer.createdAt;
+        // Nostr relay implementations can treat since/until boundaries differently.
+        // Use a tiny window around the permalink timestamp so direct post URLs don't
+        // fail to resolve when a relay interprets equal since/until as an empty range.
+        filter.since = pointer.createdAt - 1;
+        filter.until = pointer.createdAt + 1;
         filter.limit = 20;
       }
 
