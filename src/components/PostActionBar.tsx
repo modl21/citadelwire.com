@@ -22,7 +22,7 @@ type LoginAction = 'comment' | 'like' | 'repost' | 'zap';
 function actionText(action: LoginAction | undefined): string {
   switch (action) {
     case 'comment':
-      return 'comment on this post';
+      return 'reply to this post';
     case 'like':
       return 'like this post';
     case 'repost':
@@ -50,7 +50,7 @@ export function PostActionBar({ event, onComment, className, expanded = false }:
   const [loginOpen, setLoginOpen] = useState(false);
 
   const likes = expanded ? (engagement.data?.likes.length ?? 0) : 0;
-  const replies = expanded ? (engagement.data?.replies.length ?? 0) + (engagement.data?.comments.length ?? 0) : 0;
+  const replies = expanded ? (engagement.data?.replies.length ?? 0) : 0;
   const reposts = expanded ? (engagement.data?.reposts.length ?? 0) : 0;
   const zaps = expanded ? (engagement.data?.totalZapSats ?? 0) : 0;
   const liked = user ? engagement.data?.likePubkeys.has(user.pubkey) : false;
@@ -162,7 +162,7 @@ export function PostActionBar({ event, onComment, className, expanded = false }:
       >
         <MessageCircle className="mr-1.5 h-4 w-4 transition-transform group-hover/action:scale-110" />
         {expanded && <span>{formatCount(replies)}</span>}
-        {expanded ? <span className="ml-1 hidden sm:inline">Comments</span> : <span>Comment</span>}
+        {expanded ? <span className="ml-1 hidden sm:inline">Replies</span> : <span>Reply</span>}
       </Button>
 
       <Button

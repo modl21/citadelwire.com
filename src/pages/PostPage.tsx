@@ -14,7 +14,6 @@ import { NoteContent } from '@/components/NoteContent';
 import { PostActionBar } from '@/components/PostActionBar';
 import { ReplyComposer } from '@/components/ReplyComposer';
 import { MiniEventCard } from '@/components/MiniEventCard';
-import { CommentsSection } from '@/components/comments/CommentsSection';
 import { TickerBar } from '@/components/TickerBar';
 import { DonateButton } from '@/components/DonateButton';
 import { useAuthor } from '@/hooks/useAuthor';
@@ -81,12 +80,12 @@ export default function PostPage() {
 
   useSeoMeta({
     title: `${title} · CITADEL WIRE`,
-    description: event?.content.slice(0, 160) ?? 'CITADEL WIRE post with Nostr comments, likes, reposts and zaps.',
+    description: event?.content.slice(0, 160) ?? 'CITADEL WIRE post with kind 1 replies, likes, reposts and zaps.',
     ogTitle: `${title} · CITADEL WIRE`,
-    ogDescription: event?.content.slice(0, 160) ?? 'CITADEL WIRE post with Nostr comments, likes, reposts and zaps.',
+    ogDescription: event?.content.slice(0, 160) ?? 'CITADEL WIRE post with kind 1 replies, likes, reposts and zaps.',
     twitterCard: 'summary',
     twitterTitle: `${title} · CITADEL WIRE`,
-    twitterDescription: event?.content.slice(0, 160) ?? 'CITADEL WIRE post with Nostr comments, likes, reposts and zaps.',
+    twitterDescription: event?.content.slice(0, 160) ?? 'CITADEL WIRE post with kind 1 replies, likes, reposts and zaps.',
   });
 
   if (!pointer) return <NotFound />;
@@ -189,31 +188,21 @@ export default function PostPage() {
 
         {replyOpen && (
           <div className="relative z-10 mt-4">
-            <ReplyComposer root={event} onCancel={() => setReplyOpen(false)} onSuccess={() => setReplyOpen(false)} />
+            <ReplyComposer root={event} onCancel={() => setReplyOpen(false)} onSuccess={() => window.location.reload()} />
           </div>
         )}
 
         <section className="relative z-10 mt-6">
-          <Tabs defaultValue="comments" className="w-full">
+          <Tabs defaultValue="replies" className="w-full">
             <TabsList className="grid h-auto w-full grid-cols-4 rounded-2xl border border-border/50 bg-card/70 p-1 backdrop-blur">
-              <TabsTrigger value="comments" className="rounded-xl py-2 text-xs sm:text-sm">Comments</TabsTrigger>
+              <TabsTrigger value="replies" className="rounded-xl py-2 text-xs sm:text-sm">Replies</TabsTrigger>
               <TabsTrigger value="likes" className="rounded-xl py-2 text-xs sm:text-sm">Likes</TabsTrigger>
               <TabsTrigger value="reposts" className="rounded-xl py-2 text-xs sm:text-sm">Reposts</TabsTrigger>
               <TabsTrigger value="zaps" className="rounded-xl py-2 text-xs sm:text-sm">Zaps</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="comments" className="mt-4 space-y-4">
-              <CommentsSection
-                root={event}
-                title="Discussion"
-                emptyStateMessage="No Nostr comments yet"
-                emptyStateSubtitle="Start the conversation with a signed Nostr comment."
-                className="border-border/50 bg-card/70"
-                showCommentForm={false}
-                footer={
-                  <ThreadRepliesSection replies={replies} />
-                }
-              />
+            <TabsContent value="replies" className="mt-4 space-y-4">
+              <ThreadRepliesSection replies={replies} />
             </TabsContent>
 
             <TabsContent value="likes" className="mt-4">
@@ -270,28 +259,30 @@ function PostDetailHeader() {
 
 function ThreadRepliesSection({ replies }: { replies: NostrEvent[] }) {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h3 className="text-base font-semibold text-foreground">Thread replies</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Kind 1 replies are shown here alongside NIP-22 comments above.
-          </p>
-        </div>
-        <span className="rounded-full border border-border/50 bg-muted/30 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-          {replies.length}
-        </span>
-      </div>
-      {replies.length > 0 ? (
-        <div className="space-y-3">
-          {replies.map((reply) => <MiniEventCard key={reply.id} event={reply} />)}
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
-          No kind 1 replies yet.
-        </div>
-      )}
-    </div>
+    <Card className="border-border/50 bg-card/70">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between gap-3 text-lg">
+          <span className="flex items-center gap-2">
+            <Radio className="h-4 w-4 text-amber-300" />
+            Kind 1 replies
+          </span>
+          <span className="rounded-full border border-border/50 bg-muted/30 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+            {replies.length}
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {replies.length > 0 ? (
+          <div className="space-y-3">
+            {replies.map((reply) => <MiniEventCard key={reply.id} event={reply} />)}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border/60 p-8 text-center text-sm text-muted-foreground">
+            No kind 1 replies yet.
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

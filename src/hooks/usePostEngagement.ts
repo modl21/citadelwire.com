@@ -5,7 +5,6 @@ import { getEventCoordinate, getReplyRootId } from '@/lib/nostrPost';
 
 export interface PostEngagement {
   replies: NostrEvent[];
-  comments: NostrEvent[];
   likes: NostrEvent[];
   reposts: NostrEvent[];
   quoteReposts: NostrEvent[];
@@ -63,7 +62,6 @@ export function usePostEngagement(root: NostrEvent | null | undefined, enabled =
       if (!root) {
         return {
           replies: [],
-          comments: [],
           likes: [],
           reposts: [],
           quoteReposts: [],
@@ -79,12 +77,10 @@ export function usePostEngagement(root: NostrEvent | null | undefined, enabled =
       const filters = [
         { kinds: [1, 6, 7, 16, 9735], '#e': [root.id], limit: 500 },
         { kinds: [1], '#q': [root.id], limit: 100 },
-        { kinds: [1111], '#E': [root.id], limit: 500 },
         ...(coordinate
           ? [
               { kinds: [16, 9735], '#a': [coordinate], limit: 250 },
               { kinds: [1], '#q': [coordinate], limit: 100 },
-              { kinds: [1111], '#A': [coordinate], limit: 500 },
             ]
           : []),
       ];
@@ -92,9 +88,6 @@ export function usePostEngagement(root: NostrEvent | null | undefined, enabled =
       const events = uniqueById(await nostr.query(filters, { signal }));
       const replies = events
         .filter((event) => isDirectReply(event, root.id) && !event.tags.some(([name, value]) => name === 'q' && (value === root.id || value === coordinate)))
-        .sort((a, b) => a.created_at - b.created_at);
-      const comments = events
-        .filter((event) => event.kind === 1111)
         .sort((a, b) => a.created_at - b.created_at);
       const likes = events.filter(isLike);
       const reposts = events.filter((event) => event.kind === 6 || event.kind === 16);
@@ -105,7 +98,6 @@ export function usePostEngagement(root: NostrEvent | null | undefined, enabled =
 
       return {
         replies,
-        comments,
         likes,
         reposts,
         quoteReposts,
