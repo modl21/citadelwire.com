@@ -3,7 +3,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
 import { format } from 'date-fns';
 import { nip19 } from 'nostr-tools';
-import { AlertTriangle, ArrowLeft, ArrowUpRight, Check, Copy, ExternalLink, Rabbit, Radio, Shield, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Check, Copy, Rabbit, Radio, Shield, Sparkles } from 'lucide-react';
 import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -81,7 +81,6 @@ export default function PostPage() {
   const metadata: NostrMetadata | undefined = author.data?.metadata;
   const displayName = metadata?.display_name ?? metadata?.name ?? (event ? genUserName(event.pubkey) : 'CITADEL WIRE');
   const avatar = metadata?.picture;
-  const nevent = event ? nip19.neventEncode({ id: event.id, author: event.pubkey, relays: pointer?.relays }) : undefined;
   const title = event ? getEventTitle(event) : 'CITADEL WIRE post';
   const postType = event ? getPostType(event) : 'standard';
   const published = event ? format(new Date(event.created_at * 1000), 'MMMM d, yyyy · h:mm a') : '';
@@ -174,17 +173,7 @@ export default function PostPage() {
                 <Badge variant="outline" className="border-amber-400/25 bg-amber-400/10 text-amber-200">
                   {postType === 'standard' ? 'MAIN WIRE' : postType.replace('-', ' ').toUpperCase()}
                 </Badge>
-                {nevent && (
-                  <a
-                    href={`https://primal.net/e/${nevent}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/50 bg-muted/20 text-muted-foreground transition-colors hover:text-foreground"
-                    title="Open on Primal"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                )}
+
               </div>
             </div>
 
@@ -309,7 +298,7 @@ function InlineAnonAccountPanel({ event, className }: { event: NostrEvent; class
             <div className="min-w-0">
               <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-200/75">Join the signal</p>
               <p className="mt-1 text-sm leading-6 text-white/72">
-                Reply, like, repost, or zap from a locally stored ANON ACCOUNT. No extension required.
+                REPLY, LIKE, REPOST, OR ZAP FROM A LOCALLY STORED ANON ACCOUNT
               </p>
             </div>
           </div>
