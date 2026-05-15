@@ -138,7 +138,7 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
           content: JSON.stringify({
             name: account.name,
             display_name: account.name,
-            about: 'Guest CITADEL WIRE account stored locally in this browser.',
+            about: 'ANON CITADEL WIRE account stored locally in this browser.',
           }),
           tags: [],
         });
@@ -181,7 +181,7 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
                   <UserRoundPlus className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black tracking-[-0.02em] sm:text-base">Create guest account</h3>
+                  <h3 className="text-sm font-black tracking-[-0.02em] sm:text-base">Create ANON ACCOUNT</h3>
                 </div>
               </div>
               {guestName && (
@@ -196,7 +196,7 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
                 disabled={isCreatingGuest}
                 className="mt-3 h-10 w-full rounded-2xl bg-gradient-to-r from-emerald-300 to-amber-300 text-sm font-black text-black shadow-lg shadow-emerald-500/10 hover:from-emerald-200 hover:to-amber-200 sm:mt-5 sm:h-11"
               >
-                {isCreatingGuest ? 'Creating…' : 'Create guest account'}
+                {isCreatingGuest ? 'Creating…' : 'Create ANON ACCOUNT'}
               </Button>
             </div>
 
@@ -236,7 +236,7 @@ export function ActionLoginDialog({ open, onOpenChange, action = 'interact', eve
           <div className="mt-3 space-y-2 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-center text-[11px] font-medium leading-4 text-white/48 sm:mt-5 sm:text-xs">
             <div className="flex items-center justify-center gap-2">
               <Rabbit className="h-4 w-4 text-amber-200/70" />
-              Guest keys live only in this browser. Clear browser storage and they are gone.
+              ANON ACCOUNT keys live only in this browser. Clear browser storage and they are gone.
               <Sparkles className="h-4 w-4 text-sky-200/70" />
             </div>
             <a
