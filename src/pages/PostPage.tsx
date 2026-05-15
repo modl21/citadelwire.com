@@ -3,7 +3,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
 import { format } from 'date-fns';
 import { nip19 } from 'nostr-tools';
-import { AlertTriangle, ArrowLeft, ArrowUpRight, Check, ExternalLink, Rabbit, Radio, Shield, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Check, Copy, ExternalLink, Rabbit, Radio, Shield, Sparkles } from 'lucide-react';
 import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -206,7 +206,7 @@ export default function PostPage() {
           </div>
         )}
 
-        {!user && <InlineAnonAccountPanel className="relative z-10 mt-4" />}
+        {!user && <InlineAnonAccountPanel event={event} className="relative z-10 mt-4" />}
 
         <section className="relative z-10 mt-6">
           <Tabs defaultValue="replies" className="w-full">
@@ -246,12 +246,25 @@ export default function PostPage() {
   );
 }
 
-function InlineAnonAccountPanel({ className }: { className?: string }) {
+function InlineAnonAccountPanel({ event, className }: { event: NostrEvent; className?: string }) {
   const login = useLoginActions();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [anonName, setAnonName] = useState<string | null>(null);
+  const [copiedEventId, setCopiedEventId] = useState(false);
+  const eventIdentifier = useMemo(() => nip19.neventEncode({ id: event.id, author: event.pubkey, relays: CITADEL_FEED_RELAYS }), [event.id, event.pubkey]);
+  const eventDeepLink = `nostr:${eventIdentifier}`;
+
+  const handleCopyEventId = async () => {
+    try {
+      await navigator.clipboard.writeText(eventIdentifier);
+      setCopiedEventId(true);
+      setTimeout(() => setCopiedEventId(false), 1800);
+    } catch {
+      setError('Could not copy the event ID.');
+    }
+  };
 
   const handleCreateAnonAccount = async () => {
     setIsCreating(true);
@@ -324,6 +337,33 @@ function InlineAnonAccountPanel({ className }: { className?: string }) {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+
+        <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/38">Open in any Nostr app</p>
+              <p className="mt-1 truncate font-mono text-[11px] text-white/58">{eventIdentifier}</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <a
+                href={eventDeepLink}
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/72 hover:bg-white/10 hover:text-white"
+              >
+                Open
+              </a>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleCopyEventId}
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-3 text-white/72 hover:bg-white/10 hover:text-white"
+              >
+                {copiedEventId ? <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-200" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                {copiedEventId ? 'Copied' : 'Copy'}
+              </Button>
+            </div>
+          </div>
+        </div>
 
         <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-[11px] font-medium leading-4 text-white/48 sm:flex-row sm:items-center sm:justify-between sm:text-xs">
           <div className="flex items-center gap-2">
