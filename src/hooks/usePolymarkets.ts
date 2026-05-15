@@ -83,20 +83,39 @@ function isStale(title: string): boolean {
   return false;
 }
 
-function parseOutcome(raw: string | string[]): string[] {
-  if (Array.isArray(raw)) return raw;
-  try { return JSON.parse(raw); } catch { return []; }
+function parseOutcome(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.map((v) => String(v));
+  if (typeof raw !== 'string') return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map((v) => String(v)) : [];
+  } catch {
+    return [];
+  }
 }
 
-function parsePrices(raw: string | (string | number)[]): number[] {
-  const arr = Array.isArray(raw) ? raw : (() => { try { return JSON.parse(raw); } catch { return []; } })();
-  return arr.map((v: string | number) => typeof v === 'number' ? v : parseFloat(v) || 0);
+function parsePrices(raw: unknown): number[] {
+  const arr: unknown = Array.isArray(raw) ? raw : (() => {
+    if (typeof raw !== 'string') return [];
+    try { return JSON.parse(raw); } catch { return []; }
+  })();
+
+  if (!Array.isArray(arr)) return [];
+  return arr.map((v) => typeof v === 'number' ? v : parseFloat(String(v)) || 0);
 }
 
 function parseVolume(v: unknown): number {
   if (typeof v === 'number') return v;
   if (typeof v === 'string') return parseFloat(v) || 0;
   return 0;
+}
+
+function isTrue(value: unknown): boolean {
+  return value === true || value === 'true';
+}
+
+function hasGroupItemTitle(market: Record<string, unknown>): boolean {
+  return typeof market.groupItemTitle === 'string' && market.groupItemTitle.trim().length > 0;
 }
 
 /**
@@ -152,16 +171,23 @@ async function fetchFromGammaAPI(useProxy: boolean): Promise<ParsedMarket[]> {
     if (!isGeopolitics(title)) continue;
     if (isStale(title)) continue;
 
-    const activeMarkets = event.markets.filter(
-      (m: Record<string, unknown>) => m.active && !m.closed,
+    const openMarkets = event.markets.filter(
+      (m: Record<string, unknown>) => isTrue(m.active) && !isTrue(m.closed),
     );
+    if (openMarkets.length === 0) continue;
+
+    const activeMarkets = openMarkets.filter((m: Record<string, unknown>) => {
+      const prices = parsePrices(m.outcomePrices);
+      const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+      return Math.round(maxPrice * 100) < 100;
+    });
     if (activeMarkets.length === 0) continue;
 
-    const isMultiChoice = activeMarkets.length > 1;
+    const isMultiChoice = activeMarkets.some(hasGroupItemTitle);
 
-    // Aggregate 24h volume across all markets in the event
+    // Aggregate 24h volume across all open markets in the event
     let totalVolume = 0;
-    for (const m of activeMarkets) {
+    for (const m of openMarkets) {
       totalVolume += parseVolume(m.volume24hr);
     }
 
@@ -171,7 +197,11 @@ async function fetchFromGammaAPI(useProxy: boolean): Promise<ParsedMarket[]> {
     let leadPrice = 0;
 
     if (isMultiChoice) {
-      // Multi-choice: scan all markets, find the one with the highest "Yes" price
+      // Grouped date/candidate/category markets are represented as several Yes/No
+      // markets under one event. Polymarket displays the most likely outcome as
+      // the group item with the highest Yes price, not the higher side within
+      // each binary market. This prevents showing "No 91%" for a date bucket
+      // where the actual grouped frontrunner is "June 30 9%".
       for (const m of activeMarkets) {
         const names = parseOutcome(m.outcomes);
         const prices = parsePrices(m.outcomePrices);
@@ -184,21 +214,16 @@ async function fetchFromGammaAPI(useProxy: boolean): Promise<ParsedMarket[]> {
         }
       }
     } else {
-      // Binary Yes/No market
+      // Single binary market: show whichever side is actually more likely.
       const market = activeMarkets[0];
       const names = parseOutcome(market.outcomes);
       const prices = parsePrices(market.outcomePrices);
-      const yesIdx = names.indexOf('Yes');
-      const noIdx = names.indexOf('No');
-      const yesPrice = yesIdx >= 0 ? prices[yesIdx] : 0;
-      const noPrice = noIdx >= 0 ? prices[noIdx] : 0;
-
-      if (yesPrice >= noPrice) {
-        leadName = 'Yes';
-        leadPrice = yesPrice;
-      } else {
-        leadName = 'No';
-        leadPrice = noPrice;
+      for (let i = 0; i < names.length; i++) {
+        const price = prices[i] ?? 0;
+        if (price > leadPrice) {
+          leadPrice = price;
+          leadName = names[i] || 'Yes';
+        }
       }
     }
 
