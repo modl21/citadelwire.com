@@ -3,10 +3,12 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
 import { format } from 'date-fns';
 import { nip19 } from 'nostr-tools';
-import { ArrowLeft, ExternalLink, Radio } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Check, ExternalLink, Rabbit, Radio, Shield, Sparkles } from 'lucide-react';
 import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,11 +18,16 @@ import { ReplyComposer } from '@/components/ReplyComposer';
 import { MiniEventCard } from '@/components/MiniEventCard';
 import { TickerBar } from '@/components/TickerBar';
 import { DonateButton } from '@/components/DonateButton';
+import { getOrCreateGuestAccount, PRIMAL_DOWNLOAD_URL } from '@/components/auth/ActionLoginDialog';
 import { useAuthor } from '@/hooks/useAuthor';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useLoginActions } from '@/hooks/useLoginActions';
+import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { usePostEngagement } from '@/hooks/usePostEngagement';
 import { CITADEL_PUBKEY, getPostType } from '@/hooks/useCitadelFeed';
 import { genUserName } from '@/lib/genUserName';
 import { getEventTitle, parsePostPointer, useNostrEvent } from '@/lib/nostrPost';
+import { cn } from '@/lib/utils';
 import NotFound from '@/pages/NotFound';
 
 function PostPageSkeleton() {
@@ -67,6 +74,7 @@ export default function PostPage() {
   const initialEvent = isMatchingInitialEvent(locationState?.event, pointer) ? locationState.event : undefined;
   const { data: event, isLoading, isError } = useNostrEvent(pointer, initialEvent);
   const [replyOpen, setReplyOpen] = useState(false);
+  const { user } = useCurrentUser();
   const author = useAuthor(event?.pubkey);
   const engagement = usePostEngagement(event);
 
@@ -198,6 +206,8 @@ export default function PostPage() {
           </div>
         )}
 
+        {!user && <InlineAnonAccountPanel className="relative z-10 mt-4" />}
+
         <section className="relative z-10 mt-6">
           <Tabs defaultValue="replies" className="w-full">
             <TabsList className="grid h-auto w-full grid-cols-4 rounded-2xl border border-border/50 bg-card/70 p-1 backdrop-blur">
@@ -233,6 +243,106 @@ export default function PostPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+function InlineAnonAccountPanel({ className }: { className?: string }) {
+  const login = useLoginActions();
+  const { mutateAsync: publishEvent } = useNostrPublish();
+  const [error, setError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [anonName, setAnonName] = useState<string | null>(null);
+
+  const handleCreateAnonAccount = async () => {
+    setIsCreating(true);
+    setError(null);
+
+    try {
+      const account = getOrCreateGuestAccount();
+      setAnonName(account.name);
+      login.nsec(account.nsec);
+
+      try {
+        await publishEvent({
+          kind: 0,
+          content: JSON.stringify({
+            name: account.name,
+            display_name: account.name,
+            about: 'ANON CITADEL WIRE account stored locally in this browser.',
+          }),
+          tags: [],
+        });
+      } catch (profileError) {
+        console.warn('ANON profile publish failed', profileError);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create an ANON ACCOUNT.');
+      setIsCreating(false);
+    }
+  };
+
+  return (
+    <Card className={cn(
+      'overflow-hidden border-white/10 bg-[#080b12]/92 text-white shadow-2xl shadow-amber-500/10 backdrop-blur-2xl',
+      className,
+    )}>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_0%,rgba(245,158,11,0.22),transparent_35%),radial-gradient(circle_at_94%_24%,rgba(56,189,248,0.13),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.06),transparent_50%)]" />
+      <CardContent className="relative p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 shadow-[0_0_40px_rgba(245,158,11,0.12)]">
+              <Shield className="h-5 w-5 text-amber-200" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-200/75">Join the signal</p>
+              <p className="mt-1 text-sm leading-6 text-white/72">
+                Reply, like, repost, or zap from a locally stored ANON ACCOUNT. No extension required.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            onClick={handleCreateAnonAccount}
+            disabled={isCreating}
+            className="h-11 shrink-0 rounded-2xl bg-gradient-to-r from-emerald-300 to-amber-300 px-5 text-sm font-black text-black shadow-lg shadow-emerald-500/10 hover:from-emerald-200 hover:to-amber-200"
+          >
+            {isCreating ? 'Creating…' : 'ANON ACCOUNT'}
+          </Button>
+        </div>
+
+        {anonName && (
+          <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-xs font-semibold text-emerald-100">
+            <Check className="mr-1 inline h-3.5 w-3.5" />
+            {anonName}
+          </div>
+        )}
+
+        {error && (
+          <Alert className="mt-4 border-red-400/30 bg-red-500/10 text-red-100">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-[11px] font-medium leading-4 text-white/48 sm:flex-row sm:items-center sm:justify-between sm:text-xs">
+          <div className="flex items-center gap-2">
+            <Rabbit className="h-4 w-4 shrink-0 text-amber-200/70" />
+            <span>ANON ACCOUNT keys live only in this browser. Clear browser storage and they are gone.</span>
+            <Sparkles className="hidden h-4 w-4 shrink-0 text-sky-200/70 sm:block" />
+          </div>
+          <a
+            href={PRIMAL_DOWNLOAD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex shrink-0 items-center gap-1.5 font-bold text-amber-200 underline underline-offset-4 hover:text-amber-100"
+          >
+            Need a Nostr app?
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </a>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

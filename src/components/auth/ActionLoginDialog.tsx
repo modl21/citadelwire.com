@@ -18,7 +18,7 @@ interface ActionLoginDialogProps {
 
 const GUEST_NSEC_STORAGE_KEY = 'citadel-wire:guest-nsec';
 const GUEST_NAME_STORAGE_KEY = 'citadel-wire:guest-name';
-const PRIMAL_DOWNLOAD_URL = 'https://primal.net/downloads';
+export const PRIMAL_DOWNLOAD_URL = 'https://primal.net/downloads';
 const GUEST_ANIMALS = [
   'Aardvark',
   'Albatross',
@@ -66,7 +66,7 @@ function generateGuestName(): string {
   return `Citadel ${animal} ${suffix}`;
 }
 
-function getOrCreateGuestAccount(): { nsec: string; name: string } {
+export function getOrCreateGuestAccount(): { nsec: string; name: string } {
   const existingNsec = localStorage.getItem(GUEST_NSEC_STORAGE_KEY);
   const existingName = localStorage.getItem(GUEST_NAME_STORAGE_KEY);
 
