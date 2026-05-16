@@ -18,7 +18,7 @@ import { ReplyComposer } from '@/components/ReplyComposer';
 import { MiniEventCard } from '@/components/MiniEventCard';
 import { TickerBar } from '@/components/TickerBar';
 import { DonateButton } from '@/components/DonateButton';
-import { clearStoredGuestAccount, getOrCreateGuestAccount, getStoredGuestPubkey, PRIMAL_DOWNLOAD_URL } from '@/components/auth/ActionLoginDialog';
+import { clearStoredGuestAccount, getOrCreateGuestAccount, getStoredGuestPubkey, GUEST_NSEC_STORAGE_KEY, PRIMAL_DOWNLOAD_URL } from '@/components/auth/ActionLoginDialog';
 import { useAuthor } from '@/hooks/useAuthor';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLoginActions } from '@/hooks/useLoginActions';
@@ -239,6 +239,26 @@ export default function PostPage() {
 
 function AnonAccountStatusPanel({ className }: { className?: string }) {
   const login = useLoginActions();
+  const [copiedNsec, setCopiedNsec] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
+
+  const handleExportAccount = async () => {
+    const nsec = localStorage.getItem(GUEST_NSEC_STORAGE_KEY);
+    if (!nsec) {
+      setCopyError('No ANON ACCOUNT key was found in this browser.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(nsec);
+      setCopyError(null);
+      setCopiedNsec(true);
+      setTimeout(() => setCopiedNsec(false), 1800);
+    } catch {
+      setCopiedNsec(false);
+      setCopyError('Could not copy the ANON ACCOUNT key.');
+    }
+  };
 
   const handleSignOut = async () => {
     clearStoredGuestAccount();
@@ -259,16 +279,37 @@ function AnonAccountStatusPanel({ className }: { className?: string }) {
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200/80">ANON ACCOUNT active</p>
             <p className="mt-1 text-sm text-white/58">Signed in with a locally stored browser account.</p>
+            {copyError && <p className="mt-1 text-xs font-semibold text-red-200">{copyError}</p>}
           </div>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={handleSignOut}
-          className="h-10 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-white/72 hover:bg-white/10 hover:text-white"
-        >
-          Sign out
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleExportAccount}
+            className="h-10 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 text-sm font-black text-emerald-100 hover:bg-emerald-300/15 hover:text-white"
+          >
+            {copiedNsec ? (
+              <>
+                <Check className="mr-1.5 h-4 w-4" />
+                Copied
+              </>
+            ) : (
+              <>
+                <Copy className="mr-1.5 h-4 w-4" />
+                Export account
+              </>
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleSignOut}
+            className="h-10 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-white/72 hover:bg-white/10 hover:text-white"
+          >
+            Sign out
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
