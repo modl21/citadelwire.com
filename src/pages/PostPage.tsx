@@ -378,7 +378,7 @@ function InlineAnonAccountPanel({ event, className }: { event: NostrEvent; class
             <div className="min-w-0">
               <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-200/75">Join the signal</p>
               <p className="mt-1 text-sm leading-6 text-white/72">
-                REPLY, LIKE, REPOST, OR ZAP FROM A LOCALLY STORED ANON ACCOUNT
+                USE A PRIVATE ANON ACCOUNT:
               </p>
             </div>
           </div>
