@@ -348,7 +348,7 @@ function InlineAnonAccountPanel({ event, className }: { event: NostrEvent; class
             disabled={isCreating}
             className="h-11 shrink-0 rounded-2xl bg-gradient-to-r from-emerald-300 to-amber-300 px-5 text-sm font-black text-black shadow-lg shadow-emerald-500/10 hover:from-emerald-200 hover:to-amber-200"
           >
-            {isCreating ? 'Creating…' : 'ANON ACCOUNT'}
+            {isCreating ? 'Creating…' : 'CREATE ANON ACCOUNT'}
           </Button>
         </div>
 
