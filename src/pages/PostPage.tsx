@@ -69,7 +69,8 @@ function isMatchingInitialEvent(event: NostrEvent | undefined, pointer: ReturnTy
 export default function PostPage() {
   const { identifier } = useParams<{ identifier: string }>();
   const location = useLocation();
-  const pointer = useMemo(() => parsePostPointer(identifier), [identifier]);
+  const routeIdentifier = identifier ?? (typeof window !== 'undefined' ? window.__CITADEL_CANONICAL_PATH__?.match(/^\/posts\/([^/?#]+)/)?.[1] : undefined);
+  const pointer = useMemo(() => parsePostPointer(routeIdentifier), [routeIdentifier]);
   const locationState = location.state as PostLocationState | null;
   const initialEvent = isMatchingInitialEvent(locationState?.event, pointer) ? locationState.event : undefined;
   const { data: event, isLoading, isError } = useNostrEvent(pointer, initialEvent);

@@ -5,6 +5,12 @@ import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
 import { nip19 } from 'nostr-tools';
 import { CITADEL_FEED_RELAYS, CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 
+declare global {
+  interface Window {
+    __CITADEL_CANONICAL_PATH__?: string;
+  }
+}
+
 const POST_ID_PREFIX_LENGTH = 16;
 const HEX_EVENT_ID_RE = /^[0-9a-f]{8,64}$/i;
 const UTC_POST_SLUG_RE = /^(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})(\d{2})$/;
@@ -42,6 +48,11 @@ export function encodePostPath(event: NostrEvent): string {
 }
 
 export function parsePostPointer(identifier: string | undefined): PostPointer | null {
+  if (!identifier && typeof window !== 'undefined') {
+    const canonicalIdentifier = window.__CITADEL_CANONICAL_PATH__?.match(/^\/posts\/([^/?#]+)/)?.[1];
+    if (canonicalIdentifier) return parsePostPointer(canonicalIdentifier);
+  }
+
   if (!identifier) return null;
 
   const utcSlug = identifier.match(UTC_POST_SLUG_RE);

@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
-import { writeFileSync, mkdirSync, existsSync, readFileSync, readdirSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { writeFileSync, mkdirSync, existsSync, readFileSync, readdirSync, rmSync } from 'fs';
+import { resolve, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { nip19 } from 'nostr-tools';
 
@@ -109,6 +109,10 @@ function getPostUrl(event) {
   return `${SITE_URL}/posts/${getPostUtcSlug(event)}`;
 }
 
+function getPostCanonicalPath(event) {
+  return `/posts/${getPostUtcSlug(event)}`;
+}
+
 function getPostTitle(event) {
   const firstLine = event.content
     .split('\n')
@@ -180,6 +184,40 @@ function queryRelay(url, filter) {
   });
 }
 
+function parsePostsFromExistingFeed() {
+  const feedPath = resolve(__dirname, '..', 'public', 'feed.xml');
+  if (!existsSync(feedPath)) return [];
+
+  const feed = readFileSync(feedPath, 'utf-8');
+  return [...feed.matchAll(/<item>[\s\S]*?<title>([\s\S]*?)<\/title>[\s\S]*?<link>https:\/\/citadelwire\.com\/posts\/([^<]+)<\/link>[\s\S]*?<guid[^>]*>([^<]+)<\/guid>[\s\S]*?<pubDate>([^<]+)<\/pubDate>[\s\S]*?<description><!\[CDATA\[<div>([\s\S]*?)<\/div>\]\]><\/description>[\s\S]*?<\/item>/g)]
+    .map((match) => {
+      const [, title, slug, id, pubDate, htmlDescription] = match;
+      const content = htmlDescription
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<a\s+href="[^"]*">([\s\S]*?)<\/a>/gi, '$1')
+        .replace(/<[^>]*>/g, '')
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+      const createdAt = Math.floor(new Date(pubDate).getTime() / 1000);
+
+      return {
+        id,
+        pubkey: CITADEL_PUBKEY,
+        created_at: Number.isFinite(createdAt) ? createdAt : 0,
+        kind: 1,
+        tags: [['client', 'citadelwire-feed-cache'], ['d', slug], ['title', title]],
+        content,
+      };
+    })
+    .filter((event) => event.id && event.created_at > 0 && event.content);
+}
+
 async function fetchPosts() {
   const filter = {
     kinds: [1],
@@ -202,7 +240,8 @@ async function fetchPosts() {
     }
   }
 
-  return all.sort((a, b) => b.created_at - a.created_at);
+  const sorted = all.sort((a, b) => b.created_at - a.created_at);
+  return sorted.length > 0 ? sorted : parsePostsFromExistingFeed();
 }
 
 function buildRSS(posts) {
@@ -251,17 +290,20 @@ function applyPostMeta(appHtml, { title, description, url }) {
   const escapedTitle = escapeAttribute(title);
   const escapedDescription = escapeAttribute(description);
   const escapedUrl = escapeAttribute(url);
+  const escapedImage = escapeAttribute(OG_IMAGE);
 
   const htmlWithTitle = replaceOrInsertHeadTag(appHtml, /<title>.*?<\/title>/s, `<title>${escapedTitle}</title>`);
   const metaReplacements = [
     [/<meta name="description" content="[^"]*"\s*\/?>(?![\s\S]*<meta name="description")/, `<meta name="description" content="${escapedDescription}" />`],
     [/<meta property="og:title" content="[^"]*"\s*\/?>(?![\s\S]*<meta property="og:title")/, `<meta property="og:title" content="${escapedTitle}" />`],
     [/<meta property="og:description" content="[^"]*"\s*\/?>(?![\s\S]*<meta property="og:description")/, `<meta property="og:description" content="${escapedDescription}" />`],
+    [/<meta property="og:image" content="[^"]*"\s*\/?>(?![\s\S]*<meta property="og:image")/, `<meta property="og:image" content="${escapedImage}" />`],
     [/<meta property="og:type" content="[^"]*"\s*\/?>(?![\s\S]*<meta property="og:type")/, '<meta property="og:type" content="article" />'],
     [/<meta property="og:url" content="[^"]*"\s*\/?>(?![\s\S]*<meta property="og:url")/, `<meta property="og:url" content="${escapedUrl}" />`],
     [/<meta name="twitter:card" content="[^"]*"\s*\/?>(?![\s\S]*<meta name="twitter:card")/, '<meta name="twitter:card" content="summary_large_image" />'],
     [/<meta name="twitter:title" content="[^"]*"\s*\/?>(?![\s\S]*<meta name="twitter:title")/, `<meta name="twitter:title" content="${escapedTitle}" />`],
     [/<meta name="twitter:description" content="[^"]*"\s*\/?>(?![\s\S]*<meta name="twitter:description")/, `<meta name="twitter:description" content="${escapedDescription}" />`],
+    [/<meta name="twitter:image" content="[^"]*"\s*\/?>(?![\s\S]*<meta name="twitter:image")/, `<meta name="twitter:image" content="${escapedImage}" />`],
   ];
 
   return metaReplacements.reduce(
@@ -274,12 +316,21 @@ function getMetaContent(html, pattern) {
   return pattern.exec(html)?.[1];
 }
 
+function withCanonicalLink(html, canonicalPath) {
+  const canonicalScript = `<script>window.__CITADEL_CANONICAL_PATH__=${JSON.stringify(canonicalPath)};<\/script>`;
+  if (html.includes('__CITADEL_CANONICAL_PATH__')) return html;
+  if (html.includes('<div id="root"></div>')) {
+    return html.replace('<div id="root"></div>', `<div id="root"></div>\n    ${canonicalScript}`);
+  }
+  return html.replace('</head>', `    ${canonicalScript}\n  </head>`);
+}
+
 function buildPostHtml(event, appHtml) {
-  return applyPostMeta(appHtml, {
+  return withCanonicalLink(applyPostMeta(appHtml, {
     title: `${getPostTitle(event)} · CITADEL WIRE`,
     description: getPostDescription(event),
     url: getPostUrl(event),
-  });
+  }), getPostCanonicalPath(event));
 }
 
 function buildPostHtmlFromPreview(slug, previewHtml, appHtml) {
@@ -287,7 +338,7 @@ function buildPostHtmlFromPreview(slug, previewHtml, appHtml) {
   const description = getMetaContent(previewHtml, /<meta name="description" content="([^"]*)"\s*\/?>(?![\s\S]*<meta name="description")/) ?? 'CITADEL WIRE post with Nostr discussion, likes, reposts, and zaps.';
   const url = getMetaContent(previewHtml, /<meta property="og:url" content="([^"]*)"\s*\/?>(?![\s\S]*<meta property="og:url")/) ?? `${SITE_URL}/posts/${slug}`;
 
-  return applyPostMeta(appHtml, { title, description, url });
+  return withCanonicalLink(applyPostMeta(appHtml, { title, description, url }), `/posts/${slug}`);
 }
 
 function writePostPreviewPages(posts) {
@@ -325,6 +376,7 @@ function syncPostPreviewPagesToDist(posts, extraSlugs = []) {
 
   const appHtml = readFileSync(indexPath, 'utf-8');
   const postsDir = resolve(distDir, 'posts');
+  rmSync(postsDir, { recursive: true, force: true });
   mkdirSync(postsDir, { recursive: true });
   const seenSlugs = new Set(extraSlugs);
 
@@ -357,6 +409,10 @@ async function main() {
   const existingSlugs = getExistingPostSlugs();
   const generatedSlugs = writePostPreviewPages(posts);
   syncPostPreviewPagesToDist(posts, [...existingSlugs, ...generatedSlugs]);
+  const distPostsDir = resolve(__dirname, '..', 'dist', 'posts');
+  if (existsSync(distPostsDir)) {
+    console.log(`Post preview HTML written to ${relative(resolve(__dirname, '..'), distPostsDir)}`);
+  }
   console.log(`RSS feed and ${posts.length} post previews written`);
 }
 
