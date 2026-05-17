@@ -1,10 +1,11 @@
+import { lazy } from 'react';
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ScrollToTop } from "./components/ScrollToTop";
 
-import Index from "./pages/Index";
-import PostPage from "./pages/PostPage";
-import { NIP19Page } from "./pages/NIP19Page";
-import NotFound from "./pages/NotFound";
+const Index = lazy(() => import("./pages/Index"));
+const PostPage = lazy(() => import("./pages/PostPage"));
+const NIP19Page = lazy(() => import("./pages/NIP19Page").then((module) => ({ default: module.NIP19Page })));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 export function AppRouter() {
   return (

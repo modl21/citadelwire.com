@@ -64,7 +64,7 @@ export function useCitadelFeed() {
         {
           kinds: [1],
           authors: [CITADEL_PUBKEY],
-          limit: 100,
+           limit: 60,
         },
       ]);
 

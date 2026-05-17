@@ -475,7 +475,7 @@ function PostDetailHeader() {
           <DonateButton />
         </div>
         <div className="min-w-0 overflow-x-auto pb-0.5 scrollbar-none">
-          <TickerBar />
+          <TickerBar live={false} />
         </div>
       </div>
     </header>

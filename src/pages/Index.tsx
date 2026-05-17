@@ -57,9 +57,10 @@ const Index = () => {
     HOME_PAGE_VIEW_ID,
     typeof window === 'undefined' ? 'https://wire.shakespeare.wtf/' : window.location.href,
   );
+  const visiblePosts = useMemo(() => posts?.slice(0, 60) ?? [], [posts]);
   const filteredPosts = useMemo(
-    () => posts?.filter((post) => visiblePostTypes.has(getPostType(post))) ?? [],
-    [posts, visiblePostTypes],
+    () => visiblePosts.filter((post) => visiblePostTypes.has(getPostType(post))),
+    [visiblePosts, visiblePostTypes],
   );
 
   const togglePostType = (type: PostType) => {
@@ -256,7 +257,7 @@ const Index = () => {
                   Retry
                 </button>
               </div>
-            ) : posts && posts.length > 0 ? (
+            ) : visiblePosts.length > 0 ? (
               filteredPosts.length > 0 ? (
                 <div>
                   {filteredPosts.map((post, index) => (

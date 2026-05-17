@@ -239,8 +239,12 @@ function CoinChartDialog({ open, onOpenChange, coinId, title, icon, accentColor,
 
 // ── Ticker Bar ──────────────────────────────────────────────
 
-export function TickerBar() {
-  const { data, isLoading } = useMarketData();
+interface TickerBarProps {
+  live?: boolean;
+}
+
+export function TickerBar({ live = true }: TickerBarProps) {
+  const { data, isLoading } = useMarketData(live);
   const { time: utcTime, date: utcDate } = useUTCClock();
   const [btcChartOpen, setBtcChartOpen] = useState(false);
   const [xautChartOpen, setXautChartOpen] = useState(false);

@@ -25,8 +25,9 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      staleTime: 60000, // 1 minute
-      gcTime: Infinity,
+      refetchOnReconnect: false,
+      staleTime: 5 * 60 * 1000,
+      gcTime: 60 * 60 * 1000,
     },
   },
 });
@@ -56,7 +57,7 @@ export function App() {
               <NWCProvider>
                 <TooltipProvider>
                   <Toaster />
-                  <Suspense>
+                  <Suspense fallback={null}>
                     <AppRouter />
                   </Suspense>
                 </TooltipProvider>

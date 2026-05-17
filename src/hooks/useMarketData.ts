@@ -62,7 +62,7 @@ async function fetchBlockHeight(): Promise<number | null> {
   }
 }
 
-export function useMarketData() {
+export function useMarketData(enabled = true) {
   return useQuery<MarketData>({
     queryKey: ['market-data'],
     queryFn: async () => {
@@ -73,9 +73,12 @@ export function useMarketData() {
       ]);
       return { btcPrice, goldPrice, blockHeight };
     },
-    staleTime: 60 * 1000, // 1 minute
-    refetchInterval: 60 * 1000, // Auto-refresh every 60 seconds
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchInterval: enabled ? 5 * 60 * 1000 : false,
     retry: 1,
     refetchOnMount: false,
+    refetchIntervalInBackground: false,
   });
 }

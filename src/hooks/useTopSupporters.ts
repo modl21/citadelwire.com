@@ -182,16 +182,16 @@ export function useTopSupporters(limit: number = 10) {
         {
           kinds: [SUPPORTER_TOTAL_KIND, SUPPORTER_DONATION_KIND],
           '#t': ['supporter-total', 'supporter-donation'],
-          limit: 500,
+          limit: 200,
         },
       ]);
 
       const totals = getSupporterTotals(events);
       return attachSupporterMetadata(nostr, totals, limit);
     },
-    staleTime: 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchInterval: 60 * 1000,
+    staleTime: 15 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchInterval: 15 * 60 * 1000,
     retry: 1,
     refetchOnMount: false,
   });
