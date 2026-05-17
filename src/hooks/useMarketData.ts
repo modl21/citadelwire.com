@@ -74,9 +74,9 @@ export function useMarketData(enabled = true) {
       return { btcPrice, goldPrice, blockHeight };
     },
     enabled,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
     gcTime: 30 * 60 * 1000,
-    refetchInterval: enabled ? 5 * 60 * 1000 : false,
+    refetchInterval: enabled ? 60 * 1000 : false,
     retry: 1,
     refetchOnMount: false,
     refetchIntervalInBackground: false,

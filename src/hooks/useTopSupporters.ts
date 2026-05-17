@@ -182,7 +182,7 @@ export function useTopSupporters(limit: number = 10) {
         {
           kinds: [SUPPORTER_TOTAL_KIND, SUPPORTER_DONATION_KIND],
           '#t': ['supporter-total', 'supporter-donation'],
-          limit: 200,
+          limit: 500,
         },
       ]);
 
