@@ -110,6 +110,17 @@ function parseVolume(v: unknown): number {
   return 0;
 }
 
+function parseDateMs(value: unknown): number | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : null;
+}
+
+function hasEnded(value: unknown, graceMs = 24 * 60 * 60 * 1000): boolean {
+  const endTime = parseDateMs(value);
+  return endTime !== null && Date.now() > endTime + graceMs;
+}
+
 function isTrue(value: unknown): boolean {
   return value === true || value === 'true';
 }
@@ -167,12 +178,16 @@ async function fetchFromGammaAPI(useProxy: boolean): Promise<ParsedMarket[]> {
 
     const title: string = event.title || '';
 
-    // Filter to geopolitics-relevant events, skip stale ones
+    // Filter to geopolitics-relevant events, skip stale or already-ended ones.
+    // Some Polymarket events remain active/open while disputed child markets settle;
+    // once the event endDate is more than a day old, it is no longer useful as a
+    // forward-looking signal for the news feed.
     if (!isGeopolitics(title)) continue;
     if (isStale(title)) continue;
+    if (hasEnded(event.endDate)) continue;
 
     const openMarkets = event.markets.filter(
-      (m: Record<string, unknown>) => isTrue(m.active) && !isTrue(m.closed),
+      (m: Record<string, unknown>) => isTrue(m.active) && !isTrue(m.closed) && !hasEnded(m.endDate),
     );
     if (openMarkets.length === 0) continue;
 
