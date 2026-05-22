@@ -95,7 +95,7 @@ export function PostCard({ event, isFirst }: PostCardProps) {
         <button
           type="button"
           onClick={handleShare}
-          className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/40 bg-background/45 px-2 py-1 text-[11px] font-semibold text-muted-foreground/55 opacity-80 transition-colors hover:border-amber-400/30 hover:bg-amber-400/10 hover:text-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+          className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/40 bg-background/45 px-2 py-1 text-[11px] font-semibold text-muted-foreground/55 opacity-80 transition-colors hover:border-amber-400/30 hover:bg-amber-400/10 hover:text-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40"
           aria-label="Copy post link"
           title="Copy post link"
         >
