@@ -19,7 +19,7 @@ interface AudioPlayerProps {
   mp3Url: string;
   timeLabel: string;
   allEpisodesUrl: string;
-  accentColor: 'purple' | 'orange' | 'emerald';
+  accentColor: 'purple' | 'orange' | 'emerald' | 'sky';
 }
 
 const colorMap = {
@@ -49,6 +49,15 @@ const colorMap = {
     iconFill: 'text-emerald-300 fill-emerald-300',
     bar: 'bg-emerald-500/70',
     link: 'text-emerald-400/60 hover:text-emerald-400',
+  },
+  sky: {
+    gradient: 'from-sky-500/10 via-muted/20 to-cyan-500/10',
+    border: 'border-sky-500/20',
+    icon: 'text-sky-400',
+    iconBg: 'bg-sky-500/20 hover:bg-sky-500/30',
+    iconFill: 'text-sky-300 fill-sky-300',
+    bar: 'bg-sky-500/70',
+    link: 'text-sky-400/60 hover:text-sky-400',
   },
 };
 

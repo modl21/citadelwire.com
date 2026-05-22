@@ -27,9 +27,9 @@ async function fetchFeed(feedUrl: string): Promise<Response> {
   return fetch(`${CORS_PROXY}${encodeURIComponent(feedUrl)}`, { signal: AbortSignal.timeout(8000) });
 }
 
-export function useRSSEpisode(feedUrl: string) {
+export function useRSSEpisode(feedUrl: string, predicate?: (episode: RSSEpisode) => boolean) {
   return useQuery<RSSEpisode | null>({
-    queryKey: ['rss-episode', feedUrl],
+    queryKey: ['rss-episode', feedUrl, predicate ? 'filtered' : 'latest'],
     queryFn: async () => {
       const res = await fetchFeed(feedUrl);
       if (!res.ok) throw new Error('Failed to fetch RSS feed');
@@ -38,20 +38,23 @@ export function useRSSEpisode(feedUrl: string) {
       const parser = new DOMParser();
       const xml = parser.parseFromString(text, 'text/xml');
 
-      const item = xml.querySelector('item');
-      if (!item) return null;
+      const items = Array.from(xml.querySelectorAll('item'));
+      for (const item of items) {
+        const title = item.querySelector('title')?.textContent ?? 'Latest Episode';
+        const pubDate = item.querySelector('pubDate')?.textContent ?? '';
 
-      const title = item.querySelector('title')?.textContent ?? 'Latest Episode';
-      const pubDate = item.querySelector('pubDate')?.textContent ?? '';
+        // Get mp3 URL from enclosure tag
+        const enclosure = item.querySelector('enclosure');
+        const mp3Url = enclosure?.getAttribute('url') ?? '';
 
-      // Get mp3 URL from enclosure tag
-      const enclosure = item.querySelector('enclosure');
-      const mp3Url = enclosure?.getAttribute('url') ?? '';
+        if (!mp3Url) continue;
+        if (!pubDate || isOlderThanThreeDays(pubDate)) continue;
 
-      if (!mp3Url) return null;
-      if (!pubDate || isOlderThanThreeDays(pubDate)) return null;
+        const episode = { title, mp3Url, pubDate };
+        if (!predicate || predicate(episode)) return episode;
+      }
 
-      return { title, mp3Url, pubDate };
+      return null;
     },
     staleTime: 15 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
