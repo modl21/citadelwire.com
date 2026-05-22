@@ -5,6 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { PostCard } from '@/components/PostCard';
 import { PodcastPlayer } from '@/components/PodcastPlayer';
 import { RHRPlayer } from '@/components/RHRPlayer';
+import { JMSPlayer } from '@/components/JMSPlayer';
 import { TickerBar } from '@/components/TickerBar';
 import { getPostType, useCitadelFeed, CITADEL_PUBKEY, type PostType } from '@/hooks/useCitadelFeed';
 import { useAuthor } from '@/hooks/useAuthor';
@@ -210,6 +211,7 @@ const Index = () => {
           <div>
             <PodcastPlayer />
             <RHRPlayer />
+            <JMSPlayer />
           </div>
 
           {/* Feed */}
