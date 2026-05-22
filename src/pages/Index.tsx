@@ -8,6 +8,7 @@ import { RHRPlayer } from '@/components/RHRPlayer';
 import { JMSPlayer } from '@/components/JMSPlayer';
 import { TFTCPlayer } from '@/components/TFTCPlayer';
 import { AllInPlayer } from '@/components/AllInPlayer';
+import { FifthColumnPlayer } from '@/components/FifthColumnPlayer';
 import { TickerBar } from '@/components/TickerBar';
 import { getPostType, useCitadelFeed, CITADEL_PUBKEY, type PostType } from '@/hooks/useCitadelFeed';
 import { useAuthor } from '@/hooks/useAuthor';
@@ -216,6 +217,7 @@ const Index = () => {
             <JMSPlayer />
             <TFTCPlayer />
             <AllInPlayer />
+            <FifthColumnPlayer />
           </div>
 
           {/* Feed */}
