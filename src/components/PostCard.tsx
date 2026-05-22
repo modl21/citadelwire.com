@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { type NostrEvent } from '@nostrify/nostrify';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow, format } from 'date-fns';
+import { Check, Share2 } from 'lucide-react';
 import { NoteContent } from '@/components/NoteContent';
 import { cn } from '@/lib/utils';
 import { CITADEL_FEED_RELAYS } from '@/hooks/useCitadelFeed';
@@ -27,8 +29,27 @@ function isInteractiveElement(target: EventTarget | null): boolean {
 export function PostCard({ event, isFirst }: PostCardProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [copied, setCopied] = useState(false);
   const { relative, absolute } = formatTimestamp(event.created_at);
   const postPath = encodePostPath(event);
+
+  const getShareUrl = () => {
+    if (typeof window === 'undefined') return postPath;
+    return new URL(postPath, window.location.origin).toString();
+  };
+
+  const handleShare = async (shareEvent: React.MouseEvent<HTMLButtonElement>) => {
+    shareEvent.preventDefault();
+    shareEvent.stopPropagation();
+
+    try {
+      await navigator.clipboard.writeText(getShareUrl());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  };
 
   const openPost = () => {
     const relayListKey = CITADEL_FEED_RELAYS.join('|');
@@ -58,17 +79,29 @@ export function PostCard({ event, isFirst }: PostCardProps) {
       )}
       aria-label="Open post discussion"
     >
-      {/* Timestamp */}
-      <div className="flex items-center gap-1.5 mb-2">
-        <time
-          dateTime={new Date(event.created_at * 1000).toISOString()}
-          className="text-[11px] font-medium text-muted-foreground/50 tracking-wide uppercase"
-          title={absolute}
+      {/* Timestamp + share */}
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <time
+            dateTime={new Date(event.created_at * 1000).toISOString()}
+            className="truncate text-[11px] font-medium text-muted-foreground/50 tracking-wide uppercase"
+            title={absolute}
+          >
+            {absolute}
+          </time>
+          <span className="text-[11px] text-muted-foreground/30">·</span>
+          <span className="shrink-0 text-[11px] text-muted-foreground/40">{relative}</span>
+        </div>
+        <button
+          type="button"
+          onClick={handleShare}
+          className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/40 bg-background/45 px-2 py-1 text-[11px] font-semibold text-muted-foreground/55 opacity-80 transition-colors hover:border-amber-400/30 hover:bg-amber-400/10 hover:text-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+          aria-label="Copy post link"
+          title="Copy post link"
         >
-          {absolute}
-        </time>
-        <span className="text-[11px] text-muted-foreground/30">·</span>
-        <span className="text-[11px] text-muted-foreground/40">{relative}</span>
+          {copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Share2 className="h-3.5 w-3.5" />}
+          <span>{copied ? 'Copied' : 'Share'}</span>
+        </button>
       </div>
 
       {/* Content */}
