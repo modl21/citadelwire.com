@@ -136,20 +136,20 @@ export function PodcastLineup() {
     () => PODCASTS.filter((podcast) => visibleIds.has(podcast.id)).map((podcast) => podcast.id),
     [visibleIds],
   );
-  const hiddenMobileIds = useMemo(() => new Set(visibleOrder.slice(2)), [visibleOrder]);
-  const firstHiddenMobileId = visibleOrder[2];
-  const hiddenCount = Math.max(visibleOrder.length - 2, 0);
+  const hiddenPodcastIds = useMemo(() => new Set(visibleOrder.slice(1)), [visibleOrder]);
+  const firstHiddenPodcastId = visibleOrder[1];
+  const hiddenCount = Math.max(visibleOrder.length - 1, 0);
 
   return (
     <div>
       {PODCASTS.map((config) => {
-        const hiddenOnMobile = hiddenMobileIds.has(config.id);
-        const showMoreToggle = hiddenCount > 0 && config.id === firstHiddenMobileId;
+        const hiddenBehindToggle = hiddenPodcastIds.has(config.id);
+        const showMoreToggle = hiddenCount > 0 && config.id === firstHiddenPodcastId;
 
         return (
           <div key={config.id}>
             {showMoreToggle && (
-              <div className="px-4 py-1.5 sm:hidden">
+              <div className="px-4 py-1.5">
                 <button
                   type="button"
                   onClick={() => setExpanded((value) => !value)}
@@ -161,7 +161,7 @@ export function PodcastLineup() {
                 </button>
               </div>
             )}
-            <div className={cn(hiddenOnMobile && !expanded && 'hidden sm:block')}>
+            <div className={cn(hiddenBehindToggle && !expanded && 'hidden')}>
               <PodcastShowPlayer config={config} onVisibilityChange={setPodcastVisibility} />
             </div>
           </div>
