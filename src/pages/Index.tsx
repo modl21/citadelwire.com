@@ -3,13 +3,7 @@ import { useSeoMeta } from '@unhead/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { PostCard } from '@/components/PostCard';
-import { PodcastPlayer } from '@/components/PodcastPlayer';
-import { RHRPlayer } from '@/components/RHRPlayer';
-import { JMSPlayer } from '@/components/JMSPlayer';
-import { TFTCPlayer } from '@/components/TFTCPlayer';
-import { AllInPlayer } from '@/components/AllInPlayer';
-import { FifthColumnPlayer } from '@/components/FifthColumnPlayer';
-import { TBPNPlayer } from '@/components/TBPNPlayer';
+import { PodcastLineup } from '@/components/PodcastLineup';
 import { TickerBar } from '@/components/TickerBar';
 import { getPostType, useCitadelFeed, CITADEL_PUBKEY, type PostType } from '@/hooks/useCitadelFeed';
 import { useAuthor } from '@/hooks/useAuthor';
@@ -212,15 +206,7 @@ const Index = () => {
           <PolymarketSection />
 
           {/* Podcast players */}
-          <div>
-            <PodcastPlayer />
-            <RHRPlayer />
-            <JMSPlayer />
-            <TFTCPlayer />
-            <AllInPlayer />
-            <FifthColumnPlayer />
-            <TBPNPlayer />
-          </div>
+          <PodcastLineup />
 
           {/* Feed */}
           <main>
