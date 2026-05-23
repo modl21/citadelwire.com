@@ -156,7 +156,7 @@ export function PodcastLineup() {
                   className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-border/40 bg-muted/20 py-2 text-xs font-semibold text-muted-foreground/70 transition-colors hover:bg-muted/40 hover:text-muted-foreground"
                   aria-expanded={expanded}
                 >
-                  {expanded ? 'Show Fewer Shows' : `More Shows (${hiddenCount})`}
+                  {expanded ? 'Show Fewer Shows' : `Show ${hiddenCount} More Shows`}
                   <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')} />
                 </button>
               </div>
