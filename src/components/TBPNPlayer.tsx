@@ -27,7 +27,7 @@ export function TBPNPlayer() {
   return (
     <div className="px-4 sm:px-6 py-1.5">
       <AudioPlayer
-        label="Diet TBPN"
+        label="Latest TBPN"
         title={episode.title.replace(/\s*\|\s*Diet TBPN\s*$/i, '')}
         mp3Url={episode.mp3Url}
         timeLabel={timeLabel}
