@@ -20,6 +20,39 @@ interface AudioPlayerProps {
   timeLabel: string;
   allEpisodesUrl: string;
   accentColor: 'purple' | 'orange' | 'emerald' | 'sky' | 'rose' | 'zinc' | 'lime' | 'amber';
+  storageKey?: string;
+}
+
+const PLAYBACK_POSITION_PREFIX = 'citadel-wire:podcast-position:';
+
+function getStoredPosition(storageKey: string | undefined): number {
+  if (!storageKey || typeof window === 'undefined') return 0;
+
+  try {
+    const raw = window.localStorage.getItem(`${PLAYBACK_POSITION_PREFIX}${storageKey}`);
+    if (!raw) return 0;
+    const value = Number.parseFloat(raw);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function saveStoredPosition(storageKey: string | undefined, position: number, duration: number): void {
+  if (!storageKey || typeof window === 'undefined' || !Number.isFinite(position)) return;
+
+  const key = `${PLAYBACK_POSITION_PREFIX}${storageKey}`;
+  try {
+    if (Number.isFinite(duration) && duration > 0 && duration - position < 30) {
+      window.localStorage.removeItem(key);
+      return;
+    }
+    if (position > 5) {
+      window.localStorage.setItem(key, String(Math.floor(position)));
+    }
+  } catch {
+    // Ignore storage failures; playback should continue normally.
+  }
 }
 
 const colorMap = {
@@ -112,7 +145,7 @@ export function AudioPlayerSkeleton() {
   );
 }
 
-export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, accentColor }: AudioPlayerProps) {
+export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, accentColor, storageKey }: AudioPlayerProps) {
   const c = colorMap[accentColor];
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -122,6 +155,7 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
+  const hasRestoredPositionRef = useRef(false);
   const speeds = useMemo(() => [1, 1.25, 1.5, 1.75, 2] as const, []);
   const [speedIndex, setSpeedIndex] = useState(0);
 
@@ -129,10 +163,32 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
     const audio = audioRef.current;
     if (!audio) return;
 
-    const onTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const onDurationChange = () => setDuration(audio.duration);
-    const onLoadedMetadata = () => { setDuration(audio.duration); setIsLoaded(true); };
-    const onEnded = () => setIsPlaying(false);
+    const onTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+      saveStoredPosition(storageKey, audio.currentTime, audio.duration);
+    };
+    const restorePosition = () => {
+      if (hasRestoredPositionRef.current) return;
+      const storedPosition = getStoredPosition(storageKey);
+      if (storedPosition <= 0) return;
+      if (Number.isFinite(audio.duration) && audio.duration > 0 && storedPosition >= audio.duration - 30) return;
+      audio.currentTime = storedPosition;
+      setCurrentTime(storedPosition);
+      hasRestoredPositionRef.current = true;
+    };
+    const onDurationChange = () => {
+      setDuration(audio.duration);
+      restorePosition();
+    };
+    const onLoadedMetadata = () => {
+      setDuration(audio.duration);
+      setIsLoaded(true);
+      restorePosition();
+    };
+    const onEnded = () => {
+      setIsPlaying(false);
+      saveStoredPosition(storageKey, 0, 0);
+    };
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
 
@@ -151,7 +207,16 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
       audio.removeEventListener('play', onPlay);
       audio.removeEventListener('pause', onPause);
     };
-  }, [mp3Url]);
+  }, [mp3Url, storageKey]);
+
+  useEffect(() => {
+    hasRestoredPositionRef.current = false;
+    const restoredPosition = getStoredPosition(storageKey);
+    setCurrentTime(restoredPosition);
+    setDuration(0);
+    setIsLoaded(false);
+    setIsPlaying(false);
+  }, [mp3Url, storageKey]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -178,9 +243,13 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
     if (!audio || !bar || !duration) return;
     const rect = bar.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    audio.currentTime = pct * duration;
-  }, [duration]);
+    const nextTime = pct * duration;
+    audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
+    saveStoredPosition(storageKey, nextTime, duration);
+  }, [duration, storageKey]);
 
+  const progressDuration = duration > 0 ? duration : Math.max(currentTime, 0);
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
@@ -255,7 +324,7 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
           />
         </div>
         <span className="text-[8px] text-muted-foreground/40 tabular-nums w-8 shrink-0">
-          {isLoaded ? formatTime(duration) : '--:--'}
+          {isLoaded || progressDuration > 0 ? formatTime(progressDuration) : '--:--'}
         </span>
       </div>
     </div>

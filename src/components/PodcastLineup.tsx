@@ -118,6 +118,7 @@ function PodcastShowPlayer({ config, onVisibilityChange }: PodcastShowPlayerProp
         timeLabel={timeLabel}
         allEpisodesUrl={config.allEpisodesUrl}
         accentColor={config.accentColor}
+        storageKey={`${config.id}:${episode.guid}`}
       />
     </div>
   );

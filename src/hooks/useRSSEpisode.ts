@@ -6,6 +6,7 @@ export interface RSSEpisode {
   title: string;
   mp3Url: string;
   pubDate: string;
+  guid: string;
 }
 
 const MAX_EPISODE_AGE_MS = 3 * 24 * 60 * 60 * 1000;
@@ -46,11 +47,12 @@ export function useRSSEpisode(feedUrl: string, predicate?: (episode: RSSEpisode)
         // Get mp3 URL from enclosure tag
         const enclosure = item.querySelector('enclosure');
         const mp3Url = enclosure?.getAttribute('url') ?? '';
+        const guid = item.querySelector('guid')?.textContent?.trim() || mp3Url;
 
         if (!mp3Url) continue;
         if (!pubDate || isOlderThanThreeDays(pubDate)) continue;
 
-        const episode = { title, mp3Url, pubDate };
+        const episode = { title, mp3Url, pubDate, guid };
         if (!predicate || predicate(episode)) return episode;
       }
 
