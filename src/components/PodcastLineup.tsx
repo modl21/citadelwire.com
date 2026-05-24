@@ -57,14 +57,6 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'rose',
   },
   {
-    id: 'fifth-column',
-    feedUrl: 'https://api.substack.com/feed/podcast/815642.rss',
-    label: 'Latest Fifth Column',
-    allEpisodesUrl: 'https://www.wethefifth.com/podcast',
-    accentColor: 'zinc',
-    predicate: (episode) => !episode.title.toLowerCase().includes('members only'),
-  },
-  {
     id: 'tbpn',
     feedUrl: 'https://feeds.transistor.fm/technology-brother',
     label: 'Latest TBPN',
@@ -79,6 +71,14 @@ const PODCASTS: PodcastConfig[] = [
     label: 'Latest Blockspace',
     allEpisodesUrl: 'https://newsletter.blockspacemedia.com/',
     accentColor: 'amber',
+  },
+  {
+    id: 'fifth-column',
+    feedUrl: 'https://api.substack.com/feed/podcast/815642.rss',
+    label: 'Latest Fifth Column',
+    allEpisodesUrl: 'https://www.wethefifth.com/podcast',
+    accentColor: 'zinc',
+    predicate: (episode) => !episode.title.toLowerCase().includes('members only'),
   },
 ];
 
@@ -144,9 +144,9 @@ export function PodcastLineup() {
     () => PODCASTS.filter((podcast) => visibleIds.has(podcast.id)).map((podcast) => podcast.id),
     [visibleIds],
   );
-  const hiddenPodcastIds = useMemo(() => new Set(visibleOrder.slice(1)), [visibleOrder]);
-  const firstHiddenPodcastId = visibleOrder[1];
-  const hiddenCount = Math.max(visibleOrder.length - 1, 0);
+  const hiddenPodcastIds = useMemo(() => new Set(visibleOrder.slice(2)), [visibleOrder]);
+  const firstHiddenPodcastId = visibleOrder[2];
+  const hiddenCount = Math.max(visibleOrder.length - 2, 0);
 
   return (
     <div>
