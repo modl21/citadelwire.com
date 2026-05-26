@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useMarketData } from '@/hooks/useMarketData';
+import { useQueryClient } from '@tanstack/react-query';
+import { fetchBlockHeight, useMarketData, type MarketData } from '@/hooks/useMarketData';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
@@ -245,9 +246,43 @@ interface TickerBarProps {
 
 export function TickerBar({ live = true }: TickerBarProps) {
   const { data, isLoading } = useMarketData(live);
+  const queryClient = useQueryClient();
   const { time: utcTime, date: utcDate } = useUTCClock();
   const [btcChartOpen, setBtcChartOpen] = useState(false);
   const [xautChartOpen, setXautChartOpen] = useState(false);
+
+  useEffect(() => {
+    if (!live) return;
+
+    let cancelled = false;
+    let lastSeenHeight = data?.blockHeight ?? null;
+
+    const applyBlockHeight = (height: number) => {
+      if (!Number.isSafeInteger(height) || height <= (lastSeenHeight ?? 0)) return;
+      lastSeenHeight = height;
+      queryClient.setQueryData<MarketData>(['market-data'], (current) => ({
+        btcPrice: current?.btcPrice ?? null,
+        goldPrice: current?.goldPrice ?? null,
+        blockHeight: height,
+      }));
+    };
+
+    const pollBlockHeight = async () => {
+      const height = await fetchBlockHeight();
+      if (!cancelled && height !== null) applyBlockHeight(height);
+    };
+
+    const intervalId = setInterval(() => {
+      void pollBlockHeight();
+    }, 10 * 1000);
+
+    void pollBlockHeight();
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [data?.blockHeight, live, queryClient]);
 
   return (
     <>

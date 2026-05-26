@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 const CORS_PROXY = 'https://proxy.shakespeare.diy/?url=';
 
-interface MarketData {
+export interface MarketData {
   btcPrice: number | null;
   goldPrice: number | null;
   blockHeight: number | null;
@@ -50,7 +50,7 @@ async function fetchGoldPrice(): Promise<number | null> {
   }
 }
 
-async function fetchBlockHeight(): Promise<number | null> {
+export async function fetchBlockHeight(): Promise<number | null> {
   try {
     const res = await fetchWithProxyFallback('https://mempool.space/api/blocks/tip/height', 5000);
     if (!res.ok) throw new Error('Failed to fetch block height');
