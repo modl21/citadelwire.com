@@ -18,14 +18,31 @@ function isOlderThanSixDays(pubDate: string): boolean {
 }
 
 async function fetchFeed(feedUrl: string): Promise<Response> {
+  const cb = Date.now().toString();
+  const busterUrl = feedUrl.includes('?') ? `${feedUrl}&_cb=${cb}` : `${feedUrl}?_cb=${cb}`;
+
   try {
-    const direct = await fetch(feedUrl, { signal: AbortSignal.timeout(5000) });
+    const direct = await fetch(busterUrl, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+      signal: AbortSignal.timeout(5000),
+    });
     if (direct.ok) return direct;
   } catch {
     // Fall back to the configured proxy below.
   }
 
-  return fetch(`${CORS_PROXY}${encodeURIComponent(feedUrl)}`, { signal: AbortSignal.timeout(8000) });
+  return fetch(`${CORS_PROXY}${encodeURIComponent(busterUrl)}`, {
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    },
+    signal: AbortSignal.timeout(8000),
+  });
 }
 
 export function useRSSEpisode(feedUrl: string, predicate?: (episode: RSSEpisode) => boolean) {
