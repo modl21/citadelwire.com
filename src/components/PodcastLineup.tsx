@@ -15,6 +15,7 @@ interface PodcastConfig {
   accentColor: AccentColor;
   predicate?: (episode: RSSEpisode) => boolean;
   titleTransform?: (title: string) => string;
+  maxEpisodeAgeMs?: number;
 }
 
 const PODCASTS: PodcastConfig[] = [
@@ -71,6 +72,7 @@ const PODCASTS: PodcastConfig[] = [
     label: 'Latest Blockspace',
     allEpisodesUrl: 'https://newsletter.blockspacemedia.com/',
     accentColor: 'amber',
+    maxEpisodeAgeMs: 45 * 24 * 60 * 60 * 1000,
   },
   {
     id: 'fifth-column',
@@ -88,7 +90,7 @@ interface PodcastShowPlayerProps {
 }
 
 function PodcastShowPlayer({ config, onVisibilityChange }: PodcastShowPlayerProps) {
-  const { data: episode, isLoading } = useRSSEpisode(config.feedUrl, config.predicate);
+  const { data: episode, isLoading } = useRSSEpisode(config.feedUrl, config.predicate, config.maxEpisodeAgeMs);
   const isVisible = isLoading || Boolean(episode);
 
   useEffect(() => {

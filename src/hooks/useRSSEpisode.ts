@@ -11,10 +11,10 @@ export interface RSSEpisode {
 
 const MAX_EPISODE_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 
-function isOlderThanThreeDays(pubDate: string): boolean {
+function isOlderThanThreeDays(pubDate: string, maxEpisodeAgeMs: number): boolean {
   const publishedAt = new Date(pubDate).getTime();
   if (!Number.isFinite(publishedAt)) return true;
-  return Date.now() - publishedAt > MAX_EPISODE_AGE_MS;
+  return Date.now() - publishedAt > maxEpisodeAgeMs;
 }
 
 async function fetchFeed(feedUrl: string): Promise<Response> {
@@ -28,9 +28,9 @@ async function fetchFeed(feedUrl: string): Promise<Response> {
   return fetch(`${CORS_PROXY}${encodeURIComponent(feedUrl)}`, { signal: AbortSignal.timeout(8000) });
 }
 
-export function useRSSEpisode(feedUrl: string, predicate?: (episode: RSSEpisode) => boolean) {
+export function useRSSEpisode(feedUrl: string, predicate?: (episode: RSSEpisode) => boolean, maxEpisodeAgeMs = MAX_EPISODE_AGE_MS) {
   return useQuery<RSSEpisode | null>({
-    queryKey: ['rss-episode', feedUrl, predicate ? 'filtered' : 'latest'],
+    queryKey: ['rss-episode', feedUrl, predicate ? 'filtered' : 'latest', maxEpisodeAgeMs],
     queryFn: async () => {
       const res = await fetchFeed(feedUrl);
       if (!res.ok) throw new Error('Failed to fetch RSS feed');
@@ -50,7 +50,7 @@ export function useRSSEpisode(feedUrl: string, predicate?: (episode: RSSEpisode)
         const guid = item.querySelector('guid')?.textContent?.trim() || mp3Url;
 
         if (!mp3Url) continue;
-        if (!pubDate || isOlderThanThreeDays(pubDate)) continue;
+        if (!pubDate || isOlderThanThreeDays(pubDate, maxEpisodeAgeMs)) continue;
 
         const episode = { title, mp3Url, pubDate, guid };
         if (!predicate || predicate(episode)) return episode;
