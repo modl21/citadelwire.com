@@ -50,6 +50,7 @@ const Index = () => {
   const [visiblePostTypes, setVisiblePostTypes] = useState<Set<PostType>>(
     () => new Set(POST_TYPE_FILTERS.map(({ type }) => type)),
   );
+  const [postTypeTooltipOpen, setPostTypeTooltipOpen] = useState(false);
   const author = useAuthor(CITADEL_PUBKEY);
   const metadata = author.data?.metadata;
   const npub = nip19.npubEncode(CITADEL_PUBKEY);
@@ -233,11 +234,12 @@ const Index = () => {
                         {label}
                       </button>
                       {type === 'code-wire' && (
-                        <Tooltip>
+                        <Tooltip open={postTypeTooltipOpen} onOpenChange={setPostTypeTooltipOpen}>
                           <TooltipTrigger asChild>
                             <button
                               type="button"
-                              className="inline-flex h-6 items-center justify-center gap-1 rounded-full border border-amber-400/45 bg-amber-400/15 px-2 text-[10px] font-black uppercase tracking-wide text-amber-200 shadow-[0_0_18px_rgba(245,158,11,0.18)] transition-colors hover:border-amber-300/70 hover:bg-amber-400/25 hover:text-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60"
+                              onClick={() => setPostTypeTooltipOpen((open) => !open)}
+                              className="inline-flex h-6 items-center justify-center gap-1 rounded-full border border-amber-400/45 bg-amber-400/15 px-2 text-[10px] font-black uppercase tracking-wide text-white shadow-[0_0_18px_rgba(245,158,11,0.18)] transition-colors hover:border-amber-300/70 hover:bg-amber-400/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60"
                               aria-label="Post type explanations"
                             >
                               <Info className="h-3 w-3" />
