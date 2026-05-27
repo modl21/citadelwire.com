@@ -237,10 +237,11 @@ const Index = () => {
                           <TooltipTrigger asChild>
                             <button
                               type="button"
-                              className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-amber-400/45 bg-amber-400/15 text-amber-200 shadow-[0_0_18px_rgba(245,158,11,0.18)] transition-colors hover:border-amber-300/70 hover:bg-amber-400/25 hover:text-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60"
+                              className="inline-flex h-6 items-center justify-center gap-1 rounded-full border border-amber-400/45 bg-amber-400/15 px-2 text-[10px] font-black uppercase tracking-wide text-amber-200 shadow-[0_0_18px_rgba(245,158,11,0.18)] transition-colors hover:border-amber-300/70 hover:bg-amber-400/25 hover:text-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60"
                               aria-label="Post type explanations"
                             >
-                              <Info className="h-3.5 w-3.5" />
+                              <Info className="h-3 w-3" />
+                              Info
                             </button>
                           </TooltipTrigger>
                           <TooltipContent side="bottom" align="end" className="max-w-[290px] border-amber-400/30 bg-[#080b12]/95 px-4 py-3 text-xs leading-5 text-white shadow-2xl shadow-amber-500/15 backdrop-blur-xl">
