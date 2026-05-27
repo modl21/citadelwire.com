@@ -10,10 +10,11 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
 import { TopSupporters } from '@/components/TopSupporters';
 import { usePageViewCount, HOME_PAGE_VIEW_ID } from '@/hooks/usePageViewCount';
-import { Globe, RefreshCw, Rss, Eye, Radio } from 'lucide-react';
+import { Globe, RefreshCw, Rss, Eye, Radio, Info } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { WireSchedule } from '@/components/WireSchedule';
 import { PolymarketSection } from '@/components/PolymarketSection';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const BTCSidebarCharts = lazy(() =>
   import('@/components/SidebarCharts').then((module) => ({ default: module.BTCSidebarCharts })),
@@ -218,19 +219,40 @@ const Index = () => {
                 {POST_TYPE_FILTERS.map(({ type, label }) => {
                   const isActive = visiblePostTypes.has(type);
                   return (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => togglePostType(type)}
-                      aria-pressed={isActive}
-                      className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                        isActive
-                          ? 'border-amber-500/40 bg-amber-500/15 text-amber-300'
-                          : 'border-border/40 bg-muted/20 text-muted-foreground/50 hover:bg-muted/40 hover:text-muted-foreground/80'
-                      }`}
-                    >
-                      {label}
-                    </button>
+                    <div key={type} className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => togglePostType(type)}
+                        aria-pressed={isActive}
+                        className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                          isActive
+                            ? 'border-amber-500/40 bg-amber-500/15 text-amber-300'
+                            : 'border-border/40 bg-muted/20 text-muted-foreground/50 hover:bg-muted/40 hover:text-muted-foreground/80'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                      {type === 'code-wire' && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-border/40 bg-muted/20 text-muted-foreground/55 transition-colors hover:bg-muted/40 hover:text-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40"
+                              aria-label="Post type explanations"
+                            >
+                              <Info className="h-3 w-3" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" align="end" className="max-w-[260px] text-xs leading-5">
+                            <div className="space-y-1">
+                              <p><span className="font-bold text-foreground">MAIN WIRE</span> tracks 120+ sources.</p>
+                              <p><span className="font-bold text-foreground">LIVE WIRE</span> tracks breaking news every 5 minutes.</p>
+                              <p><span className="font-bold text-foreground">CODE WIRE</span> tracks 400+ open source project updates.</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                   );
                 })}
               </div>
