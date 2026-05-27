@@ -9,7 +9,7 @@ export interface RSSEpisode {
   guid: string;
 }
 
-const MAX_EPISODE_AGE_MS = 3 * 24 * 60 * 60 * 1000;
+const MAX_EPISODE_AGE_MS = 6 * 24 * 60 * 60 * 1000;
 
 function isOlderThanThreeDays(pubDate: string): boolean {
   const publishedAt = new Date(pubDate).getTime();
