@@ -237,17 +237,17 @@ const Index = () => {
                           <TooltipTrigger asChild>
                             <button
                               type="button"
-                              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-border/40 bg-muted/20 text-muted-foreground/55 transition-colors hover:bg-muted/40 hover:text-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40"
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-amber-400/45 bg-amber-400/15 text-amber-200 shadow-[0_0_18px_rgba(245,158,11,0.18)] transition-colors hover:border-amber-300/70 hover:bg-amber-400/25 hover:text-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60"
                               aria-label="Post type explanations"
                             >
-                              <Info className="h-3 w-3" />
+                              <Info className="h-3.5 w-3.5" />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent side="bottom" align="end" className="max-w-[260px] text-xs leading-5">
-                            <div className="space-y-1">
-                              <p><span className="font-bold text-foreground">MAIN WIRE</span> tracks 120+ sources.</p>
-                              <p><span className="font-bold text-foreground">LIVE WIRE</span> tracks breaking news every 5 minutes.</p>
-                              <p><span className="font-bold text-foreground">CODE WIRE</span> tracks 400+ open source project updates.</p>
+                          <TooltipContent side="bottom" align="end" className="max-w-[290px] border-amber-400/30 bg-[#080b12]/95 px-4 py-3 text-xs leading-5 text-white shadow-2xl shadow-amber-500/15 backdrop-blur-xl">
+                            <div className="space-y-2">
+                              <p><span className="font-black text-amber-200">MAIN WIRE</span> 120+ global sources.</p>
+                              <p><span className="font-black text-sky-200">LIVE WIRE</span> breaking news detection.</p>
+                              <p><span className="font-black text-emerald-200">CODE WIRE</span> 400+ open source projects.</p>
                             </div>
                           </TooltipContent>
                         </Tooltip>
