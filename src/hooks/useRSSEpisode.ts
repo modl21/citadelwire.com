@@ -11,7 +11,7 @@ export interface RSSEpisode {
 
 const MAX_EPISODE_AGE_MS = 6 * 24 * 60 * 60 * 1000;
 
-function isOlderThanThreeDays(pubDate: string): boolean {
+function isOlderThanSixDays(pubDate: string): boolean {
   const publishedAt = new Date(pubDate).getTime();
   if (!Number.isFinite(publishedAt)) return true;
   return Date.now() - publishedAt > MAX_EPISODE_AGE_MS;
@@ -50,7 +50,7 @@ export function useRSSEpisode(feedUrl: string, predicate?: (episode: RSSEpisode)
         const guid = item.querySelector('guid')?.textContent?.trim() || mp3Url;
 
         if (!mp3Url) continue;
-        if (!pubDate || isOlderThanThreeDays(pubDate)) continue;
+        if (!pubDate || isOlderThanSixDays(pubDate)) continue;
 
         const episode = { title, mp3Url, pubDate, guid };
         if (!predicate || predicate(episode)) return episode;
