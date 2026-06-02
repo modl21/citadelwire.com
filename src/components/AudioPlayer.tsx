@@ -24,6 +24,7 @@ interface AudioPlayerProps {
 }
 
 const PLAYBACK_POSITION_PREFIX = 'citadel-wire:podcast-position:';
+const PLAYBACK_SPEED_STORAGE_KEY = 'citadel-wire:podcast-playback-speed';
 
 function getStoredPosition(storageKey: string | undefined): number {
   if (!storageKey || typeof window === 'undefined') return 0;
@@ -50,6 +51,33 @@ function saveStoredPosition(storageKey: string | undefined, position: number, du
     if (position > 5) {
       window.localStorage.setItem(key, String(Math.floor(position)));
     }
+  } catch {
+    // Ignore storage failures; playback should continue normally.
+  }
+}
+
+function getStoredPlaybackSpeedIndex(speeds: readonly number[]): number {
+  if (typeof window === 'undefined') return 0;
+
+  try {
+    const raw = window.localStorage.getItem(PLAYBACK_SPEED_STORAGE_KEY);
+    if (!raw) return 0;
+
+    const storedSpeed = Number.parseFloat(raw);
+    if (!Number.isFinite(storedSpeed)) return 0;
+
+    const speedIndex = speeds.findIndex((speed) => speed === storedSpeed);
+    return speedIndex >= 0 ? speedIndex : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function saveStoredPlaybackSpeed(speed: number): void {
+  if (typeof window === 'undefined' || !Number.isFinite(speed)) return;
+
+  try {
+    window.localStorage.setItem(PLAYBACK_SPEED_STORAGE_KEY, String(speed));
   } catch {
     // Ignore storage failures; playback should continue normally.
   }
@@ -157,7 +185,14 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
   const [isLoaded, setIsLoaded] = useState(false);
   const hasRestoredPositionRef = useRef(false);
   const speeds = useMemo(() => [1, 1.25, 1.5, 1.75, 2] as const, []);
-  const [speedIndex, setSpeedIndex] = useState(0);
+  const [speedIndex, setSpeedIndex] = useState(() => getStoredPlaybackSpeedIndex(speeds));
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.playbackRate = speeds[speedIndex];
+  }, [speedIndex, speeds, mp3Url]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -233,8 +268,10 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
 
   const cycleSpeed = useCallback(() => {
     const next = (speedIndex + 1) % speeds.length;
+    const nextSpeed = speeds[next];
     setSpeedIndex(next);
-    if (audioRef.current) { audioRef.current.playbackRate = speeds[next]; }
+    saveStoredPlaybackSpeed(nextSpeed);
+    if (audioRef.current) { audioRef.current.playbackRate = nextSpeed; }
   }, [speedIndex, speeds]);
 
   const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
