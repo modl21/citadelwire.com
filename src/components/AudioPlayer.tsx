@@ -25,6 +25,7 @@ interface AudioPlayerProps {
 
 const PLAYBACK_POSITION_PREFIX = 'citadel-wire:podcast-position:';
 const PLAYBACK_SPEED_STORAGE_KEY = 'citadel-wire:podcast-playback-speed';
+const ACTIVE_PLAYBACK_STORAGE_KEY = 'citadel-wire:podcast-active-playback';
 
 function getStoredPosition(storageKey: string | undefined): number {
   if (!storageKey || typeof window === 'undefined') return 0;
@@ -78,6 +79,38 @@ function saveStoredPlaybackSpeed(speed: number): void {
 
   try {
     window.localStorage.setItem(PLAYBACK_SPEED_STORAGE_KEY, String(speed));
+  } catch {
+    // Ignore storage failures; playback should continue normally.
+  }
+}
+
+function getStoredActivePlaybackKey(): string | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    return window.localStorage.getItem(ACTIVE_PLAYBACK_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function saveStoredActivePlaybackKey(storageKey: string | undefined): void {
+  if (!storageKey || typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.setItem(ACTIVE_PLAYBACK_STORAGE_KEY, storageKey);
+  } catch {
+    // Ignore storage failures; playback should continue normally.
+  }
+}
+
+function clearStoredActivePlaybackKey(storageKey: string | undefined): void {
+  if (!storageKey || typeof window === 'undefined') return;
+
+  try {
+    if (window.localStorage.getItem(ACTIVE_PLAYBACK_STORAGE_KEY) === storageKey) {
+      window.localStorage.removeItem(ACTIVE_PLAYBACK_STORAGE_KEY);
+    }
   } catch {
     // Ignore storage failures; playback should continue normally.
   }
@@ -184,6 +217,8 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
   const [duration, setDuration] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
   const hasRestoredPositionRef = useRef(false);
+  const hasAttemptedAutoResumeRef = useRef(false);
+  const isPageUnloadingRef = useRef(false);
   const speeds = useMemo(() => [1, 1.25, 1.5, 1.75, 2] as const, []);
   const [speedIndex, setSpeedIndex] = useState(() => getStoredPlaybackSpeedIndex(speeds));
 
@@ -193,6 +228,23 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
 
     audio.playbackRate = speeds[speedIndex];
   }, [speedIndex, speeds, mp3Url]);
+
+  useEffect(() => {
+    const onBeforeUnload = () => {
+      isPageUnloadingRef.current = true;
+      if (storageKey && audioRef.current && !audioRef.current.paused && !audioRef.current.ended) {
+        saveStoredActivePlaybackKey(storageKey);
+      }
+    };
+
+    window.addEventListener('beforeunload', onBeforeUnload);
+    window.addEventListener('pagehide', onBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      window.removeEventListener('pagehide', onBeforeUnload);
+    };
+  }, [storageKey]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -219,13 +271,30 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
       setDuration(audio.duration);
       setIsLoaded(true);
       restorePosition();
+
+      if (!hasAttemptedAutoResumeRef.current && storageKey && getStoredActivePlaybackKey() === storageKey) {
+        hasAttemptedAutoResumeRef.current = true;
+        audio.play().catch(() => {
+          setIsPlaying(false);
+          clearStoredActivePlaybackKey(storageKey);
+        });
+      }
     };
     const onEnded = () => {
       setIsPlaying(false);
       saveStoredPosition(storageKey, 0, 0);
+      clearStoredActivePlaybackKey(storageKey);
     };
-    const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
+    const onPlay = () => {
+      setIsPlaying(true);
+      saveStoredActivePlaybackKey(storageKey);
+    };
+    const onPause = () => {
+      setIsPlaying(false);
+      if (!isPageUnloadingRef.current) {
+        clearStoredActivePlaybackKey(storageKey);
+      }
+    };
 
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('durationchange', onDurationChange);
@@ -246,6 +315,7 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
 
   useEffect(() => {
     hasRestoredPositionRef.current = false;
+    hasAttemptedAutoResumeRef.current = false;
     const restoredPosition = getStoredPosition(storageKey);
     setCurrentTime(restoredPosition);
     setDuration(0);
