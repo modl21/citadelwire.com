@@ -179,7 +179,7 @@ export default function PostPage() {
               </div>
             </div>
 
-            <NoteContent event={event} className="text-[17px] leading-8 text-foreground/95 sm:text-[18px]" />
+            <NoteContent event={event} className="text-[17px] leading-8 text-foreground/95 sm:text-[18px]" showMoreInfo />
 
             <PostActionBar
               event={event}
