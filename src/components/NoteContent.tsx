@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 interface NoteContentProps {
   event: NostrEvent;
   className?: string;
+  showMoreInfo?: boolean;
 }
 
 const NOSTR_URI_REGEX = /nostr:(npub1|note1|nprofile1|nevent1)([023456789acdefghjklmnpqrstuvwxyz]+)/g;
@@ -21,6 +22,24 @@ function escapeHtml(str: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function createDuckDuckGoSearchUrl(query: string): string {
+  return `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+}
+
+function stripLeadingHeadlineMarker(text: string): string {
+  return text
+    .replace(/^[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE00}-\u{FEFF}\s]+/u, '')
+    .trim();
+}
+
+function renderMoreInfoButton(headline: string): string {
+  const query = stripLeadingHeadlineMarker(headline) || headline;
+  const url = createDuckDuckGoSearchUrl(query);
+  const label = `More info about ${query}`;
+
+  return `<a class="more-info-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(label)}">More info</a>`;
 }
 
 /** Render inline formatting: bold, italic, code, links, nostr URIs, hashtags. */
@@ -102,14 +121,14 @@ function isSubItem(line: string): boolean {
 }
 
 /** Render a list item, highlighting the leading category/title if present. */
-function renderListItem(text: string): string {
+function renderListItem(text: string, showMoreInfo: boolean): string {
   // Match patterns like "TITLE: rest", "TITLE - rest", "TITLE — rest", "**TITLE**: rest"
   const categoryMatch = text.match(/^(\*{0,2})([^:–—\-\n]{2,50}?)(\*{0,2})\s*[:–—\-]\s+(.+)$/s);
   if (categoryMatch) {
     const [, , title, , rest] = categoryMatch;
-    return `<strong>${escapeHtml(title.trim())}</strong> — ${renderInline(rest.trim())}`;
+    return `<strong>${escapeHtml(title.trim())}</strong> — <span class="story-headline">${renderInline(rest.trim())}${showMoreInfo ? renderMoreInfoButton(rest.trim()) : ''}</span>`;
   }
-  return renderInline(text);
+  return `<span class="story-headline">${renderInline(text)}${showMoreInfo ? renderMoreInfoButton(text) : ''}</span>`;
 }
 
 /** Nest sub-items (class="sub-item") under the preceding parent <li>. */
@@ -144,7 +163,7 @@ function nestSubItems(items: string[]): string {
 }
 
 /** Parse the content into structured HTML. */
-function renderContent(content: string): string {
+function renderContent(content: string, showMoreInfo: boolean): string {
   const lines = content.split('\n');
   const blocks: string[] = [];
   let i = 0;
@@ -176,7 +195,7 @@ function renderContent(content: string): string {
           items.push(`<li class="sub-item">${renderInline(subText)}</li>`);
         } else {
           const itemText = currentLine.replace(/^\d+[\.\)]\s*/, '');
-          items.push(`<li>${renderListItem(itemText)}</li>`);
+          items.push(`<li>${renderListItem(itemText, showMoreInfo)}</li>`);
         }
         i++;
       }
@@ -206,7 +225,7 @@ function renderContent(content: string): string {
           items.push(`<li class="sub-item">${renderInline(subText)}</li>`);
         } else {
           const itemText = currentLine.replace(/^\s*[-•–]\s*/, '');
-          items.push(`<li>${renderListItem(itemText)}</li>`);
+          items.push(`<li>${renderListItem(itemText, showMoreInfo)}</li>`);
         }
         i++;
       }
@@ -248,8 +267,8 @@ function renderContent(content: string): string {
 }
 
 /** Parses content of text note events with smart formatting. */
-export function NoteContent({ event, className }: NoteContentProps) {
-  const html = useMemo(() => renderContent(event.content), [event.content]);
+export function NoteContent({ event, className, showMoreInfo = false }: NoteContentProps) {
+  const html = useMemo(() => renderContent(event.content, showMoreInfo), [event.content, showMoreInfo]);
 
   return (
     <div

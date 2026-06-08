@@ -108,6 +108,7 @@ export function PostCard({ event, isFirst }: PostCardProps) {
       <NoteContent
         event={event}
         className="text-[15px] sm:text-[15px] text-foreground/95 leading-[1.75] tracking-[-0.01em]"
+        showMoreInfo
       />
 
     </article>
