@@ -161,6 +161,16 @@ html {
   transform: translateY(-0.09rem) scale(1.04);
 }
 
+.note-content .more-info-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* Paragraphs */
 .note-content p {
   margin-top: 0.55em;

@@ -39,7 +39,7 @@ function renderMoreInfoButton(headline: string): string {
   const url = createDuckDuckGoSearchUrl(query);
   const label = `More info about ${query}`;
 
-  return `<a class="more-info-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">♥</a>`;
+  return `<a class="more-info-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"><svg class="more-info-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 13h4l2-6 4 12 3-9 2 3h5" /></svg></a>`;
 }
 
 /** Render inline formatting: bold, italic, code, links, nostr URIs, hashtags. */
