@@ -143,7 +143,7 @@ html {
   background: radial-gradient(circle at 35% 25%, hsl(47 100% 82% / 0.95), hsl(43 96% 56% / 0.86) 52%, hsl(38 92% 42% / 0.82));
   box-shadow: 0 0 0 1px hsl(43 96% 56% / 0.12), 0 0 12px hsl(43 96% 56% / 0.18);
   color: hsl(42 45% 12%);
-  font-size: 0.72rem;
+  font-size: 0.92rem;
   font-weight: 900;
   line-height: 1;
   text-decoration: none;
