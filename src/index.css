@@ -133,26 +133,32 @@ html {
 .note-content .more-info-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   vertical-align: middle;
-  margin-left: 0.5rem;
-  border: 1px solid hsl(var(--border) / 0.55);
+  margin-left: 0.45rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  border: 1px solid hsl(43 96% 56% / 0.55);
   border-radius: 999px;
-  background: hsl(var(--background) / 0.5);
-  padding: 0.22rem 0.5rem;
-  color: hsl(var(--muted-foreground) / 0.78);
-  font-size: 0.62rem;
-  font-weight: 700;
+  background: radial-gradient(circle at 35% 25%, hsl(47 100% 82% / 0.95), hsl(43 96% 56% / 0.86) 52%, hsl(38 92% 42% / 0.82));
+  box-shadow: 0 0 0 1px hsl(43 96% 56% / 0.12), 0 0 12px hsl(43 96% 56% / 0.18);
+  color: hsl(42 45% 12%);
+  font-size: 0.72rem;
+  font-weight: 900;
   line-height: 1;
   text-decoration: none;
   white-space: nowrap;
-  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  transform: translateY(-0.06rem);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease, transform 0.15s ease;
 }
 
 .note-content .more-info-link:hover {
-  border-color: hsl(43 96% 56% / 0.45);
-  background: hsl(43 96% 56% / 0.12);
-  color: hsl(43 96% 72%);
+  border-color: hsl(43 96% 72% / 0.8);
+  color: hsl(42 45% 10%);
+  filter: brightness(1.08) saturate(1.12);
+  box-shadow: 0 0 0 1px hsl(43 96% 72% / 0.18), 0 0 16px hsl(43 96% 56% / 0.32);
   text-decoration: none;
+  transform: translateY(-0.09rem) scale(1.04);
 }
 
 /* Paragraphs */
