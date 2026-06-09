@@ -73,6 +73,13 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'amber',
   },
   {
+    id: 'no-solutions',
+    feedUrl: 'https://sovereignengineering.io/dialogues.xml',
+    label: 'Latest No Solutions',
+    allEpisodesUrl: 'https://sovereignengineering.io/podcast',
+    accentColor: 'emerald',
+  },
+  {
     id: 'fifth-column',
     feedUrl: 'https://api.substack.com/feed/podcast/815642.rss',
     label: 'Latest Fifth Column',
