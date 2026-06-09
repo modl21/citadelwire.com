@@ -43,7 +43,7 @@ const PODCASTS: PodcastConfig[] = [
   {
     id: 'tftc',
     feedUrl: 'https://feeds.fountain.fm/ZwwaDULvAj0yZvJ5kdB9',
-    label: 'Latest Ten31 Timestamp',
+    label: 'Latest Ten31',
     allEpisodesUrl: 'https://fountain.fm/show/V71wG3DhMtF9fDqaJRWX',
     accentColor: 'sky',
     predicate: (episode) => episode.title.toLowerCase().includes('ten31 timestamp'),
