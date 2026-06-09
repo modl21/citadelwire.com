@@ -80,6 +80,13 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'emerald',
   },
   {
+    id: 'hell-money',
+    feedUrl: 'https://anchor.fm/s/9968c7a4/podcast/rss',
+    label: 'Latest Hell Money',
+    allEpisodesUrl: 'https://hellpodcast.money',
+    accentColor: 'rose',
+  },
+  {
     id: 'fifth-column',
     feedUrl: 'https://api.substack.com/feed/podcast/815642.rss',
     label: 'Latest Fifth Column',
