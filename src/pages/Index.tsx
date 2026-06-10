@@ -28,6 +28,42 @@ const POST_TYPE_FILTERS: { type: PostType; label: string }[] = [
   { type: 'live-wire', label: 'LIVE WIRE' },
   { type: 'code-wire', label: 'CODE WIRE' },
 ];
+const POST_TYPE_FILTER_STORAGE_KEY = 'citadel-wire:visible-post-types';
+
+function getDefaultVisiblePostTypes(): Set<PostType> {
+  return new Set(POST_TYPE_FILTERS.map(({ type }) => type));
+}
+
+function getStoredVisiblePostTypes(): Set<PostType> {
+  if (typeof window === 'undefined') return getDefaultVisiblePostTypes();
+
+  try {
+    const raw = window.localStorage.getItem(POST_TYPE_FILTER_STORAGE_KEY);
+    if (!raw) return getDefaultVisiblePostTypes();
+
+    const storedTypes: unknown = JSON.parse(raw);
+    if (!Array.isArray(storedTypes)) return getDefaultVisiblePostTypes();
+
+    const allowedTypes = getDefaultVisiblePostTypes();
+    const visibleTypes = storedTypes.filter((type): type is PostType =>
+      typeof type === 'string' && allowedTypes.has(type as PostType),
+    );
+
+    return new Set(visibleTypes);
+  } catch {
+    return getDefaultVisiblePostTypes();
+  }
+}
+
+function saveStoredVisiblePostTypes(visiblePostTypes: Set<PostType>): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.setItem(POST_TYPE_FILTER_STORAGE_KEY, JSON.stringify(Array.from(visiblePostTypes)));
+  } catch {
+    // Ignore storage failures; filters should still work for the current session.
+  }
+}
 
 function PostSkeleton() {
   return (
@@ -47,9 +83,7 @@ function PostSkeleton() {
 
 const Index = () => {
   const { data: posts, isLoading, isError, refetch } = useCitadelFeed();
-  const [visiblePostTypes, setVisiblePostTypes] = useState<Set<PostType>>(
-    () => new Set(POST_TYPE_FILTERS.map(({ type }) => type)),
-  );
+  const [visiblePostTypes, setVisiblePostTypes] = useState<Set<PostType>>(() => getStoredVisiblePostTypes());
   const [postTypeTooltipOpen, setPostTypeTooltipOpen] = useState(false);
   const author = useAuthor(CITADEL_PUBKEY);
   const metadata = author.data?.metadata;
@@ -72,6 +106,7 @@ const Index = () => {
       } else {
         next.add(type);
       }
+      saveStoredVisiblePostTypes(next);
       return next;
     });
   };
