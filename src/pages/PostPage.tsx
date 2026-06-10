@@ -490,7 +490,7 @@ function ThreadRepliesSection({ replies }: { replies: NostrEvent[] }) {
         <CardTitle className="flex items-center justify-between gap-3 text-lg">
           <span className="flex items-center gap-2">
             <Radio className="h-4 w-4 text-amber-300" />
-            Kind 1 replies
+            Replies
           </span>
           <span className="rounded-full border border-border/50 bg-muted/30 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
             {replies.length}
@@ -504,7 +504,7 @@ function ThreadRepliesSection({ replies }: { replies: NostrEvent[] }) {
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-border/60 p-8 text-center text-sm text-muted-foreground">
-            No kind 1 replies yet.
+            No replies yet.
           </div>
         )}
       </CardContent>
