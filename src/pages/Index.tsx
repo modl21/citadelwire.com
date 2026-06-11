@@ -207,7 +207,7 @@ const Index = () => {
           {/* Profile info — compact on mobile, full on desktop */}
           <div className="px-4 sm:px-6">
             <div className="py-1.5 sm:py-2 border-b border-border/40 flex items-center gap-1.5 sm:gap-2.5 text-[9px] sm:text-[11px] overflow-hidden">
-              <a href="https://primal.net/odell" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 shrink-0 group/odell">
+              <a href="https://odell.xyz" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 shrink-0 group/odell">
                 <Avatar className="h-3.5 w-3.5 sm:h-4 sm:w-4">
                   <AvatarImage src="https://primaldata.s3.us-east-005.backblazeb2.com/cache/2/c7/ce/2c7ce06799d9a1226680f19826b8fc18ea5df5e2702bcf681e267e0977069e44.jpg" alt="ODELL" />
                   <AvatarFallback className="text-[6px] bg-muted">O</AvatarFallback>
