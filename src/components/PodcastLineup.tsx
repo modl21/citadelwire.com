@@ -50,12 +50,11 @@ const PODCASTS: PodcastConfig[] = [
     titleTransform: (title) => title.replace(/^Ten31 Timestamp:\s*/i, ''),
   },
   {
-    id: 'tftc-main',
-    feedUrl: 'https://feeds.fountain.fm/ZwwaDULvAj0yZvJ5kdB9',
-    label: 'Latest TFTC',
-    allEpisodesUrl: 'https://tftc.io',
-    accentColor: 'purple',
-    predicate: (episode) => !episode.title.toLowerCase().includes('ten31 timestamp'),
+    id: 'blockspace',
+    feedUrl: 'https://rss.beehiiv.com/podcasts/019dbc32-d0bc-72d2-a970-951247013bb3.xml',
+    label: 'Latest Blockspace',
+    allEpisodesUrl: 'https://newsletter.blockspacemedia.com/',
+    accentColor: 'amber',
   },
   {
     id: 'all-in',
@@ -74,13 +73,6 @@ const PODCASTS: PodcastConfig[] = [
     titleTransform: (title) => title.replace(/\s*\|\s*Diet TBPN\s*$/i, ''),
   },
   {
-    id: 'blockspace',
-    feedUrl: 'https://rss.beehiiv.com/podcasts/019dbc32-d0bc-72d2-a970-951247013bb3.xml',
-    label: 'Latest Blockspace',
-    allEpisodesUrl: 'https://newsletter.blockspacemedia.com/',
-    accentColor: 'amber',
-  },
-  {
     id: 'no-solutions',
     feedUrl: 'https://sovereignengineering.io/dialogues.xml',
     label: 'Latest No Solutions',
@@ -95,6 +87,14 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'rose',
   },
   {
+    id: 'fifth-column',
+    feedUrl: 'https://api.substack.com/feed/podcast/815642.rss',
+    label: 'Latest Fifth Column',
+    allEpisodesUrl: 'https://www.wethefifth.com/podcast',
+    accentColor: 'zinc',
+    predicate: (episode) => !episode.title.toLowerCase().includes('members only'),
+  },
+  {
     id: 'what-bitcoin-did',
     feedUrl: 'https://feeds.fountain.fm/UZSKQcrOnhqYS1JopxGg',
     label: 'Latest WBD',
@@ -102,12 +102,12 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'orange',
   },
   {
-    id: 'fifth-column',
-    feedUrl: 'https://api.substack.com/feed/podcast/815642.rss',
-    label: 'Latest Fifth Column',
-    allEpisodesUrl: 'https://www.wethefifth.com/podcast',
-    accentColor: 'zinc',
-    predicate: (episode) => !episode.title.toLowerCase().includes('members only'),
+    id: 'tftc-main',
+    feedUrl: 'https://feeds.fountain.fm/ZwwaDULvAj0yZvJ5kdB9',
+    label: 'Latest TFTC',
+    allEpisodesUrl: 'https://tftc.io',
+    accentColor: 'purple',
+    predicate: (episode) => !episode.title.toLowerCase().includes('ten31 timestamp'),
   },
 ];
 
