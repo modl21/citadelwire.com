@@ -80,19 +80,19 @@ const PODCASTS: PodcastConfig[] = [
     titleTransform: (title) => title.replace(/\s*\|\s*Diet TBPN\s*$/i, ''),
   },
   {
-    id: 'no-solutions',
-    feedUrl: 'https://sovereignengineering.io/dialogues.xml',
-    label: 'Latest No Solutions',
-    allEpisodesUrl: 'https://sovereignengineering.io/podcast',
-    accentColor: 'emerald',
-  },
-  {
     id: 'fifth-column',
     feedUrl: 'https://api.substack.com/feed/podcast/815642.rss',
     label: 'Latest Fifth Column',
     allEpisodesUrl: 'https://www.wethefifth.com/podcast',
     accentColor: 'zinc',
     predicate: (episode) => !episode.title.toLowerCase().includes('members only'),
+  },
+  {
+    id: 'no-solutions',
+    feedUrl: 'https://sovereignengineering.io/dialogues.xml',
+    label: 'Latest No Solutions',
+    allEpisodesUrl: 'https://sovereignengineering.io/podcast',
+    accentColor: 'emerald',
   },
   {
     id: 'what-bitcoin-did',
