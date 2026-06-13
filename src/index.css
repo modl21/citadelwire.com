@@ -110,6 +110,18 @@ html {
   background: hsl(220 14% 93% / 0.18);
 }
 
+.light [class^="text-amber-"],
+.light [class*=" text-amber-"],
+.light [class^="text-yellow-"],
+.light [class*=" text-yellow-"] {
+  color: hsl(var(--foreground)) !important;
+}
+
+.light [class*="hover:text-amber-"]:hover,
+.light [class*="hover:text-yellow-"]:hover {
+  color: hsl(var(--foreground)) !important;
+}
+
 /* Note content prose styling */
 .note-content {
   font-feature-settings: 'kern' 1, 'liga' 1;
