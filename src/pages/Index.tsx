@@ -191,7 +191,7 @@ const Index = () => {
             <DonateButton />
             <button
               onClick={() => window.location.reload()}
-              className="p-2 rounded-full hover:bg-muted/60 transition-colors text-muted-foreground/50 hover:text-foreground"
+              className="hidden p-2 rounded-full hover:bg-muted/60 transition-colors text-muted-foreground/50 hover:text-foreground sm:inline-flex"
               title="Refresh"
             >
               <RefreshCw className="h-4 w-4" />
@@ -206,7 +206,19 @@ const Index = () => {
 
         {/* Schedule row */}
         <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-2.5 border-t border-border/20 pt-2">
-          <WireSchedule />
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <WireSchedule />
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="inline-flex shrink-0 rounded-full p-2 text-muted-foreground/50 transition-colors hover:bg-muted/60 hover:text-foreground sm:hidden"
+              title="Refresh"
+              aria-label="Refresh"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </header>
 
