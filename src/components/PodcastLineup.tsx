@@ -87,6 +87,13 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'rose',
   },
   {
+    id: 'what-bitcoin-did',
+    feedUrl: 'https://feeds.fountain.fm/UZSKQcrOnhqYS1JopxGg',
+    label: 'Latest WBD',
+    allEpisodesUrl: 'https://www.whatbitcoindid.com',
+    accentColor: 'orange',
+  },
+  {
     id: 'fifth-column',
     feedUrl: 'https://api.substack.com/feed/podcast/815642.rss',
     label: 'Latest Fifth Column',
