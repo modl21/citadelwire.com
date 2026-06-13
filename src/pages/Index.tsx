@@ -10,11 +10,12 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
 import { TopSupporters } from '@/components/TopSupporters';
 import { usePageViewCount, HOME_PAGE_VIEW_ID } from '@/hooks/usePageViewCount';
-import { Globe, RefreshCw, Rss, Eye, Radio, Info } from 'lucide-react';
+import { Globe, RefreshCw, Rss, Eye, Radio, Info, Moon, Sun } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { WireSchedule } from '@/components/WireSchedule';
 import { PolymarketSection } from '@/components/PolymarketSection';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useTheme } from '@/hooks/useTheme';
 
 const BTCSidebarCharts = lazy(() =>
   import('@/components/SidebarCharts').then((module) => ({ default: module.BTCSidebarCharts })),
@@ -85,6 +86,8 @@ const Index = () => {
   const { data: posts, isLoading, isError, refetch } = useCitadelFeed();
   const [visiblePostTypes, setVisiblePostTypes] = useState<Set<PostType>>(() => getStoredVisiblePostTypes());
   const [postTypeTooltipOpen, setPostTypeTooltipOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const isLightMode = theme === 'light';
   const author = useAuthor(CITADEL_PUBKEY);
   const metadata = author.data?.metadata;
   const npub = nip19.npubEncode(CITADEL_PUBKEY);
@@ -109,6 +112,10 @@ const Index = () => {
       saveStoredVisiblePostTypes(next);
       return next;
     });
+  };
+
+  const toggleTheme = () => {
+    setTheme(isLightMode ? 'dark' : 'light');
   };
 
   useSeoMeta({
@@ -171,6 +178,16 @@ const Index = () => {
             >
               <Rss className="h-4 w-4" />
             </a>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-2 rounded-full hover:bg-muted/60 transition-colors text-muted-foreground/55 hover:text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40"
+              title={isLightMode ? 'Switch to dark mode' : 'Switch to light mode'}
+              aria-label={isLightMode ? 'Switch to dark mode' : 'Switch to light mode'}
+              aria-pressed={isLightMode}
+            >
+              {isLightMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+            </button>
             <DonateButton />
             <button
               onClick={() => window.location.reload()}
