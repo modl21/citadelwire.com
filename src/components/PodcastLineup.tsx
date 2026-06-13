@@ -50,6 +50,14 @@ const PODCASTS: PodcastConfig[] = [
     titleTransform: (title) => title.replace(/^Ten31 Timestamp:\s*/i, ''),
   },
   {
+    id: 'tftc-main',
+    feedUrl: 'https://feeds.fountain.fm/ZwwaDULvAj0yZvJ5kdB9',
+    label: 'Latest TFTC',
+    allEpisodesUrl: 'https://tftc.io',
+    accentColor: 'purple',
+    predicate: (episode) => !episode.title.toLowerCase().includes('ten31 timestamp'),
+  },
+  {
     id: 'all-in',
     feedUrl: 'https://allinchamathjason.libsyn.com/rss',
     label: 'Latest All-In',
@@ -109,7 +117,7 @@ interface PodcastShowPlayerProps {
 }
 
 function PodcastShowPlayer({ config, onVisibilityChange }: PodcastShowPlayerProps) {
-  const { data: episode, isLoading } = useRSSEpisode(config.feedUrl, config.predicate);
+  const { data: episode, isLoading } = useRSSEpisode(config.feedUrl, config.predicate, config.id);
   const isVisible = isLoading || Boolean(episode);
 
   useEffect(() => {

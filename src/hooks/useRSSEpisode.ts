@@ -45,9 +45,13 @@ async function fetchFeed(feedUrl: string): Promise<Response> {
   });
 }
 
-export function useRSSEpisode(feedUrl: string, predicate?: (episode: RSSEpisode) => boolean) {
+export function useRSSEpisode(
+  feedUrl: string,
+  predicate?: (episode: RSSEpisode) => boolean,
+  cacheKey?: string,
+) {
   return useQuery<RSSEpisode | null>({
-    queryKey: ['rss-episode', feedUrl, predicate ? 'filtered' : 'latest'],
+    queryKey: ['rss-episode', feedUrl, cacheKey ?? (predicate ? 'filtered' : 'latest')],
     queryFn: async () => {
       const res = await fetchFeed(feedUrl);
       if (!res.ok) throw new Error('Failed to fetch RSS feed');
