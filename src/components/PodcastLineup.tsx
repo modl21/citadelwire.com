@@ -57,6 +57,13 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'amber',
   },
   {
+    id: 'hell-money',
+    feedUrl: 'https://anchor.fm/s/9968c7a4/podcast/rss',
+    label: 'Latest Hell Money',
+    allEpisodesUrl: 'https://hellpodcast.money',
+    accentColor: 'rose',
+  },
+  {
     id: 'all-in',
     feedUrl: 'https://allinchamathjason.libsyn.com/rss',
     label: 'Latest All-In',
@@ -78,13 +85,6 @@ const PODCASTS: PodcastConfig[] = [
     label: 'Latest No Solutions',
     allEpisodesUrl: 'https://sovereignengineering.io/podcast',
     accentColor: 'emerald',
-  },
-  {
-    id: 'hell-money',
-    feedUrl: 'https://anchor.fm/s/9968c7a4/podcast/rss',
-    label: 'Latest Hell Money',
-    allEpisodesUrl: 'https://hellpodcast.money',
-    accentColor: 'rose',
   },
   {
     id: 'fifth-column',
