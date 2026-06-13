@@ -95,6 +95,13 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'emerald',
   },
   {
+    id: 'dwarkesh',
+    feedUrl: 'https://api.substack.com/feed/podcast/69345.rss',
+    label: 'Latest Dwarkesh',
+    allEpisodesUrl: 'https://www.dwarkesh.com/podcast',
+    accentColor: 'zinc',
+  },
+  {
     id: 'what-bitcoin-did',
     feedUrl: 'https://feeds.fountain.fm/UZSKQcrOnhqYS1JopxGg',
     label: 'Latest WBD',
@@ -108,6 +115,13 @@ const PODCASTS: PodcastConfig[] = [
     allEpisodesUrl: 'https://tftc.io',
     accentColor: 'purple',
     predicate: (episode) => !episode.title.toLowerCase().includes('ten31 timestamp'),
+  },
+  {
+    id: 'slp',
+    feedUrl: 'https://anchor.fm/s/7d083a4/podcast/rss',
+    label: 'Latest SLP',
+    allEpisodesUrl: 'https://www.stephanlivera.com/',
+    accentColor: 'amber',
   },
 ];
 
