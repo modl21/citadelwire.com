@@ -113,12 +113,33 @@ html {
 .light [class^="text-amber-"],
 .light [class*=" text-amber-"],
 .light [class^="text-yellow-"],
-.light [class*=" text-yellow-"] {
+.light [class*=" text-yellow-"],
+.light [class^="text-white"],
+.light [class*=" text-white"],
+.light [class^="text-muted-foreground"],
+.light [class*=" text-muted-foreground"],
+.light [class^="text-gray-"],
+.light [class*=" text-gray-"],
+.light [class^="text-zinc-"],
+.light [class*=" text-zinc-"],
+.light [class^="text-slate-"],
+.light [class*=" text-slate-"],
+.light [class^="text-neutral-"],
+.light [class*=" text-neutral-"],
+.light [class^="text-stone-"],
+.light [class*=" text-stone-"] {
   color: hsl(var(--foreground)) !important;
 }
 
 .light [class*="hover:text-amber-"]:hover,
-.light [class*="hover:text-yellow-"]:hover {
+.light [class*="hover:text-yellow-"]:hover,
+.light [class*="hover:text-white"]:hover,
+.light [class*="hover:text-muted-foreground"]:hover,
+.light [class*="hover:text-gray-"]:hover,
+.light [class*="hover:text-zinc-"]:hover,
+.light [class*="hover:text-slate-"]:hover,
+.light [class*="hover:text-neutral-"]:hover,
+.light [class*="hover:text-stone-"]:hover {
   color: hsl(var(--foreground)) !important;
 }
 
