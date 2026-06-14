@@ -2,23 +2,31 @@
   "name": "CITADEL WIRE",
   "short_name": "CITADEL WIRE",
   "description": "high signal news",
-  "start_url": "/",
+  "id": "/",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "background_color": "#080b12",
   "theme_color": "#080b12",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "/citadel-wire-logo.jpg",
+      "src": "https://blossom.primal.net/d4bcc6326c8f61250fe0acaacd29332736ce5bf04d5600465145980b06f4a624.jpg",
       "sizes": "192x192",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/citadel-wire-logo.jpg",
+      "src": "https://blossom.primal.net/d4bcc6326c8f61250fe0acaacd29332736ce5bf04d5600465145980b06f4a624.jpg",
       "sizes": "512x512",
       "type": "image/jpeg",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "https://blossom.primal.net/d4bcc6326c8f61250fe0acaacd29332736ce5bf04d5600465145980b06f4a624.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "maskable"
     }
   ]
 }
