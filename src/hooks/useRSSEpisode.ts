@@ -18,12 +18,9 @@ function isOlderThanFourDays(pubDate: string): boolean {
 }
 
 async function fetchFeed(feedUrl: string): Promise<Response> {
-  const cb = Date.now().toString();
-  const busterUrl = feedUrl.includes('?') ? `${feedUrl}&_cb=${cb}` : `${feedUrl}?_cb=${cb}`;
-
   try {
-    const direct = await fetch(busterUrl, {
-      cache: 'no-store',
+    const direct = await fetch(feedUrl, {
+      cache: 'reload',
       headers: {
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache',
@@ -35,8 +32,8 @@ async function fetchFeed(feedUrl: string): Promise<Response> {
     // Fall back to the configured proxy below.
   }
 
-  return fetch(`${CORS_PROXY}${encodeURIComponent(busterUrl)}`, {
-    cache: 'no-store',
+  return fetch(`${CORS_PROXY}${encodeURIComponent(feedUrl)}`, {
+    cache: 'reload',
     headers: {
       'Cache-Control': 'no-cache',
       'Pragma': 'no-cache',
