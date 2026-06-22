@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 export interface SupporterMetadata {
   name?: string;
   display_name?: string;
-  picture: string;
+  picture?: string;
 }
 
 export interface Supporter {
@@ -14,6 +14,10 @@ export interface Supporter {
   latestAt: number;
   metadata: SupporterMetadata;
 }
+
+type SupporterTotal = Omit<Supporter, 'metadata'> & {
+  taggedMetadata?: SupporterMetadata;
+};
 
 export const SUPPORTER_TOTAL_KIND = 36497;
 export const SUPPORTER_DONATION_KIND = 9703;
@@ -54,7 +58,7 @@ function getSatsFromAmountTag(event: NostrEvent): number | null {
   return Math.floor(millisats / 1000);
 }
 
-function validateSupporterTotalEvent(event: NostrEvent): Omit<Supporter, 'metadata'> | null {
+function validateSupporterTotalEvent(event: NostrEvent): SupporterTotal | null {
   if (event.kind !== SUPPORTER_TOTAL_KIND) return null;
 
   const d = getTagValue(event, 'd');
@@ -64,14 +68,21 @@ function validateSupporterTotalEvent(event: NostrEvent): Omit<Supporter, 'metada
   const totalSats = getSatsFromAmountTag(event);
   if (!totalSats) return null;
 
+  const taggedMetadata: SupporterMetadata = {
+    name: getTagValue(event, 'name'),
+    display_name: getTagValue(event, 'display_name'),
+    picture: getTagValue(event, 'picture'),
+  };
+
   return {
     pubkey: supporterPubkey,
     totalSats,
     latestAt: Number.parseInt(getTagValue(event, 'last_payment_at') ?? String(event.created_at), 10) || event.created_at,
+    taggedMetadata,
   };
 }
 
-function validateSupporterDonationEvent(event: NostrEvent): Omit<Supporter, 'metadata'> & { paymentKey: string } | null {
+function validateSupporterDonationEvent(event: NostrEvent): SupporterTotal & { paymentKey: string } | null {
   if (event.kind !== SUPPORTER_DONATION_KIND) return null;
 
   const supporterPubkey = getTagValue(event, 'p');
@@ -91,8 +102,8 @@ function validateSupporterDonationEvent(event: NostrEvent): Omit<Supporter, 'met
   };
 }
 
-function getSupporterTotals(events: NostrEvent[]): Omit<Supporter, 'metadata'>[] {
-  const latestTotalByPubkey = new Map<string, Omit<Supporter, 'metadata'>>();
+function getSupporterTotals(events: NostrEvent[]): SupporterTotal[] {
+  const latestTotalByPubkey = new Map<string, SupporterTotal>();
   const donationTotalsByPubkey = new Map<string, { totalSats: number; latestAt: number }>();
   const countedPayments = new Set<string>();
 
@@ -135,7 +146,7 @@ function getSupporterTotals(events: NostrEvent[]): Omit<Supporter, 'metadata'>[]
 
 async function attachSupporterMetadata(
   nostr: ReturnType<typeof useNostr>['nostr'],
-  totals: Omit<Supporter, 'metadata'>[],
+  totals: SupporterTotal[],
   limit: number,
 ): Promise<Supporter[]> {
   if (totals.length === 0) return [];
@@ -152,7 +163,7 @@ async function attachSupporterMetadata(
     if (metadataByPubkey.has(event.pubkey)) continue;
 
     const metadata = parseMetadata(event.content);
-    if (!metadata?.picture) continue;
+    if (!metadata) continue;
 
     metadataByPubkey.set(event.pubkey, {
       name: metadata.name,
@@ -161,14 +172,21 @@ async function attachSupporterMetadata(
     });
   }
 
-  return totals
-    .map((supporter) => {
-      const metadata = metadataByPubkey.get(supporter.pubkey);
-      if (!metadata) return null;
-      return { ...supporter, metadata };
-    })
-    .filter((supporter): supporter is Supporter => supporter !== null)
-    .slice(0, limit);
+  return totals.slice(0, limit).map((supporter) => {
+    const profileMetadata = metadataByPubkey.get(supporter.pubkey);
+    const metadata: SupporterMetadata = {
+      name: profileMetadata?.name ?? supporter.taggedMetadata?.name,
+      display_name: profileMetadata?.display_name ?? supporter.taggedMetadata?.display_name,
+      picture: profileMetadata?.picture ?? supporter.taggedMetadata?.picture,
+    };
+
+    return {
+      pubkey: supporter.pubkey,
+      totalSats: supporter.totalSats,
+      latestAt: supporter.latestAt,
+      metadata,
+    };
+  });
 }
 
 export function useTopSupporters(limit: number = 10) {
