@@ -8,10 +8,8 @@ import { TickerBar } from '@/components/TickerBar';
 import { getPostType, useCitadelFeed, CITADEL_PUBKEY, type PostType } from '@/hooks/useCitadelFeed';
 import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
-import { TopSupporters } from '@/components/TopSupporters';
 import { usePageViewCount, HOME_PAGE_VIEW_ID } from '@/hooks/usePageViewCount';
 import { Globe, RefreshCw, Rss, Eye, Radio, Info, Moon, Sun } from 'lucide-react';
-import { nip19 } from 'nostr-tools';
 import { WireSchedule } from '@/components/WireSchedule';
 import { PolymarketSection } from '@/components/PolymarketSection';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -90,7 +88,6 @@ const Index = () => {
   const isLightMode = theme === 'light';
   const author = useAuthor(CITADEL_PUBKEY);
   const metadata = author.data?.metadata;
-  const npub = nip19.npubEncode(CITADEL_PUBKEY);
   const { count: pageViews, isLoading: isPageViewsLoading } = usePageViewCount(
     HOME_PAGE_VIEW_ID,
     typeof window === 'undefined' ? 'https://wire.shakespeare.wtf/' : window.location.href,
@@ -264,9 +261,6 @@ const Index = () => {
               <span className="text-white whitespace-nowrap"><span className="font-bold">high signal news</span> using <span className="text-amber-400 font-bold">live</span> market data</span>
             </div>
           </div>
-
-          {/* Top Supporters */}
-          <TopSupporters />
 
           {/* Prediction Markets */}
           <PolymarketSection />

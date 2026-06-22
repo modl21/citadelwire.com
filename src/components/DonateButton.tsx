@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Zap, Copy, Check, ExternalLink, AtSign, Loader2 } from 'lucide-react';
+import { Zap, Copy, Check, ExternalLink, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,7 +21,6 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { publishSupporterEvent, getVisitorSigner } from '@/lib/publishSupporter';
 import { CITADEL_PUBKEY } from '@/hooks/useCitadelFeed';
 import { useNostr } from '@nostrify/react';
-import { nip19 } from 'nostr-tools';
 import type { NUser } from '@nostrify/react/login';
 import QRCode from 'qrcode';
 
@@ -106,58 +105,6 @@ async function fetchInvoice(amountSats: number, comment?: string, signer?: NUser
   return invoiceData.pr;
 }
 
-const CORS_PROXY = 'https://proxy.shakespeare.diy/?url=';
-
-/** Resolve a NIP-05 identifier (user@domain) to a hex pubkey. */
-async function resolveNip05(identifier: string): Promise<string | null> {
-  const trimmed = identifier.trim().toLowerCase();
-  if (!trimmed.includes('@')) return null;
-
-  const [localPart, domain] = trimmed.split('@');
-  if (!localPart || !domain) return null;
-
-  try {
-    const url = `https://${domain}/.well-known/nostr.json?name=${encodeURIComponent(localPart)}`;
-    const res = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`);
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    const pubkey = data?.names?.[localPart];
-    if (pubkey && /^[0-9a-f]{64}$/.test(pubkey)) return pubkey;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-/** Try to parse an npub/nprofile directly. */
-function parseNpub(value: string): string | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  try {
-    const decoded = nip19.decode(trimmed);
-    if (decoded.type === 'npub') return decoded.data;
-    if (decoded.type === 'nprofile') return decoded.data.pubkey;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-/** Resolve input to a hex pubkey — supports NIP-05 (user@domain), npub, and nprofile. */
-async function resolveIdentity(input: string): Promise<string | null> {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-
-  // If it looks like a NIP-05 address
-  if (trimmed.includes('@')) {
-    return resolveNip05(trimmed);
-  }
-
-  // Otherwise try npub/nprofile
-  return parseNpub(trimmed);
-}
-
 function DonateContent({
   onClose,
 }: {
@@ -168,9 +115,6 @@ function DonateContent({
   const { user } = useCurrentUser();
   const [amount, setAmount] = useState<number | string>(10000);
   const [memo, setMemo] = useState('');
-  const [identityInput, setIdentityInput] = useState(() => user?.pubkey ? nip19.npubEncode(user.pubkey) : '');
-  const [resolvedPubkey, setResolvedPubkey] = useState<string | null>(() => user?.pubkey ?? null);
-  const [isResolving, setIsResolving] = useState(false);
   const [invoice, setInvoice] = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -200,7 +144,7 @@ function DonateContent({
       return;
     }
 
-    const supporterPubkey = resolvedPubkey;
+    const supporterPubkey = user?.pubkey ?? null;
 
     setIsLoading(true);
     try {
@@ -228,7 +172,7 @@ function DonateContent({
     } finally {
       setIsLoading(false);
     }
-  }, [amount, memo, resolvedPubkey, toast, onClose, recordSupporter]);
+  }, [amount, memo, user, toast, onClose, recordSupporter]);
 
   const handleCopy = async () => {
     if (!invoice) return;
@@ -448,43 +392,7 @@ function DonateContent({
         onChange={(e) => setMemo(e.target.value)}
       />
 
-      <div className="relative">
-        <Input
-          type="text"
-          placeholder="nostr username (ex: odell@primal.net) (optional)"
-          value={identityInput}
-          onChange={(e) => {
-            setIdentityInput(e.target.value);
-            setResolvedPubkey(null);
-          }}
-          onBlur={async () => {
-            const val = identityInput.trim();
-            if (!val) { setResolvedPubkey(null); return; }
-            setIsResolving(true);
-            const pubkey = await resolveIdentity(val);
-            setResolvedPubkey(pubkey);
-            setIsResolving(false);
-          }}
-          className="pl-9 text-sm"
-        />
-        <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-      </div>
-      {identityInput && !isResolving && resolvedPubkey && (
-        <p className="text-[11px] text-green-500 -mt-2 ml-1">Verified</p>
-      )}
-      {identityInput && !isResolving && !resolvedPubkey && identityInput.length > 3 && (
-        <p className="text-[11px] text-muted-foreground/50 -mt-2 ml-1">Unable to verify. Donation will be anonymous unless this resolves.</p>
-      )}
-      {!identityInput.trim() && (
-        <p className="text-[11px] text-muted-foreground/50 -mt-2 ml-1">Leave blank to donate anonymously.</p>
-      )}
-      {isResolving && (
-        <p className="text-[11px] text-muted-foreground/50 -mt-2 ml-1 flex items-center gap-1">
-          <Loader2 className="h-2.5 w-2.5 animate-spin" /> Looking up...
-        </p>
-      )}
-
-      <Button onClick={handleGetInvoice} className="w-full" disabled={isLoading || isResolving}>
+      <Button onClick={handleGetInvoice} className="w-full" disabled={isLoading}>
         <Zap className="h-4 w-4 mr-2" />
         {isLoading ? 'Getting invoice...' : 'Donate'}
       </Button>
