@@ -6,10 +6,9 @@ import { Zap } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { cn } from '@/lib/utils';
 
-function SupporterAvatar({ pubkey, totalSats, picture, displayName, rank }: { pubkey: string; totalSats: number; picture?: string; displayName: string; rank: number }) {
+function SupporterAvatar({ pubkey, totalSats, picture, displayName, rank }: { pubkey: string; totalSats: number; picture: string; displayName: string; rank: number }) {
   const npub = nip19.npubEncode(pubkey);
   const profileUrl = `https://primal.net/p/${npub}`;
-  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <a
@@ -26,8 +25,8 @@ function SupporterAvatar({ pubkey, totalSats, picture, displayName, rank }: { pu
           rank <= 2 ? 'h-5 w-5 ring-amber-500/40' :
           'h-5 w-5 ring-border/40',
         )}>
-          {picture ? <AvatarImage src={picture} alt={displayName} /> : null}
-          <AvatarFallback delayMs={200}>{initials}</AvatarFallback>
+          <AvatarImage src={picture} alt={displayName} />
+          <AvatarFallback delayMs={200}>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
         {rank === 0 && (
           <div className="absolute -top-0.5 -right-0.5 bg-amber-500 text-white rounded-full w-2.5 h-2.5 flex items-center justify-center">
@@ -85,7 +84,7 @@ export function TopSupporters() {
                 key={supporter.pubkey}
                 pubkey={supporter.pubkey}
                 totalSats={supporter.totalSats}
-                picture={supporter.metadata.picture}
+                picture={supporter.metadata.picture!}
                 displayName={displayName}
                 rank={index}
               />

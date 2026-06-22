@@ -149,9 +149,8 @@ Top Supporters queries relays for both cumulative total events and donation reco
 3. Parse `amount` as millisatoshis.
 4. Keep only the latest kind `36497` event per supporter pubkey.
 5. If no kind `36497` total exists for a supporter, aggregate their kind `9703` records by summing deduplicated `amount` tags.
-6. Fetch profile metadata separately and merge it with any `name`, `display_name`, and `picture` tags present on cumulative total events.
-7. Display supporters even when their current profile metadata or picture is unavailable, falling back to tagged metadata and then generated initials.
-8. Sort by total sats descending.
+6. Fetch profile metadata separately and only display supporters with a profile picture.
+7. Sort by total sats descending.
 
 ### Notes
 - Nostr is permissionless. This relaxed model does not require a single trusted leaderboard publisher.
