@@ -123,6 +123,13 @@ const PODCASTS: PodcastConfig[] = [
     allEpisodesUrl: 'https://www.stephanlivera.com/',
     accentColor: 'amber',
   },
+  {
+    id: 'the-bitcoin-podcast',
+    feedUrl: 'https://media.rss.com/bitcoinpodcast/feed.xml',
+    label: 'LATEST TBP',
+    allEpisodesUrl: 'https://podcastindex.org/podcast/6443613',
+    accentColor: 'orange',
+  },
 ];
 
 interface PodcastShowPlayerProps {
