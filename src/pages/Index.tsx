@@ -258,7 +258,7 @@ const Index = () => {
                 </>
               )}
               <span className="text-muted-foreground/30">·</span>
-              <span className="text-white whitespace-nowrap"><span className="font-bold">high signal news</span> using <span className="text-amber-400 font-bold">live</span> market data</span>
+              <span className="text-white whitespace-nowrap font-bold">high signal news</span>
               <a
                 href="https://smp4.simplex.im/c#pnthhrx5BfdJEdTJ6QOEhEJ6g-hdwuOiMEFu6dpj3cQ"
                 target="_blank"
