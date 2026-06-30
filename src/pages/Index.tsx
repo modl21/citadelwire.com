@@ -263,7 +263,7 @@ const Index = () => {
                 href="https://smp4.simplex.im/c#pnthhrx5BfdJEdTJ6QOEhEJ6g-hdwuOiMEFu6dpj3cQ"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex shrink-0 items-center rounded-full border border-sky-300/45 bg-sky-300/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-sky-200 transition-colors hover:border-sky-200/70 hover:bg-sky-300/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 sm:text-[10px]"
+                className="inline-flex shrink-0 items-center rounded-full border border-sky-300/45 bg-sky-300/15 px-1.5 py-0.5 text-[7px] font-bold uppercase leading-none tracking-normal text-sky-200 transition-colors hover:border-sky-200/70 hover:bg-sky-300/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 sm:px-2 sm:text-[10px] sm:tracking-wide"
               >
                 Join our SimpleX channel
               </a>
