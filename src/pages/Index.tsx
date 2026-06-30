@@ -259,6 +259,14 @@ const Index = () => {
               )}
               <span className="text-muted-foreground/30">·</span>
               <span className="text-white whitespace-nowrap"><span className="font-bold">high signal news</span> using <span className="text-amber-400 font-bold">live</span> market data</span>
+              <a
+                href="https://smp4.simplex.im/c#pnthhrx5BfdJEdTJ6QOEhEJ6g-hdwuOiMEFu6dpj3cQ"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex shrink-0 items-center rounded-full border border-sky-300/45 bg-sky-300/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-sky-200 transition-colors hover:border-sky-200/70 hover:bg-sky-300/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 sm:text-[10px]"
+              >
+                Join our SimpleX channel
+              </a>
             </div>
           </div>
 
