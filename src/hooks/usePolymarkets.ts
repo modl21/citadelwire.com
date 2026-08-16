@@ -39,6 +39,31 @@ function isGeopolitics(title: string): boolean {
   return GEO_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
+/** Exclude sports and esports even when Polymarket returns them for a politics query. */
+function isSportsOrEsports(event: Record<string, unknown>): boolean {
+  const tags = Array.isArray(event.tags) ? event.tags : [];
+  const categoryLabels = tags.flatMap((tag) => {
+    if (!tag || typeof tag !== 'object') return [];
+    const record = tag as Record<string, unknown>;
+    return [record.label, record.name, record.slug]
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.trim().toLowerCase());
+  });
+
+  if (categoryLabels.some((label) => label === 'sports' || label === 'sport' || label === 'esports' || label === 'e-sports')) {
+    return true;
+  }
+
+  if (event.gameId !== undefined || event.sportsMarketType !== undefined) return true;
+
+  const markets = Array.isArray(event.markets) ? event.markets : [];
+  return markets.some((market) => {
+    if (!market || typeof market !== 'object') return false;
+    const record = market as Record<string, unknown>;
+    return record.gameId !== undefined || record.sportsMarketType !== undefined;
+  });
+}
+
 /** Filter out events referencing past months/dates that are no longer relevant. */
 function isStale(title: string): boolean {
   const now = new Date();
@@ -178,10 +203,11 @@ async function fetchFromGammaAPI(useProxy: boolean): Promise<ParsedMarket[]> {
 
     const title: string = event.title || '';
 
-    // Filter to geopolitics-relevant events, skip stale or already-ended ones.
-    // Some Polymarket events remain active/open while disputed child markets settle;
-    // once the event endDate is more than a day old, it is no longer useful as a
-    // forward-looking signal for the news feed.
+    // Filter to geopolitics-relevant events, skip sports, esports, stale, or
+    // already-ended events. Polymarket can return unrelated tagged events even
+    // when the API request is scoped to politics, so category metadata is checked
+    // before applying the title-based relevance filter.
+    if (isSportsOrEsports(event)) continue;
     if (!isGeopolitics(title)) continue;
     if (isStale(title)) continue;
     if (hasEnded(event.endDate)) continue;
