@@ -85,13 +85,6 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'sky',
   },
   {
-    id: 'btc-sessions',
-    feedUrl: 'https://anchor.fm/s/11e95d20/podcast/rss',
-    label: 'Latest BTC Sessions',
-    allEpisodesUrl: 'https://www.btcsessions.ca/',
-    accentColor: 'orange',
-  },
-  {
     id: 'all-in',
     feedUrl: 'https://allinchamathjason.libsyn.com/rss',
     label: 'Latest All-In',
@@ -137,12 +130,11 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'orange',
   },
   {
-    id: 'tftc-main',
-    feedUrl: 'https://feeds.fountain.fm/ZwwaDULvAj0yZvJ5kdB9',
-    label: 'Latest TFTC',
-    allEpisodesUrl: 'https://tftc.io',
-    accentColor: 'purple',
-    predicate: (episode) => !episode.title.toLowerCase().includes('ten31 timestamp'),
+    id: 'btc-sessions',
+    feedUrl: 'https://anchor.fm/s/11e95d20/podcast/rss',
+    label: 'Latest BTC Sessions',
+    allEpisodesUrl: 'https://www.btcsessions.ca/',
+    accentColor: 'orange',
   },
   {
     id: 'slp',
@@ -150,6 +142,14 @@ const PODCASTS: PodcastConfig[] = [
     label: 'Latest SLP',
     allEpisodesUrl: 'https://www.stephanlivera.com/',
     accentColor: 'amber',
+  },
+  {
+    id: 'tftc-main',
+    feedUrl: 'https://feeds.fountain.fm/ZwwaDULvAj0yZvJ5kdB9',
+    label: 'Latest TFTC',
+    allEpisodesUrl: 'https://tftc.io',
+    accentColor: 'purple',
+    predicate: (episode) => !episode.title.toLowerCase().includes('ten31 timestamp'),
   },
   {
     id: 'the-bitcoin-podcast',
