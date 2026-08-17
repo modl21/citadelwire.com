@@ -130,18 +130,18 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'orange',
   },
   {
-    id: 'btc-sessions',
-    feedUrl: 'https://anchor.fm/s/11e95d20/podcast/rss',
-    label: 'Latest BTC Sessions',
-    allEpisodesUrl: 'https://www.btcsessions.ca/',
-    accentColor: 'orange',
-  },
-  {
     id: 'slp',
     feedUrl: 'https://anchor.fm/s/7d083a4/podcast/rss',
     label: 'Latest SLP',
     allEpisodesUrl: 'https://www.stephanlivera.com/',
     accentColor: 'amber',
+  },
+  {
+    id: 'btc-sessions',
+    feedUrl: 'https://anchor.fm/s/11e95d20/podcast/rss',
+    label: 'Latest BTC Sessions',
+    allEpisodesUrl: 'https://www.btcsessions.ca/',
+    accentColor: 'orange',
   },
   {
     id: 'tftc-main',
