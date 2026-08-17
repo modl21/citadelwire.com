@@ -78,6 +78,20 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'emerald',
   },
   {
+    id: 'bitcast',
+    feedUrl: 'https://serve.podhome.fm/rss/50244b8d-e1ba-4474-8ae2-86b9688e5c78',
+    label: 'Latest Bitcast',
+    allEpisodesUrl: 'https://btcsessions.live/',
+    accentColor: 'sky',
+  },
+  {
+    id: 'btc-sessions',
+    feedUrl: 'https://anchor.fm/s/11e95d20/podcast/rss',
+    label: 'Latest BTC Sessions',
+    allEpisodesUrl: 'https://www.btcsessions.ca/',
+    accentColor: 'orange',
+  },
+  {
     id: 'all-in',
     feedUrl: 'https://allinchamathjason.libsyn.com/rss',
     label: 'Latest All-In',
