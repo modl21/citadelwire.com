@@ -92,6 +92,13 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'rose',
   },
   {
+    id: 'tangents',
+    feedUrl: 'https://serve.podhome.fm/rss/9cae0ad6-8f59-493e-b74b-85e389eccada',
+    label: 'Latest Tangents',
+    allEpisodesUrl: 'https://tangentsdaily.substack.com',
+    accentColor: 'sky',
+  },
+  {
     id: 'tbpn',
     feedUrl: 'https://feeds.transistor.fm/technology-brother',
     label: 'Latest TBPN',
