@@ -64,18 +64,18 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'rose',
   },
   {
-    id: 'pbj',
-    feedUrl: 'https://feeds.fountain.fm/UnefO3pkSLLDwIGz0Xq1',
-    label: 'Latest PBJ',
-    allEpisodesUrl: 'https://presidiobitcoin.substack.com/podcast',
-    accentColor: 'amber',
-  },
-  {
     id: 'ungovernable',
     feedUrl: 'https://serve.podhome.fm/rss/23c0e268-b6a5-4ae7-b73a-1bb0cf853978',
     label: 'Latest Ungovernable',
     allEpisodesUrl: 'https://serve.podhome.fm/ungovernable',
     accentColor: 'emerald',
+  },
+  {
+    id: 'pbj',
+    feedUrl: 'https://feeds.fountain.fm/UnefO3pkSLLDwIGz0Xq1',
+    label: 'Latest PBJ',
+    allEpisodesUrl: 'https://presidiobitcoin.substack.com/podcast',
+    accentColor: 'amber',
   },
   {
     id: 'bitcast',
