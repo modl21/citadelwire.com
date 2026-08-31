@@ -115,6 +115,13 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'emerald',
   },
   {
+    id: 'opt-out',
+    feedUrl: 'https://rss.buzzsprout.com/1790481.rss',
+    label: 'Latest Opt Out',
+    allEpisodesUrl: 'https://optoutpod.com/',
+    accentColor: 'purple',
+  },
+  {
     id: 'watchman-privacy',
     feedUrl: 'https://watchmanprivacy.libsyn.com/rss',
     label: 'Latest Escape The Technocracy',
