@@ -35,12 +35,6 @@ const RECURRING_WIRE_SLOTS: RecurringWireSlot[] = [
   },
 ];
 
-const MOBILE_RECURRING_LABELS: Record<RecurringWireSlot['type'], string> = {
-  'DAILY WIRE': 'DAILY',
-  'WEEKLY WIRE': 'WEEKLY',
-  'FORWARD WIRE': 'FWD',
-};
-
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
 
@@ -221,8 +215,7 @@ export function WireSchedule() {
               )}
               title={`${slot.type} · ${new Date(nextTimestampMs).toUTCString()}`}
             >
-              <span className="sm:hidden">{MOBILE_RECURRING_LABELS[slot.type]}</span>
-              <span className="hidden sm:inline">{slot.type}</span>
+              <span>{slot.type}</span>
               <span className="tabular-nums font-semibold normal-case text-current/85">
                 <span className="sm:hidden">{formatCountdown(nextTimestampMs, nowMs, true)}</span>
                 <span className="hidden sm:inline">{formatCountdown(nextTimestampMs, nowMs)}</span>
