@@ -17,21 +17,21 @@ const RECURRING_WIRE_SLOTS: RecurringWireSlot[] = [
     type: 'DAILY WIRE',
     hour: 21,
     minute: 30,
-    accentClassName: 'border-orange-400/40 bg-orange-400/15 text-orange-300',
+    accentClassName: 'text-orange-300',
   },
   {
     type: 'WEEKLY WIRE',
     weekday: 5,
     hour: 22,
     minute: 0,
-    accentClassName: 'border-purple-400/40 bg-purple-400/15 text-purple-300',
+    accentClassName: 'text-purple-300',
   },
   {
     type: 'FORWARD WIRE',
     weekday: 1,
     hour: 11,
     minute: 0,
-    accentClassName: 'border-rose-400/40 bg-rose-400/15 text-rose-300',
+    accentClassName: 'text-rose-300',
   },
 ];
 
@@ -210,7 +210,7 @@ export function WireSchedule() {
             <div
               key={slot.type}
               className={cn(
-                'inline-flex shrink-0 items-center gap-0.5 rounded-full border px-1 py-0.5 text-[7px] font-bold uppercase leading-none tracking-tight sm:gap-1 sm:px-1.5 sm:py-0.5 sm:text-[9px] sm:tracking-wide',
+                'inline-flex shrink-0 items-center gap-0.5 text-[7px] font-bold uppercase leading-none tracking-tight sm:gap-1 sm:text-[9px] sm:tracking-wide',
                 slot.accentClassName,
               )}
               title={`${slot.type} · ${new Date(nextTimestampMs).toUTCString()}`}
