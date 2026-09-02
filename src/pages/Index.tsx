@@ -282,8 +282,8 @@ const Index = () => {
           {/* Feed */}
           <main>
             <div className="px-4 sm:px-6 py-2.5 border-b border-border/30">
-              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none" aria-label="Post type filters">
-                <span className="shrink-0 text-[8px] font-semibold text-muted-foreground/50 uppercase tracking-wider mr-0.5 sm:text-[9px]">
+              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none sm:gap-1.5" aria-label="Post type filters">
+                <span className="shrink-0 text-[8px] font-semibold text-muted-foreground/50 uppercase tracking-tight mr-0.5 sm:text-[9px] sm:tracking-wider">
                   Show
                 </span>
                 {POST_TYPE_FILTERS.map(({ type, label }) => {
@@ -294,7 +294,7 @@ const Index = () => {
                       type="button"
                       onClick={() => togglePostType(type)}
                       aria-pressed={isActive}
-                      className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[7px] font-semibold leading-none tracking-tight transition-colors sm:px-2 sm:py-0.5 sm:text-[9px] ${
+                      className={`shrink-0 rounded-full border px-1 py-0.5 text-[7px] font-semibold leading-none tracking-tighter transition-colors sm:px-2 sm:py-0.5 sm:text-[9px] sm:tracking-tight ${
                         isActive
                           ? 'border-amber-500/40 bg-amber-500/15 text-amber-300'
                           : 'border-border/40 bg-muted/20 text-muted-foreground/50 hover:bg-muted/40 hover:text-muted-foreground/80'
@@ -309,11 +309,11 @@ const Index = () => {
                     <button
                       type="button"
                       onClick={() => setPostTypeTooltipOpen((open) => !open)}
-                      className="inline-flex h-5 shrink-0 items-center justify-center gap-1 rounded-full border border-amber-400/45 bg-amber-400/15 px-1 text-[7px] font-black uppercase leading-none tracking-tight text-white shadow-[0_0_18px_rgba(245,158,11,0.18)] transition-colors hover:border-amber-300/70 hover:bg-amber-400/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 sm:h-6 sm:px-1.5 sm:text-[9px]"
+                      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-amber-400/45 bg-amber-400/15 text-white shadow-[0_0_18px_rgba(245,158,11,0.18)] transition-colors hover:border-amber-300/70 hover:bg-amber-400/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 sm:h-6 sm:w-auto sm:gap-1 sm:px-1.5"
                       aria-label="Post type explanations"
                     >
                       <Info className="h-3 w-3" />
-                      Info
+                      <span className="hidden text-[9px] font-black uppercase leading-none tracking-tight sm:inline">Info</span>
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" align="end" className="max-w-[290px] border-amber-400/30 bg-[#080b12]/95 px-4 py-3 text-xs leading-5 text-white shadow-2xl shadow-amber-500/15 backdrop-blur-xl">

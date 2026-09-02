@@ -35,6 +35,12 @@ const RECURRING_WIRE_SLOTS: RecurringWireSlot[] = [
   },
 ];
 
+const MOBILE_RECURRING_LABELS: Record<RecurringWireSlot['type'], string> = {
+  'DAILY WIRE': 'DAILY',
+  'WEEKLY WIRE': 'WEEKLY',
+  'FORWARD WIRE': 'FWD',
+};
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
 
@@ -60,16 +66,16 @@ function getNextRecurringTimestamp(slot: RecurringWireSlot, nowMs: number): numb
   return nextSlotMs > nowMs ? nextSlotMs : nextSlotMs + WEEK_MS;
 }
 
-function formatCountdown(targetMs: number, nowMs: number): string {
+function formatCountdown(targetMs: number, nowMs: number, compact = false): string {
   const totalSeconds = Math.max(0, Math.floor((targetMs - nowMs) / 1000));
   const days = Math.floor(totalSeconds / 86400);
   const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
-  if (days > 0) return `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
-  if (hours > 0) return `${hours}h ${pad(minutes)}m ${pad(seconds)}s`;
-  if (minutes > 0) return `${minutes}m ${pad(seconds)}s`;
+  if (days > 0) return compact ? `${days}d ${pad(hours)}h` : `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+  if (hours > 0) return compact ? `${hours}h ${pad(minutes)}m` : `${hours}h ${pad(minutes)}m ${pad(seconds)}s`;
+  if (minutes > 0) return compact ? `${minutes}m` : `${minutes}m ${pad(seconds)}s`;
   return `${pad(seconds)}s`;
 }
 
@@ -203,21 +209,23 @@ export function WireSchedule() {
       </div>
 
       {/* Recurring wire countdowns */}
-      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-1 overflow-x-auto scrollbar-none sm:gap-1.5">
         {RECURRING_WIRE_SLOTS.map((slot) => {
           const nextTimestampMs = getNextRecurringTimestamp(slot, nowMs);
           return (
             <div
               key={slot.type}
               className={cn(
-                'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 text-[8px] font-bold uppercase tracking-wide sm:text-[9px]',
+                'inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[7px] font-bold uppercase leading-none tracking-tight sm:gap-1.5 sm:px-2 sm:py-1 sm:text-[9px] sm:tracking-wide',
                 slot.accentClassName,
               )}
               title={`${slot.type} · ${new Date(nextTimestampMs).toUTCString()}`}
             >
-              <span>{slot.type}</span>
+              <span className="sm:hidden">{MOBILE_RECURRING_LABELS[slot.type]}</span>
+              <span className="hidden sm:inline">{slot.type}</span>
               <span className="tabular-nums font-semibold normal-case text-current/85">
-                {formatCountdown(nextTimestampMs, nowMs)}
+                <span className="sm:hidden">{formatCountdown(nextTimestampMs, nowMs, true)}</span>
+                <span className="hidden sm:inline">{formatCountdown(nextTimestampMs, nowMs)}</span>
               </span>
             </div>
           );
