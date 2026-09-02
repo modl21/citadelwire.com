@@ -20,12 +20,45 @@ export const CITADEL_FEED_RELAYS = [
   'wss://antiprimal.net',
 ];
 
-export type PostType = 'standard' | 'live-wire' | 'code-wire';
+export type PostType = 'standard' | 'live-wire' | 'code-wire' | 'daily-wire' | 'weekly-wire' | 'forward-wire';
 
 export function getPostType(event: NostrEvent): PostType {
   const tags = event.tags.map((tag) => tag[1]?.toLowerCase()).filter(Boolean);
   const firstLine = event.content.split('\n')[0]?.toLowerCase() ?? '';
   const contentStart = event.content.trimStart().toLowerCase();
+
+  if (
+    tags.includes('daily-wire') ||
+    tags.includes('dailywire') ||
+    firstLine.includes('daily wire') ||
+    firstLine.includes('dailywire') ||
+    contentStart.startsWith('daily wire') ||
+    contentStart.startsWith('dailywire')
+  ) {
+    return 'daily-wire';
+  }
+
+  if (
+    tags.includes('weekly-wire') ||
+    tags.includes('weeklywire') ||
+    firstLine.includes('weekly wire') ||
+    firstLine.includes('weeklywire') ||
+    contentStart.startsWith('weekly wire') ||
+    contentStart.startsWith('weeklywire')
+  ) {
+    return 'weekly-wire';
+  }
+
+  if (
+    tags.includes('forward-wire') ||
+    tags.includes('forwardwire') ||
+    firstLine.includes('forward wire') ||
+    firstLine.includes('forwardwire') ||
+    contentStart.startsWith('forward wire') ||
+    contentStart.startsWith('forwardwire')
+  ) {
+    return 'forward-wire';
+  }
 
   if (
     tags.includes('code-wire') ||

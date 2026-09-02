@@ -26,6 +26,9 @@ const POST_TYPE_FILTERS: { type: PostType; label: string }[] = [
   { type: 'standard', label: 'MAIN WIRE' },
   { type: 'live-wire', label: 'LIVE WIRE' },
   { type: 'code-wire', label: 'CODE WIRE' },
+  { type: 'daily-wire', label: 'DAILY WIRE' },
+  { type: 'weekly-wire', label: 'WEEKLY WIRE' },
+  { type: 'forward-wire', label: 'FORWARD WIRE' },
 ];
 const POST_TYPE_FILTER_STORAGE_KEY = 'citadel-wire:visible-post-types';
 
@@ -317,6 +320,9 @@ const Index = () => {
                               <p><span className="font-black text-amber-200">MAIN WIRE</span> 120+ global sources.</p>
                               <p><span className="font-black text-sky-200">LIVE WIRE</span> breaking news detection.</p>
                               <p><span className="font-black text-emerald-200">CODE WIRE</span> 400+ open source projects.</p>
+                              <p><span className="font-black text-orange-200">DAILY WIRE</span> concise prior-24-hour news and releases at 21:30 UTC.</p>
+                              <p><span className="font-black text-purple-200">WEEKLY WIRE</span> seven-day developments and releases, Fridays at 22:00 UTC.</p>
+                              <p><span className="font-black text-rose-200">FORWARD WIRE</span> seven-day review and calibrated look ahead, Mondays at 11:00 UTC.</p>
                             </div>
                           </TooltipContent>
                         </Tooltip>

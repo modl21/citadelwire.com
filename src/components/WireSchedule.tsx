@@ -4,6 +4,72 @@ import { cn } from '@/lib/utils';
 
 const SCHEDULE_HOURS = [0, 3, 6, 9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
 
+interface RecurringWireSlot {
+  type: 'DAILY WIRE' | 'WEEKLY WIRE' | 'FORWARD WIRE';
+  hour: number;
+  minute: number;
+  weekday?: number; // UTC day of week, where Sunday is 0
+}
+
+const RECURRING_WIRE_SLOTS: RecurringWireSlot[] = [
+  { type: 'FORWARD WIRE', weekday: 1, hour: 11, minute: 0 },
+  { type: 'DAILY WIRE', hour: 21, minute: 30 },
+  { type: 'WEEKLY WIRE', weekday: 5, hour: 22, minute: 0 },
+];
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+interface ScheduleSlot {
+  label: string;
+  timestampMs: number;
+  accentClassName: string;
+}
+
+function pad(n: number) {
+  return n.toString().padStart(2, '0');
+}
+
+function startOfUtcDay(date: Date): number {
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+function getSlotTimestampMs(slot: RecurringWireSlot, dayStartMs: number): number {
+  return dayStartMs + slot.hour * 60 * 60 * 1000 + slot.minute * 60 * 1000;
+}
+
+function isSlotOnDate(slot: RecurringWireSlot, dayStartMs: number): boolean {
+  return slot.weekday === undefined || new Date(dayStartMs).getUTCDay() === slot.weekday;
+}
+
+function getRecurringWireSlots(nowMs: number): ScheduleSlot[] {
+  const now = new Date(nowMs);
+  const todayStartMs = startOfUtcDay(now);
+  const slotAccentClassNames: Record<RecurringWireSlot['type'], string> = {
+    'DAILY WIRE': 'border-orange-400/40 bg-orange-400/15 text-orange-300',
+    'WEEKLY WIRE': 'border-purple-400/40 bg-purple-400/15 text-purple-300',
+    'FORWARD WIRE': 'border-rose-400/40 bg-rose-400/15 text-rose-300',
+  };
+
+  return RECURRING_WIRE_SLOTS.flatMap((slot) =>
+    Array.from({ length: 2 }, (_, dayOffset) => todayStartMs + dayOffset * DAY_MS)
+      .filter((dayStartMs) => isSlotOnDate(slot, dayStartMs))
+      .map((dayStartMs) => ({
+        label: slot.type,
+        timestampMs: getSlotTimestampMs(slot, dayStartMs),
+        accentClassName: slotAccentClassNames[slot.type],
+      })),
+  );
+}
+
+function getNextRecurringSlot(nowMs: number): ScheduleSlot {
+  const upcomingSlots = getRecurringWireSlots(nowMs).filter((slot) => slot.timestampMs > nowMs);
+  return upcomingSlots.sort((a, b) => a.timestampMs - b.timestampMs)[0] ?? {
+    label: 'DAILY WIRE',
+    timestampMs: nowMs + DAY_MS,
+    accentClassName: 'border-orange-400/40 bg-orange-400/15 text-orange-300',
+  };
+}
+
 interface ScheduleState {
   nextHour: number;
   minutesUntilNext: number;
@@ -55,10 +121,6 @@ function getScheduleState(now: Date): ScheduleState {
   };
 }
 
-function pad(n: number) {
-  return n.toString().padStart(2, '0');
-}
-
 export function WireSchedule() {
   const [state, setState] = useState<ScheduleState>(() => getScheduleState(new Date()));
 
@@ -80,6 +142,8 @@ export function WireSchedule() {
   }, []);
 
   const { nextHour, minutesUntilNext, secondsUntilNext, currentHourIndex } = state;
+  const recurringSlots = getRecurringWireSlots(Date.now());
+  const nextRecurringSlot = getNextRecurringSlot(Date.now());
 
   return (
     <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -113,6 +177,25 @@ export function WireSchedule() {
               )}
             >
               {pad(hour)}
+            </span>
+          );
+        })}
+
+        <div className="mx-1 h-3 w-px shrink-0 bg-border/40" aria-hidden="true" />
+
+        {recurringSlots.map((slot) => {
+          const isNext = slot.timestampMs === nextRecurringSlot.timestampMs;
+          return (
+            <span
+              key={`${slot.label}-${slot.timestampMs}`}
+              title={`${slot.label} · ${new Date(slot.timestampMs).toUTCString()}`}
+              className={cn(
+                'shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide transition-all duration-500',
+                slot.accentClassName,
+                isNext && 'ring-1 ring-current',
+              )}
+            >
+              {slot.label}
             </span>
           );
         })}
