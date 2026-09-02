@@ -283,7 +283,7 @@ const Index = () => {
           <main>
             <div className="px-4 sm:px-6 py-2.5 border-b border-border/30">
               <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none" aria-label="Post type filters">
-                <span className="shrink-0 text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider mr-1">
+                <span className="shrink-0 text-[8px] font-semibold text-muted-foreground/50 uppercase tracking-wider mr-0.5 sm:text-[9px]">
                   Show
                 </span>
                 {POST_TYPE_FILTERS.map(({ type, label }) => {
@@ -294,7 +294,7 @@ const Index = () => {
                       type="button"
                       onClick={() => togglePostType(type)}
                       aria-pressed={isActive}
-                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-none transition-colors sm:px-2.5 sm:py-1 sm:text-[10px] ${
+                      className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[7px] font-semibold leading-none tracking-tight transition-colors sm:px-2 sm:py-0.5 sm:text-[9px] ${
                         isActive
                           ? 'border-amber-500/40 bg-amber-500/15 text-amber-300'
                           : 'border-border/40 bg-muted/20 text-muted-foreground/50 hover:bg-muted/40 hover:text-muted-foreground/80'
@@ -309,7 +309,7 @@ const Index = () => {
                     <button
                       type="button"
                       onClick={() => setPostTypeTooltipOpen((open) => !open)}
-                      className="inline-flex h-5 shrink-0 items-center justify-center gap-1 rounded-full border border-amber-400/45 bg-amber-400/15 px-1.5 text-[8px] font-black uppercase tracking-wide text-white shadow-[0_0_18px_rgba(245,158,11,0.18)] transition-colors hover:border-amber-300/70 hover:bg-amber-400/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 sm:h-6 sm:px-2 sm:text-[10px]"
+                      className="inline-flex h-5 shrink-0 items-center justify-center gap-1 rounded-full border border-amber-400/45 bg-amber-400/15 px-1 text-[7px] font-black uppercase leading-none tracking-tight text-white shadow-[0_0_18px_rgba(245,158,11,0.18)] transition-colors hover:border-amber-300/70 hover:bg-amber-400/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 sm:h-6 sm:px-1.5 sm:text-[9px]"
                       aria-label="Post type explanations"
                     >
                       <Info className="h-3 w-3" />
@@ -321,9 +321,9 @@ const Index = () => {
                       <p><span className="font-black text-amber-200">MAIN WIRE</span> 120+ global sources.</p>
                       <p><span className="font-black text-sky-200">LIVE WIRE</span> breaking news detection.</p>
                       <p><span className="font-black text-emerald-200">CODE WIRE</span> 400+ open source projects.</p>
-                      <p><span className="font-black text-orange-200">DAILY WIRE</span> concise prior-24-hour news and releases at 21:30 UTC.</p>
-                      <p><span className="font-black text-purple-200">WEEKLY WIRE</span> seven-day developments and releases, Fridays at 22:00 UTC.</p>
-                      <p><span className="font-black text-rose-200">FORWARD WIRE</span> seven-day review and calibrated look ahead, Mondays at 11:00 UTC.</p>
+                      <p><span className="font-black text-orange-200">DAILY WIRE</span> concise daily review at 21:30 UTC.</p>
+                      <p><span className="font-black text-purple-200">WEEKLY WIRE</span> concise weekly review, Fridays at 22:00 UTC.</p>
+                      <p><span className="font-black text-rose-200">FORWARD WIRE</span> calibrated look ahead, Mondays at 11:00 UTC.</p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
