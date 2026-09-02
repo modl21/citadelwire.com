@@ -60,16 +60,16 @@ function getNextRecurringTimestamp(slot: RecurringWireSlot, nowMs: number): numb
   return nextSlotMs > nowMs ? nextSlotMs : nextSlotMs + WEEK_MS;
 }
 
-function formatCountdown(targetMs: number, nowMs: number, compact = false): string {
+function formatCountdown(targetMs: number, nowMs: number): string {
   const totalSeconds = Math.max(0, Math.floor((targetMs - nowMs) / 1000));
   const days = Math.floor(totalSeconds / 86400);
   const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
-  if (days > 0) return compact ? `${days}d ${pad(hours)}h` : `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
-  if (hours > 0) return compact ? `${hours}h ${pad(minutes)}m` : `${hours}h ${pad(minutes)}m ${pad(seconds)}s`;
-  if (minutes > 0) return compact ? `${minutes}m` : `${minutes}m ${pad(seconds)}s`;
+  if (days > 0) return `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+  if (hours > 0) return `${hours}h ${pad(minutes)}m ${pad(seconds)}s`;
+  if (minutes > 0) return `${minutes}m ${pad(seconds)}s`;
   return `${pad(seconds)}s`;
 }
 
@@ -217,8 +217,7 @@ export function WireSchedule() {
             >
               <span>{slot.type}</span>
               <span className="tabular-nums font-semibold normal-case text-current/85">
-                <span className="sm:hidden">{formatCountdown(nextTimestampMs, nowMs, true)}</span>
-                <span className="hidden sm:inline">{formatCountdown(nextTimestampMs, nowMs)}</span>
+                {formatCountdown(nextTimestampMs, nowMs)}
               </span>
             </div>
           );
