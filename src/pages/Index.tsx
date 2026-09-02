@@ -5,7 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { PostCard } from '@/components/PostCard';
 import { PodcastLineup } from '@/components/PodcastLineup';
 import { TickerBar } from '@/components/TickerBar';
-import { getPostType, useCitadelFeed, CITADEL_PUBKEY, type PostType } from '@/hooks/useCitadelFeed';
+import { getPostType, useCitadelFeed, CITADEL_FEED_LIMIT, CITADEL_PUBKEY, type PostType } from '@/hooks/useCitadelFeed';
 import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
 import { usePageViewCount, HOME_PAGE_VIEW_ID } from '@/hooks/usePageViewCount';
@@ -95,7 +95,7 @@ const Index = () => {
     HOME_PAGE_VIEW_ID,
     typeof window === 'undefined' ? 'https://wire.shakespeare.wtf/' : window.location.href,
   );
-  const visiblePosts = useMemo(() => posts?.slice(0, 60) ?? [], [posts]);
+  const visiblePosts = useMemo(() => posts?.slice(0, CITADEL_FEED_LIMIT) ?? [], [posts]);
   const filteredPosts = useMemo(
     () => visiblePosts.filter((post) => visiblePostTypes.has(getPostType(post))),
     [visiblePosts, visiblePostTypes],

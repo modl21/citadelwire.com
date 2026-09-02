@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { readCachedCitadelPosts, writeCachedCitadelPosts } from '@/lib/citadelFeedStore';
 
 /** The pubkey for CITADEL WIRE */
 export const CITADEL_PUBKEY = '01d077c7b21bfee89a6883edabcd408ef324e9ab431f46bf57d5860430bcb97c';
@@ -19,6 +20,8 @@ export const CITADEL_FEED_RELAYS = [
   'wss://relay.damus.io',
   'wss://antiprimal.net',
 ];
+
+export const CITADEL_FEED_LIMIT = 2400;
 
 export type PostType = 'standard' | 'live-wire' | 'code-wire' | 'daily-wire' | 'weekly-wire' | 'forward-wire';
 
@@ -93,17 +96,29 @@ export function useCitadelFeed() {
   const query = useQuery<NostrEvent[]>({
     queryKey: ['citadel-feed', CITADEL_FEED_RELAYS],
     queryFn: async () => {
+      const cachedPosts = await readCachedCitadelPosts();
+      const newestCachedAt = cachedPosts[0]?.created_at;
+
       const events = await relayGroup.query([
         {
           kinds: [1],
           authors: [CITADEL_PUBKEY],
-           limit: 60,
+          ...(newestCachedAt ? { since: newestCachedAt + 1 } : { limit: CITADEL_FEED_LIMIT }),
         },
       ]);
 
+      const mergedEvents = new Map<string, NostrEvent>();
+      for (const event of cachedPosts) mergedEvents.set(event.id, event);
+      for (const event of events) mergedEvents.set(event.id, event);
+
       // Sort chronologically — newest first
-      return events.sort((a, b) => b.created_at - a.created_at);
+      const sortedEvents = Array.from(mergedEvents.values())
+        .sort((a, b) => b.created_at - a.created_at)
+        .slice(0, CITADEL_FEED_LIMIT);
+      await writeCachedCitadelPosts(sortedEvents);
+      return sortedEvents;
     },
+    placeholderData: (previousData) => previousData,
     staleTime: 60 * 1000, // 1 minute
     gcTime: 10 * 60 * 1000,
     retry: 1,
