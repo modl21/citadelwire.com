@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
-import { readCachedCitadelPosts, writeCachedCitadelPosts } from '@/lib/citadelFeedStore';
+import { readCachedCitadelFeedState, readCachedCitadelPosts, writeCachedCitadelPosts } from '@/lib/citadelFeedStore';
 
 /** The pubkey for CITADEL WIRE */
 export const CITADEL_PUBKEY = '01d077c7b21bfee89a6883edabcd408ef324e9ab431f46bf57d5860430bcb97c';
@@ -96,26 +96,32 @@ export function useCitadelFeed() {
   const query = useQuery<NostrEvent[]>({
     queryKey: ['citadel-feed', CITADEL_FEED_RELAYS],
     queryFn: async () => {
-      const cachedPosts = await readCachedCitadelPosts();
+      const [cachedPosts, cachedState] = await Promise.all([
+        readCachedCitadelPosts(),
+        readCachedCitadelFeedState(),
+      ]);
       const newestCachedAt = cachedPosts[0]?.created_at;
+      const shouldIncrementalSync = typeof newestCachedAt === 'number' && cachedState?.hasFullHistory === true;
 
       const events = await relayGroup.query([
         {
           kinds: [1],
           authors: [CITADEL_PUBKEY],
-          ...(newestCachedAt ? { since: newestCachedAt + 1 } : { limit: CITADEL_FEED_LIMIT }),
+          ...(shouldIncrementalSync ? { since: newestCachedAt + 1 } : { limit: CITADEL_FEED_LIMIT }),
         },
       ]);
 
       const mergedEvents = new Map<string, NostrEvent>();
-      for (const event of cachedPosts) mergedEvents.set(event.id, event);
+      if (shouldIncrementalSync) {
+        for (const event of cachedPosts) mergedEvents.set(event.id, event);
+      }
       for (const event of events) mergedEvents.set(event.id, event);
 
       // Sort chronologically — newest first
       const sortedEvents = Array.from(mergedEvents.values())
         .sort((a, b) => b.created_at - a.created_at)
         .slice(0, CITADEL_FEED_LIMIT);
-      await writeCachedCitadelPosts(sortedEvents);
+      await writeCachedCitadelPosts(sortedEvents, true);
       return sortedEvents;
     },
     placeholderData: (previousData) => previousData,
