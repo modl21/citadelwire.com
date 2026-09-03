@@ -25,6 +25,7 @@ import type { NUser } from '@nostrify/react/login';
 import QRCode from 'qrcode';
 
 const LIGHTNING_ADDRESS = 'wire@primal.net';
+const MONERO_ADDRESS = '8ApUq9t1xVpUP6fPWgePGQKPZfJWuTuoT7W5GiQk4SQnXpGHivsRo2tHbJ8czD66249Ggn1bte4ZoDdsYWve1kAo6Ldy9MS';
 const ZAP_POLL_INTERVAL_MS = 3000;
 const ZAP_POLL_MAX_DURATION_MS = 10 * 60 * 1000; // stop polling after 10 minutes
 const ZAP_RELAYS = [
@@ -188,6 +189,16 @@ function DonateContent({
     await recordSupporter(invoiceSupporterPubkey, completedAmount, invoice);
     setDonationCompleted(true);
     setTimeout(() => window.location.reload(), 2000);
+  };
+
+  const handleMoneroDonate = async () => {
+    try {
+      await navigator.clipboard.writeText(MONERO_ADDRESS);
+      toast({ title: 'Monero address copied', description: 'Opening your Monero wallet...' });
+    } catch {
+      toast({ title: 'Monero', description: 'Opening your Monero wallet...' });
+    }
+    window.open(`monero:${MONERO_ADDRESS}`, '_blank', 'noopener,noreferrer');
   };
 
   // Poll for zap receipt (kind 9735) matching the invoice
@@ -394,7 +405,16 @@ function DonateContent({
 
       <Button onClick={handleGetInvoice} className="w-full" disabled={isLoading}>
         <Zap className="h-4 w-4 mr-2" />
-        {isLoading ? 'Getting invoice...' : 'Donate'}
+        {isLoading ? 'Getting invoice...' : 'Donate Bitcoin'}
+      </Button>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        onClick={handleMoneroDonate}
+      >
+        Donate Monero
       </Button>
     </div>
   );
