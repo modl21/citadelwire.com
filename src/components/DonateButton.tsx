@@ -120,6 +120,9 @@ function DonateContent({
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showMonero, setShowMonero] = useState(false);
+  const [moneroQrCodeUrl, setMoneroQrCodeUrl] = useState('');
+  const [moneroCopied, setMoneroCopied] = useState(false);
   const [donationCompleted, setDonationCompleted] = useState(false);
   const [completedAmount, setCompletedAmount] = useState(0);
   const [invoiceSupporterPubkey, setInvoiceSupporterPubkey] = useState<string | null>(null);
@@ -191,14 +194,16 @@ function DonateContent({
     setTimeout(() => window.location.reload(), 2000);
   };
 
-  const handleMoneroDonate = async () => {
-    try {
-      await navigator.clipboard.writeText(MONERO_ADDRESS);
-      toast({ title: 'Monero address copied', description: 'Opening your Monero wallet...' });
-    } catch {
-      toast({ title: 'Monero', description: 'Opening your Monero wallet...' });
-    }
-    window.open(`monero:${MONERO_ADDRESS}`, '_blank', 'noopener,noreferrer');
+  const handleMoneroDonate = () => {
+    setShowMonero(true);
+    setMoneroCopied(false);
+  };
+
+  const handleCopyMonero = async () => {
+    await navigator.clipboard.writeText(MONERO_ADDRESS);
+    setMoneroCopied(true);
+    toast({ title: 'Copied!', description: 'Monero address copied to clipboard' });
+    setTimeout(() => setMoneroCopied(false), 2000);
   };
 
   // Poll for zap receipt (kind 9735) matching the invoice
@@ -297,11 +302,77 @@ function DonateContent({
     return () => { cancelled = true; };
   }, [invoice]);
 
+  // Generate the Monero QR code when that donation view opens
+  useEffect(() => {
+    if (!showMonero) {
+      setMoneroQrCodeUrl('');
+      return;
+    }
+    let cancelled = false;
+    QRCode.toDataURL(`monero:${MONERO_ADDRESS}`, {
+      width: 400,
+      margin: 2,
+      color: { dark: '#000000', light: '#FFFFFF' },
+    }).then((url) => {
+      if (!cancelled) setMoneroQrCodeUrl(url);
+    });
+    return () => { cancelled = true; };
+  }, [showMonero]);
+
   if (donationCompleted) {
     return (
       <div className="py-8 px-1 text-center space-y-3">
         <div className="text-4xl">🧡</div>
         <p className="text-sm text-muted-foreground">Thank you for supporting CITADEL WIRE!</p>
+      </div>
+    );
+  }
+
+  if (showMonero) {
+    return (
+      <div className="space-y-4 px-1">
+        <div className="text-center">
+          <span className="text-2xl font-bold">XMR</span>
+          <span className="text-muted-foreground ml-1.5 text-sm">Monero</span>
+        </div>
+
+        <div className="flex justify-center">
+          <div className="bg-white rounded-xl p-2.5 shadow-sm">
+            {moneroQrCodeUrl ? (
+              <img src={moneroQrCodeUrl} alt="Monero QR" className="w-52 h-52 sm:w-56 sm:h-56" />
+            ) : (
+              <div className="w-52 h-52 sm:w-56 sm:h-56 bg-muted animate-pulse rounded" />
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Input
+            value={MONERO_ADDRESS}
+            readOnly
+            className="font-mono text-[11px] flex-1 min-w-0"
+            onClick={(e) => e.currentTarget.select()}
+          />
+          <Button variant="outline" size="icon" onClick={handleCopyMonero} className="shrink-0">
+            {moneroCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+          </Button>
+        </div>
+
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => window.open(`monero:${MONERO_ADDRESS}`, '_blank', 'noopener,noreferrer')}
+        >
+          <ExternalLink className="h-4 w-4 mr-2" />
+          Open in Wallet
+        </Button>
+
+        <button
+          onClick={() => setShowMonero(false)}
+          className="text-xs text-muted-foreground/50 hover:text-muted-foreground w-full text-center transition-colors"
+        >
+          Back to Bitcoin donation
+        </button>
       </div>
     );
   }
