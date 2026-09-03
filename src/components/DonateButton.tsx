@@ -26,6 +26,27 @@ import QRCode from 'qrcode';
 
 const LIGHTNING_ADDRESS = 'wire@primal.net';
 const MONERO_ADDRESS = '8ApUq9t1xVpUP6fPWgePGQKPZfJWuTuoT7W5GiQk4SQnXpGHivsRo2tHbJ8czD66249Ggn1bte4ZoDdsYWve1kAo6Ldy9MS';
+
+function MoneroIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 256 256"
+      aria-hidden="true"
+      className={className}
+      fill="currentColor"
+    >
+      <circle cx="128" cy="128" r="128" fill="#F2682A" />
+      <path
+        fill="#FFFFFF"
+        d="M128 34c-52 0-94 42-94 94v44h40v-44c0-30 24-54 54-54s54 24 54 54v44h40v-44c0-52-42-94-94-94Z"
+      />
+      <path
+        fill="#FFFFFF"
+        d="M66 168h36v28H66zm88 0h36v28h-36z"
+      />
+    </svg>
+  );
+}
 const ZAP_POLL_INTERVAL_MS = 3000;
 const ZAP_POLL_MAX_DURATION_MS = 10 * 60 * 1000; // stop polling after 10 minutes
 const ZAP_RELAYS = [
@@ -485,6 +506,7 @@ function DonateContent({
         className="w-full"
         onClick={handleMoneroDonate}
       >
+        <MoneroIcon className="h-4 w-4 mr-2" />
         Donate Monero
       </Button>
     </div>
