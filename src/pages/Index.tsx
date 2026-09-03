@@ -341,8 +341,8 @@ const Index = () => {
                   type="search"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search posts"
-                  aria-label="Search posts"
+                  placeholder="Search last 500 posts"
+                  aria-label="Search last 500 posts"
                   title="Searches only the most recent 500 posts"
                   className="h-5 min-w-0 flex-1 border-0 bg-transparent p-0 text-[10px] text-foreground/85 outline-none ring-0 placeholder:text-muted-foreground/35 focus:outline-none focus:ring-0 sm:text-[11px]"
                 />
@@ -357,9 +357,6 @@ const Index = () => {
                   </button>
                 )}
               </div>
-              <p className="mt-0.5 text-[8px] text-muted-foreground/35">
-                Searches only the most recent 500 posts
-              </p>
             </div>
             {isLoading ? (
               <div>
