@@ -9,7 +9,7 @@ import { getPostType, useCitadelFeed, CITADEL_FEED_LIMIT, CITADEL_PUBKEY, type P
 import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
 import { usePageViewCount, HOME_PAGE_VIEW_ID } from '@/hooks/usePageViewCount';
-import { Globe, RefreshCw, Rss, Eye, Radio, Info, Moon, Sun } from 'lucide-react';
+import { Globe, RefreshCw, Rss, Eye, Radio, Info, Moon, Sun, Search } from 'lucide-react';
 import { WireSchedule } from '@/components/WireSchedule';
 import { PolymarketSection } from '@/components/PolymarketSection';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -87,6 +87,7 @@ const Index = () => {
   const { data: posts, isLoading, isError, refetch } = useCitadelFeed();
   const [visiblePostTypes, setVisiblePostTypes] = useState<Set<PostType>>(() => getStoredVisiblePostTypes());
   const [postTypeTooltipOpen, setPostTypeTooltipOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { theme, setTheme } = useTheme();
   const isLightMode = theme === 'light';
   const author = useAuthor(CITADEL_PUBKEY);
@@ -96,9 +97,14 @@ const Index = () => {
     typeof window === 'undefined' ? 'https://wire.shakespeare.wtf/' : window.location.href,
   );
   const visiblePosts = useMemo(() => posts?.slice(0, CITADEL_FEED_LIMIT) ?? [], [posts]);
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const filteredPosts = useMemo(
-    () => visiblePosts.filter((post) => visiblePostTypes.has(getPostType(post))),
-    [visiblePosts, visiblePostTypes],
+    () => visiblePosts.filter((post) => {
+      if (!visiblePostTypes.has(getPostType(post))) return false;
+      if (!normalizedSearchQuery) return true;
+      return post.content.toLowerCase().includes(normalizedSearchQuery);
+    }),
+    [visiblePosts, visiblePostTypes, normalizedSearchQuery],
   );
 
   const togglePostType = (type: PostType) => {
@@ -327,6 +333,28 @@ const Index = () => {
                     </div>
                   </TooltipContent>
                 </Tooltip>
+              </div>
+
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <Search className="h-3 w-3 shrink-0 text-muted-foreground/40" />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search posts"
+                  aria-label="Search posts"
+                  className="h-5 min-w-0 flex-1 border-0 bg-transparent p-0 text-[10px] text-foreground/85 outline-none ring-0 placeholder:text-muted-foreground/35 focus:outline-none focus:ring-0 sm:text-[11px]"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="shrink-0 rounded-full px-1 text-[8px] font-semibold uppercase tracking-wide text-muted-foreground/45 transition-colors hover:bg-muted/40 hover:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40"
+                    aria-label="Clear post search"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
             </div>
             {isLoading ? (
