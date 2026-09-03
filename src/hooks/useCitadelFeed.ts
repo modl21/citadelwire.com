@@ -21,7 +21,7 @@ export const CITADEL_FEED_RELAYS = [
   'wss://antiprimal.net',
 ];
 
-export const CITADEL_FEED_LIMIT = 2400;
+export const CITADEL_FEED_LIMIT = 1000;
 
 export type PostType = 'standard' | 'live-wire' | 'code-wire' | 'daily-wire' | 'weekly-wire' | 'forward-wire';
 
