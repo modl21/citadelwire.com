@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { Zap, Copy, Check, ExternalLink, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -127,7 +127,7 @@ async function fetchInvoice(amountSats: number, comment?: string, signer?: NUser
   return invoiceData.pr;
 }
 
-function DonateContent({
+const DonateContent = memo(function DonateContent({
   onClose,
 }: {
   onClose: () => void;
@@ -511,7 +511,7 @@ function DonateContent({
       </Button>
     </div>
   );
-}
+});
 
 export function DonateButton() {
   const [open, setOpen] = useState(false);
@@ -528,7 +528,11 @@ export function DonateButton() {
           Donate
         </button>
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetContent side="bottom" className="rounded-t-2xl max-h-[90dvh] overflow-y-auto">
+          <SheetContent
+            side="bottom"
+            className="rounded-t-2xl max-h-[90dvh] overflow-y-auto will-change-transform"
+            onOpenAutoFocus={(event) => event.preventDefault()}
+          >
             <SheetHeader className="text-center pb-2">
               <SheetTitle>Support CITADEL WIRE</SheetTitle>
             </SheetHeader>
@@ -551,7 +555,10 @@ export function DonateButton() {
         Donate
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent
+          className="sm:max-w-[400px] will-change-transform"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Support CITADEL WIRE</DialogTitle>
           </DialogHeader>
