@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { usePolymarkets, type ParsedMarket } from '@/hooks/usePolymarkets';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TrendingUp, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 function formatVolume(usd: number): string {
   if (usd >= 1_000_000) return `$${(usd / 1_000_000).toFixed(1)}M`;
@@ -70,19 +70,6 @@ export function PolymarketSection() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-2.5 border-b border-border/30">
-      {/* Section header */}
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-1.5">
-          <TrendingUp className="h-3 w-3 text-amber-400" />
-          <span className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider">
-            Prediction Markets
-          </span>
-        </div>
-        <span className="text-[9px] text-muted-foreground/30 font-medium">
-          via Polymarket
-        </span>
-      </div>
-
       {/* Always-visible preview markets */}
       <div className="-mx-3 sm:-mx-4">
         {isLoading ? (
