@@ -24,7 +24,7 @@ import { useNostr } from '@nostrify/react';
 import type { NUser } from '@nostrify/react/login';
 import QRCode from 'qrcode';
 
-const LIGHTNING_ADDRESS = 'wire@primal.net';
+const LIGHTNING_ADDRESS = 'odellxyz@lexe.app';
 const MONERO_ADDRESS = '8ApUq9t1xVpUP6fPWgePGQKPZfJWuTuoT7W5GiQk4SQnXpGHivsRo2tHbJ8czD66249Ggn1bte4ZoDdsYWve1kAo6Ldy9MS';
 const CRYPTO_DONATION_URL = 'https://trocador.app/anonpay/?ticker_to=xmr&network_to=Mainnet&address=8ApUq9t1xVpUP6fPWgePGQKPZfJWuTuoT7W5GiQk4SQnXpGHivsRo2tHbJ8czD66249Ggn1bte4ZoDdsYWve1kAo6Ldy9MS&fiat_equiv=USD&name=Donate&description=Support+Wire&ticker_from=usdc&network_from=base&bgcolor=00000000';
 
@@ -70,6 +70,11 @@ interface LnurlPayEndpoint {
   commentAllowed?: number;
 }
 
+interface LightningInvoice {
+  pr: string;
+  verify?: string;
+}
+
 async function resolveLnurlEndpoint(): Promise<LnurlPayEndpoint> {
   const [name, domain] = LIGHTNING_ADDRESS.split('@');
   const url = `https://${domain}/.well-known/lnurlp/${name}`;
@@ -78,7 +83,7 @@ async function resolveLnurlEndpoint(): Promise<LnurlPayEndpoint> {
   return res.json();
 }
 
-async function fetchInvoice(amountSats: number, comment?: string, signer?: NUser): Promise<string> {
+async function fetchInvoice(amountSats: number, comment?: string, signer?: NUser): Promise<LightningInvoice> {
   const data = await resolveLnurlEndpoint();
   if (!data.callback) throw new Error('No callback URL found');
 
@@ -125,7 +130,10 @@ async function fetchInvoice(amountSats: number, comment?: string, signer?: NUser
   const invoiceData = await invoiceRes.json();
 
   if (!invoiceData.pr) throw new Error('No invoice returned');
-  return invoiceData.pr;
+  return {
+    pr: invoiceData.pr,
+    verify: typeof invoiceData.verify === 'string' ? invoiceData.verify : undefined,
+  };
 }
 
 const DonateContent = memo(function DonateContent({
@@ -148,6 +156,7 @@ const DonateContent = memo(function DonateContent({
   const [donationCompleted, setDonationCompleted] = useState(false);
   const [completedAmount, setCompletedAmount] = useState(0);
   const [invoiceSupporterPubkey, setInvoiceSupporterPubkey] = useState<string | null>(null);
+  const [paymentVerifyUrl, setPaymentVerifyUrl] = useState<string | null>(null);
   const [zapDetected, setZapDetected] = useState(false);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollStartRef = useRef<number>(0);
@@ -180,18 +189,19 @@ const DonateContent = memo(function DonateContent({
         try {
           const webln = (window as Record<string, unknown>).webln as { enable: () => Promise<void>; sendPayment: (invoice: string) => Promise<void> };
           await webln.enable();
-          const pr = await fetchInvoice(finalAmount, memo, user);
-          await webln.sendPayment(pr);
+          const invoice = await fetchInvoice(finalAmount, memo, user);
+          await webln.sendPayment(invoice.pr);
           toast({ title: 'Donation sent!', description: `You sent ${finalAmount} sats. Thank you!` });
-          await recordSupporter(supporterPubkey, finalAmount, pr);
+          await recordSupporter(supporterPubkey, finalAmount, invoice.pr);
           onClose();
           return;
         } catch {
           // WebLN failed or was rejected, fall through to QR
         }
       }
-      const pr = await fetchInvoice(finalAmount, memo, user);
-      setInvoice(pr);
+      const invoice = await fetchInvoice(finalAmount, memo, user);
+      setInvoice(invoice.pr);
+      setPaymentVerifyUrl(invoice.verify ?? null);
       setCompletedAmount(finalAmount);
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
@@ -228,7 +238,7 @@ const DonateContent = memo(function DonateContent({
     setTimeout(() => setMoneroCopied(false), 2000);
   };
 
-  // Poll for zap receipt (kind 9735) matching the invoice
+  // Poll for zap receipt (kind 9735) or the provider's LNURL-verify endpoint
   useEffect(() => {
     if (!invoice) {
       if (pollTimerRef.current) {
@@ -240,7 +250,7 @@ const DonateContent = memo(function DonateContent({
 
     pollStartRef.current = Date.now();
 
-    const checkForZapReceipt = async () => {
+    const checkForPaymentConfirmation = async () => {
       // Stop polling after max duration
       if (Date.now() - pollStartRef.current > ZAP_POLL_MAX_DURATION_MS) {
         if (pollTimerRef.current) {
@@ -248,6 +258,35 @@ const DonateContent = memo(function DonateContent({
           pollTimerRef.current = null;
         }
         return;
+      }
+
+      if (paymentVerifyUrl) {
+        try {
+          const res = await fetch(paymentVerifyUrl, { cache: 'no-store' });
+          if (res.ok) {
+            const data: unknown = await res.json();
+            const settled = Boolean(
+              data &&
+              typeof data === 'object' &&
+              (
+                (data as { settled?: boolean }).settled === true ||
+                (data as { status?: string }).status === 'OK' &&
+                Boolean((data as { preimage?: string }).preimage)
+              ),
+            );
+
+            if (settled) {
+              setZapDetected(true);
+              if (pollTimerRef.current) {
+                clearInterval(pollTimerRef.current);
+                pollTimerRef.current = null;
+              }
+              return;
+            }
+          }
+        } catch {
+          // Silently ignore provider polling errors
+        }
       }
 
       try {
@@ -280,8 +319,8 @@ const DonateContent = memo(function DonateContent({
     };
 
     // Initial check after a short delay
-    const initialTimeout = setTimeout(checkForZapReceipt, 2000);
-    pollTimerRef.current = setInterval(checkForZapReceipt, ZAP_POLL_INTERVAL_MS);
+    const initialTimeout = setTimeout(checkForPaymentConfirmation, 2000);
+    pollTimerRef.current = setInterval(checkForPaymentConfirmation, ZAP_POLL_INTERVAL_MS);
 
     return () => {
       clearTimeout(initialTimeout);
@@ -290,7 +329,7 @@ const DonateContent = memo(function DonateContent({
         pollTimerRef.current = null;
       }
     };
-  }, [invoice, nostr]);
+  }, [invoice, paymentVerifyUrl, nostr]);
 
   // Auto-confirm when zap receipt is detected
   useEffect(() => {
@@ -454,7 +493,7 @@ const DonateContent = memo(function DonateContent({
         </Button>
 
         <button
-          onClick={() => { setInvoice(null); setInvoiceSupporterPubkey(null); setQrCodeUrl(''); setZapDetected(false); }}
+          onClick={() => { setInvoice(null); setInvoiceSupporterPubkey(null); setPaymentVerifyUrl(null); setQrCodeUrl(''); setZapDetected(false); }}
           className="text-xs text-muted-foreground/50 hover:text-muted-foreground w-full text-center transition-colors"
         >
           Change amount
