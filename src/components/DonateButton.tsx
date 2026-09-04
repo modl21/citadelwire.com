@@ -26,7 +26,7 @@ import QRCode from 'qrcode';
 
 const LIGHTNING_ADDRESS = 'wire@primal.net';
 const MONERO_ADDRESS = '8ApUq9t1xVpUP6fPWgePGQKPZfJWuTuoT7W5GiQk4SQnXpGHivsRo2tHbJ8czD66249Ggn1bte4ZoDdsYWve1kAo6Ldy9MS';
-const CRYPTO_DONATION_URL = 'https://trocador.app/anonpay/?ticker_to=xmr&network_to=Mainnet&address=8ApUq9t1xVpUP6fPWgePGQKPZfJWuTuoT7W5GiQk4SQnXpGHivsRo2tHbJ8czD66249Ggn1bte4ZoDdsYWve1kAo6Ldy9MS&fiat_equiv=USD&amount=21.0&name=Donate&description=Support+Wire&ticker_from=usdc&network_from=base&bgcolor=00000000';
+const CRYPTO_DONATION_URL = 'https://trocador.app/anonpay/?ticker_to=xmr&network_to=Mainnet&address=8ApUq9t1xVpUP6fPWgePGQKPZfJWuTuoT7W5GiQk4SQnXpGHivsRo2tHbJ8czD66249Ggn1bte4ZoDdsYWve1kAo6Ldy9MS&fiat_equiv=USD&name=Donate&description=Support+Wire&ticker_from=usdc&network_from=base&bgcolor=00000000';
 
 function MoneroIcon({ className }: { className?: string }) {
   return (
