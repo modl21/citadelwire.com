@@ -59,7 +59,7 @@ const ZAP_RELAYS = [
   'wss://antiprimal.net',
 ];
 
-const presetAmounts = [1000, 5000, 10000, 21000, 42000];
+const presetAmounts = [2000, 4000, 21000, 42000, 100000];
 
 interface LnurlPayEndpoint {
   callback: string;
@@ -144,7 +144,7 @@ const DonateContent = memo(function DonateContent({
   const { toast } = useToast();
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
-  const [amount, setAmount] = useState<number | string>(10000);
+  const [amount, setAmount] = useState<number | string>(21000);
   const [memo, setMemo] = useState('');
   const [invoice, setInvoice] = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
