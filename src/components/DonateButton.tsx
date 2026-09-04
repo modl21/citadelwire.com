@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useCallback, useRef } from 'react';
-import { Zap, Copy, Check, ExternalLink, Loader2 } from 'lucide-react';
+import { Zap, Copy, Check, ExternalLink, Loader2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -26,6 +26,7 @@ import QRCode from 'qrcode';
 
 const LIGHTNING_ADDRESS = 'wire@primal.net';
 const MONERO_ADDRESS = '8ApUq9t1xVpUP6fPWgePGQKPZfJWuTuoT7W5GiQk4SQnXpGHivsRo2tHbJ8czD66249Ggn1bte4ZoDdsYWve1kAo6Ldy9MS';
+const CRYPTO_DONATION_URL = 'https://trocador.app/anonpay/?ticker_to=xmr&network_to=Mainnet&address=8ApUq9t1xVpUP6fPWgePGQKPZfJWuTuoT7W5GiQk4SQnXpGHivsRo2tHbJ8czD66249Ggn1bte4ZoDdsYWve1kAo6Ldy9MS&fiat_equiv=USD&amount=21.0&name=Donate&description=Support+Wire&ticker_from=usdc&network_from=base&bgcolor=00000000';
 
 function MoneroIcon({ className }: { className?: string }) {
   return (
@@ -508,6 +509,16 @@ const DonateContent = memo(function DonateContent({
       >
         <MoneroIcon className="h-4 w-4 mr-2" />
         Donate Monero
+      </Button>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        onClick={() => window.open(CRYPTO_DONATION_URL, '_blank', 'noopener,noreferrer')}
+      >
+        <ArrowRight className="h-4 w-4 mr-2" />
+        Donate Crypto
       </Button>
     </div>
   );
