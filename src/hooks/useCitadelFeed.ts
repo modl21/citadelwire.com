@@ -17,7 +17,7 @@ export const CITADEL_FEED_RELAYS = [
   'wss://premium.primal.net',
   'wss://relay.primal.net',
   'wss://relay.ditto.pub',
-  'wss://relay.damus.io',
+  'wss://nos.lol',
   'wss://antiprimal.net',
 ];
 
