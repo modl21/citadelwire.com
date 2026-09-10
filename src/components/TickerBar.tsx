@@ -272,9 +272,9 @@ export function TickerBar({ live = true }: TickerBarProps) {
 
   return (
     <>
-      <div className="flex items-center gap-1.5 sm:gap-3 text-[10px] sm:text-[11px] font-medium">
+      <div className="flex items-center gap-1 sm:gap-3 text-[9px] sm:text-[11px] font-medium">
         {/* Block Height */}
-        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0">
           <Box className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-purple-400" />
           <span className="hidden sm:inline text-muted-foreground/60">Block</span>
           {isLoading || !data?.blockHeight ? (
@@ -294,7 +294,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
         <div className="w-px h-3 bg-border/50 shrink-0" />
 
         {/* BTC Price */}
-        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0">
           <Bitcoin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-amber-500" />
           <span className="hidden sm:inline text-muted-foreground/60">BTC</span>
           {isLoading || !data?.btcPrice ? (
@@ -312,7 +312,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
         <div className="w-px h-3 bg-border/50 shrink-0" />
 
         {/* Gold (XAUT) Price */}
-        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0">
           <span className="text-yellow-500 text-[11px] sm:text-sm leading-none">Au</span>
           <span className="hidden sm:inline text-muted-foreground/60">GOLD</span>
           {isLoading || !data?.goldPrice ? (
@@ -330,7 +330,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
         <div className="w-px h-3 bg-border/50 shrink-0" />
 
         {/* S&P 500 Price */}
-        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0">
           <TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-sky-400" />
           <span className="hidden sm:inline text-muted-foreground/60">SPX</span>
           {isLoading || !data?.sp500Price ? (
@@ -348,7 +348,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
         <div className="w-px h-3 bg-border/50 shrink-0" />
 
         {/* Brent Oil Price */}
-        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0">
           <Droplets className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-orange-400" />
           <span className="hidden sm:inline text-muted-foreground/60">OIL</span>
           {isLoading || !data?.brentOilPrice ? (
@@ -366,15 +366,15 @@ export function TickerBar({ live = true }: TickerBarProps) {
         <div className="w-px h-3 bg-border/50 shrink-0" />
 
         {/* US 10Y Treasury Yield */}
-        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-          <Landmark className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-violet-400" />
+        <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0">
+          <Landmark className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 text-violet-400" />
           <span className="hidden sm:inline text-muted-foreground/60">10Y</span>
           {isLoading || !data?.us10yPrice ? (
             <Skeleton className="h-3 sm:h-3.5 w-8 sm:w-12" />
           ) : (
             <button
               onClick={() => setUs10yChartOpen(true)}
-              className="text-foreground font-semibold tabular-nums hover:text-violet-400 transition-colors cursor-pointer underline decoration-dotted decoration-muted-foreground/30 underline-offset-2 hover:decoration-violet-400/50"
+              className="text-foreground font-semibold tabular-nums tracking-tighter hover:text-violet-400 transition-colors cursor-pointer underline decoration-dotted decoration-muted-foreground/30 underline-offset-2 hover:decoration-violet-400/50 sm:tracking-normal"
             >
               {formatYield(data.us10yPrice)}
             </button>
