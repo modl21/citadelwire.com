@@ -276,7 +276,6 @@ export function TickerBar({ live = true }: TickerBarProps) {
         {/* Block Height */}
         <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0">
           <Box className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-purple-400" />
-          <span className="hidden sm:inline text-muted-foreground/60">Block</span>
           {isLoading || !data?.blockHeight ? (
             <Skeleton className="h-3 sm:h-3.5 w-14 sm:w-20" />
           ) : (
