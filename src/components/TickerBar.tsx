@@ -4,7 +4,7 @@ import { fetchBlockHeight, useMarketData, type MarketData } from '@/hooks/useMar
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { Bitcoin, Box, Clock, TrendingUp, Droplets } from 'lucide-react';
+import { Bitcoin, Box, TrendingUp, Droplets } from 'lucide-react';
 import { CHART_SPANS, MARKETS, useCoinChart, getChange, formatPricePrecise, type HyperliquidMarketConfig } from '@/lib/chartUtils';
 
 function formatPrice(value: number): string {
@@ -18,38 +18,6 @@ function formatPrice(value: number): string {
 
 function formatBlockHeight(value: number): string {
   return value.toLocaleString('en-US');
-}
-
-function useUTCClock(): { time: string; date: string } {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const update = () => setNow(new Date());
-    const msUntilNextSecond = 1000 - new Date().getMilliseconds();
-    let intervalId: ReturnType<typeof setInterval> | undefined;
-
-    const timeoutId = setTimeout(() => {
-      update();
-      intervalId = setInterval(update, 1000);
-    }, msUntilNextSecond);
-
-    return () => {
-      clearTimeout(timeoutId);
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, []);
-  return { time: formatUTCTime(now), date: formatUTCDate(now) };
-}
-
-function formatUTCTime(date: Date): string {
-  const h = date.getUTCHours().toString().padStart(2, '0');
-  const m = date.getUTCMinutes().toString().padStart(2, '0');
-  const s = date.getUTCSeconds().toString().padStart(2, '0');
-  return `${h}:${m}:${s}`;
-}
-
-function formatUTCDate(date: Date): string {
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${months[date.getUTCMonth()]} ${date.getUTCDate()}`;
 }
 
 function SparklineCanvas({ prices, width, height, accentColor }: { prices: number[][]; width: number; height: number; accentColor: string }) {
@@ -247,7 +215,6 @@ interface TickerBarProps {
 export function TickerBar({ live = true }: TickerBarProps) {
   const { data, isLoading } = useMarketData(live);
   const queryClient = useQueryClient();
-  const { time: utcTime, date: utcDate } = useUTCClock();
   const [btcChartOpen, setBtcChartOpen] = useState(false);
   const [xautChartOpen, setXautChartOpen] = useState(false);
   const [sp500ChartOpen, setSp500ChartOpen] = useState(false);
@@ -368,7 +335,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
         {/* Brent Oil Price */}
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <Droplets className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-orange-400" />
-          <span className="hidden sm:inline text-muted-foreground/60">BRENT</span>
+          <span className="hidden sm:inline text-muted-foreground/60">OIL</span>
           {isLoading || !data?.brentOilPrice ? (
             <Skeleton className="h-3 sm:h-3.5 w-8 sm:w-12" />
           ) : (
@@ -381,15 +348,6 @@ export function TickerBar({ live = true }: TickerBarProps) {
           )}
         </div>
 
-        <div className="w-px h-3 bg-border/50 shrink-0" />
-
-        {/* UTC Clock */}
-        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-          <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-sky-400" />
-          <span className="text-foreground font-semibold tabular-nums">{utcTime}</span>
-          <span className="text-muted-foreground/50">{utcDate}</span>
-          <span className="hidden sm:inline text-muted-foreground/50">UTC</span>
-        </div>
       </div>
 
       <CoinChartDialog

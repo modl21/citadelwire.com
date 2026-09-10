@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Radio } from 'lucide-react';
+import { Clock, Radio } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const SCHEDULE_HOURS = [0, 3, 6, 9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
@@ -75,10 +75,22 @@ function formatCountdown(targetMs: number, nowMs: number): string {
 
 interface ScheduleState {
   nowMs: number;
+  utcTime: string;
+  utcDate: string;
   nextHour: number;
-  minutesUntilNext: number;
-  secondsUntilNext: number;
   currentHourIndex: number; // index of the most recently passed scheduled hour
+}
+
+function formatUTCTime(date: Date): string {
+  const h = date.getUTCHours().toString().padStart(2, '0');
+  const m = date.getUTCMinutes().toString().padStart(2, '0');
+  const s = date.getUTCSeconds().toString().padStart(2, '0');
+  return `${h}:${m}:${s}`;
+}
+
+function formatUTCDate(date: Date): string {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[date.getUTCMonth()]} ${date.getUTCDate()}`;
 }
 
 function getScheduleState(now: Date): ScheduleState {
@@ -105,23 +117,11 @@ function getScheduleState(now: Date): ScheduleState {
     }
   }
 
-  let nextHour: number;
-  let secondsUntilNext: number;
-
-  if (nextIdx === -1) {
-    // After last slot of the day — next is midnight
-    nextHour = 0;
-    secondsUntilNext = 86400 - totalSeconds;
-  } else {
-    nextHour = SCHEDULE_HOURS[nextIdx];
-    secondsUntilNext = nextHour * 3600 - totalSeconds;
-  }
-
   return {
     nowMs: now.getTime(),
-    nextHour,
-    minutesUntilNext: Math.floor(secondsUntilNext / 60),
-    secondsUntilNext: secondsUntilNext % 60,
+    utcTime: formatUTCTime(now),
+    utcDate: formatUTCDate(now),
+    nextHour: nextIdx === -1 ? 0 : SCHEDULE_HOURS[nextIdx],
     currentHourIndex,
   };
 }
@@ -146,7 +146,7 @@ export function WireSchedule() {
     };
   }, []);
 
-  const { nowMs, nextHour, minutesUntilNext, secondsUntilNext, currentHourIndex } = state;
+  const { nowMs, utcTime, utcDate, nextHour, currentHourIndex } = state;
 
   return (
     <div className="space-y-1.5">
@@ -188,17 +188,12 @@ export function WireSchedule() {
 
         <div className="w-px h-3 bg-border/40 shrink-0" />
 
-        {/* Countdown to next */}
-        <div className="shrink-0 text-[10px] sm:text-[11px] font-medium tabular-nums text-muted-foreground/60">
-          <span className="hidden sm:inline text-muted-foreground/40">next </span>
-          <span className="text-sky-400/90 font-semibold">
-            {pad(nextHour)}:00
-          </span>
-          <span className="text-muted-foreground/40 ml-1">
-            {minutesUntilNext > 0
-              ? `in ${minutesUntilNext}m ${pad(secondsUntilNext)}s`
-              : `in ${pad(secondsUntilNext)}s`}
-          </span>
+        {/* UTC Clock */}
+        <div className="flex shrink-0 items-center gap-1 text-[10px] font-medium tabular-nums text-muted-foreground/60 sm:gap-1.5 sm:text-[11px]">
+          <Clock className="h-3 w-3 text-sky-400 sm:h-3.5 sm:w-3.5" />
+          <span className="font-semibold text-foreground">{utcTime}</span>
+          <span className="text-muted-foreground/50">{utcDate}</span>
+          <span className="hidden text-muted-foreground/50 sm:inline">UTC</span>
         </div>
       </div>
 
