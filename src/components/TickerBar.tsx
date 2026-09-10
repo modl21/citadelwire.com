@@ -328,7 +328,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
         {/* Gold (XAUT) Price */}
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <span className="text-yellow-500 text-[11px] sm:text-sm leading-none">Au</span>
-          <span className="hidden sm:inline text-muted-foreground/60">XAUT</span>
+          <span className="hidden sm:inline text-muted-foreground/60">GOLD</span>
           {isLoading || !data?.goldPrice ? (
             <Skeleton className="h-3 sm:h-3.5 w-12 sm:w-16" />
           ) : (
