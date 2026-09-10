@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 
 // ── Responsive Sparkline Canvas ──────────────────────────────
 
-function SidebarSparkline({ prices, accentColor, isYield = false }: { prices: number[][]; accentColor: string; isYield?: boolean }) {
+function SidebarSparkline({ prices, accentColor, isYield = false, isHashrate = false }: { prices: number[][]; accentColor: string; isYield?: boolean; isHashrate?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -83,19 +83,25 @@ function SidebarSparkline({ prices, accentColor, isYield = false }: { prices: nu
     const mutedFg = computedStyle.getPropertyValue('--muted-foreground').trim();
     const labelColor = mutedFg ? `hsl(${mutedFg} / 0.5)` : 'rgba(150,150,150,0.5)';
 
+    const formatValue = (value: number) => {
+      if (isYield) return formatYield(value);
+      if (isHashrate) return formatHashrate(value);
+      return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+    };
+
     ctx.fillStyle = labelColor;
     ctx.font = '9px Inter Variable, Inter, system-ui, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(isYield ? formatYield(max) : `$${max.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, 4, padTop - 3);
-    ctx.fillText(isYield ? formatYield(min) : `$${min.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, 4, padTop + chartH + 12);
+    ctx.fillText(formatValue(max), 4, padTop - 3);
+    ctx.fillText(formatValue(min), 4, padTop + chartH + 12);
 
     // Current price
     ctx.fillStyle = accentColor;
     ctx.font = 'bold 10px Inter Variable, Inter, system-ui, sans-serif';
     ctx.textAlign = 'right';
     const last = values[values.length - 1];
-    ctx.fillText(isYield ? formatYield(last) : `$${last.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, chartW - 4, padTop - 3);
-  }, [prices, accentColor, isYield]);
+    ctx.fillText(formatValue(last), chartW - 4, padTop - 3);
+  }, [prices, accentColor, isYield, isHashrate]);
 
   useEffect(() => {
     draw();
@@ -113,7 +119,7 @@ function SidebarSparkline({ prices, accentColor, isYield = false }: { prices: nu
 
 // ── Change Indicator ─────────────────────────────────────────
 
-function ChangeIndicator({ prices, isYield = false }: { prices: number[][]; isYield?: boolean }) {
+function ChangeIndicator({ prices, isYield = false, isHashrate = false }: { prices: number[][]; isYield?: boolean; isHashrate?: boolean }) {
   const { change, pct, isUp } = getChange(prices);
   const sign = isUp ? '+' : '';
 
@@ -121,7 +127,7 @@ function ChangeIndicator({ prices, isYield = false }: { prices: number[][]; isYi
     <div className={`flex items-center gap-1 ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
       {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
       <span className="text-[11px] font-bold tabular-nums">
-        {isYield ? formatYieldChange(change) : `${sign}${formatPricePrecise(change)}`}
+        {isYield ? formatYieldChange(change) : isHashrate ? `${sign}${change.toFixed(2)} EH/s` : `${sign}${formatPricePrecise(change)}`}
       </span>
       <span className="text-[10px] font-semibold tabular-nums opacity-70">
         ({sign}{pct.toFixed(2)}%)
@@ -347,25 +353,21 @@ interface MempoolStats {
   difficultyRemainingDays: number | null;
   avgBlockFeesBtc: number | null;
   avgTxFeeSats: number | null;
-  latestHashrateEh: number | null;
-  hashrateSeries: number[][];
 }
 
 function useMempoolStats() {
   return useQuery<MempoolStats>({
     queryKey: ['mempool-stats'],
     queryFn: async () => {
-      const [feesRes, difficultyRes, rewardRes, hashrateRes] = await Promise.all([
+      const [feesRes, difficultyRes, rewardRes] = await Promise.all([
         fetch('https://mempool.space/api/v1/fees/recommended'),
         fetch('https://mempool.space/api/v1/difficulty-adjustment'),
         fetch('https://mempool.space/api/v1/mining/reward-stats/1m'),
-        fetch('https://mempool.space/api/v1/mining/hashrate/1m'),
       ]);
 
       const fees: unknown = feesRes.ok ? await feesRes.json() : null;
       const difficulty: unknown = difficultyRes.ok ? await difficultyRes.json() : null;
       const reward: unknown = rewardRes.ok ? await rewardRes.json() : null;
-      const hashrate: unknown = hashrateRes.ok ? await hashrateRes.json() : null;
 
       const fastestFee = fees && typeof fees === 'object' && typeof (fees as Record<string, unknown>).fastestFee === 'number'
         ? (fees as Record<string, number>).fastestFee
@@ -391,19 +393,7 @@ function useMempoolStats() {
         ? totalFee / totalTx
         : null;
 
-      const hashrateRecord = hashrate && typeof hashrate === 'object' ? hashrate as Record<string, unknown> : null;
-      const hashrates = Array.isArray(hashrateRecord?.hashrates) ? hashrateRecord.hashrates : [];
-      const hashrateSeries = hashrates.flatMap((entry) => {
-        if (!entry || typeof entry !== 'object') return [];
-        const record = entry as Record<string, unknown>;
-        const timestamp = typeof record.timestamp === 'number' ? record.timestamp : null;
-        const avgHashrate = typeof record.avgHashrate === 'number' && Number.isFinite(record.avgHashrate) ? record.avgHashrate : null;
-        if (timestamp === null || avgHashrate === null || avgHashrate <= 0) return [];
-        return [[timestamp * 1000, avgHashrate / 1e18] as [number, number]];
-      });
-      const latestHashrateEh = hashrateSeries.length > 0 ? hashrateSeries[hashrateSeries.length - 1][1] : null;
-
-      return { fastestFee, difficultyChange, difficultyRemainingDays, avgBlockFeesBtc, avgTxFeeSats, latestHashrateEh, hashrateSeries };
+      return { fastestFee, difficultyChange, difficultyRemainingDays, avgBlockFeesBtc, avgTxFeeSats };
     },
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -438,11 +428,92 @@ function formatHashrate(value: number | null): string {
   return value === null ? '—' : `${value.toFixed(0)} EH/s`;
 }
 
+function useMempoolHashrate(days: number, enabled: boolean) {
+  return useQuery<number[][]>({
+    queryKey: ['mempool-hashrate', days],
+    queryFn: async () => {
+      const span = days === 1 ? '1d' : days === 7 ? '1w' : days === 30 ? '1m' : '6m';
+      const res = await fetch(`https://mempool.space/api/v1/mining/hashrate/${span}`);
+      if (!res.ok) throw new Error('Failed to fetch hashrate');
+      const data: unknown = await res.json();
+      if (!data || typeof data !== 'object') throw new Error('Invalid hashrate response');
+      const hashrates = Array.isArray((data as Record<string, unknown>).hashrates) ? (data as Record<string, unknown[]>).hashrates : [];
+
+      return hashrates.flatMap((entry) => {
+        if (!entry || typeof entry !== 'object') return [];
+        const timestamp = typeof entry.timestamp === 'number' ? entry.timestamp : null;
+        const avgHashrate = typeof entry.avgHashrate === 'number' && Number.isFinite(entry.avgHashrate) ? entry.avgHashrate : null;
+        if (timestamp === null || avgHashrate === null || avgHashrate <= 0) return [];
+        return [[timestamp * 1000, avgHashrate / 1e18] as [number, number]];
+      });
+    },
+    enabled,
+    staleTime: 15 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    retry: 1,
+    refetchOnMount: false,
+  });
+}
+
+function MempoolHashrateChart() {
+  const [activeIdx, setActiveIdx] = useState(2); // default 30D
+  const span = CHART_SPANS[activeIdx];
+  const { data: hashrateSeries, isLoading } = useMempoolHashrate(span.days, true);
+
+  return (
+    <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
+      <div className="px-3 py-2.5 border-b border-border/20">
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <Gauge className="h-3.5 w-3.5 text-emerald-400" />
+          <a
+            href="https://mempool.space/mining"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] font-semibold text-foreground/90 hover:text-foreground transition-colors"
+          >
+            Hashrate
+          </a>
+          <span className="text-[9px] text-muted-foreground/40 ml-auto">EH/s</span>
+        </div>
+        <div className="flex items-center gap-0.5">
+          {CHART_SPANS.map((s, i) => (
+            <button
+              key={s.label}
+              onClick={() => setActiveIdx(i)}
+              className={cn(
+                'px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors',
+                i === activeIdx
+                  ? 'bg-emerald-500/20 text-emerald-300'
+                  : 'text-muted-foreground/40 hover:text-muted-foreground/70 hover:bg-muted/30',
+              )}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="px-1 py-2" style={{ height: 140 }}>
+        {isLoading || !hashrateSeries || hashrateSeries.length < 2 ? (
+          <div className="flex items-center justify-center h-full px-2">
+            <Skeleton className="h-full w-full rounded" />
+          </div>
+        ) : (
+          <SidebarSparkline prices={hashrateSeries} accentColor="#34d399" isHashrate />
+        )}
+      </div>
+
+      {hashrateSeries && hashrateSeries.length >= 2 && (
+        <div className="px-3 pb-2.5">
+          <ChangeIndicator prices={hashrateSeries} isHashrate />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MempoolStatsPanel() {
   const { data, isLoading } = useMempoolStats();
-  const hashrateChart = data && data.hashrateSeries.length >= 2
-    ? data.hashrateSeries.map(([timestamp, hashrate]) => [timestamp, hashrate] as [number, number])
-    : null;
 
   return (
     <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
@@ -474,20 +545,13 @@ function MempoolStatsPanel() {
         ) : (
           <>
             <StatRow label="Fastest Fee" value={formatMempoolFee(data.fastestFee)} />
+            <StatRow label="Avg Tx Fee" value={formatTxFee(data.avgTxFeeSats)} />
             <StatRow label="Difficulty Adj" value={formatDifficulty(data.difficultyChange)} />
             <StatRow label="Next Adj In" value={formatDifficultyRemaining(data.difficultyRemainingDays)} />
             <StatRow label="Avg Block Fees" value={formatBlockFees(data.avgBlockFeesBtc)} />
-            <StatRow label="Avg Tx Fee" value={formatTxFee(data.avgTxFeeSats)} />
-            <StatRow label="Hashrate" value={formatHashrate(data.latestHashrateEh)} />
           </>
         )}
       </div>
-
-      {hashrateChart && (
-        <div className="border-t border-border/20 px-2 py-2" style={{ height: 92 }}>
-          <SidebarSparkline prices={hashrateChart} accentColor="#34d399" />
-        </div>
-      )}
     </div>
   );
 }
@@ -581,6 +645,7 @@ export function XAUTSidebarCharts() {
         <StatsPanel stats={brentStats} symbol="BRENTOIL" accentColor="#fb923c" hideMarketCap hideCirculating hideMaxSupply />
       ) : null}
 
+      <MempoolHashrateChart />
       <MempoolStatsPanel />
     </div>
   );
