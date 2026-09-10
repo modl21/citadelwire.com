@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 const CORS_PROXY = 'https://proxy.shakespeare.diy/?url=';
+const HYPERLIQUID_INFO_URL = 'https://api.hyperliquid.xyz/info';
 
 export const CHART_SPANS = [
   { label: '24H', days: 1 },
@@ -9,21 +10,104 @@ export const CHART_SPANS = [
   { label: '6M', days: 180 },
 ] as const;
 
-export function useCoinChart(coinId: string, days: number, enabled: boolean) {
+export interface HyperliquidMarketConfig {
+  coin: string;
+  dex?: string;
+}
+
+export const MARKETS: Record<string, HyperliquidMarketConfig> = {
+  BTC: { coin: 'BTC' },
+  SP500: { coin: 'xyz:SP500', dex: 'xyz' },
+  XAUT: { coin: 'xyz:GOLD', dex: 'xyz' },
+  BRENTOIL: { coin: 'xyz:BRENTOIL', dex: 'xyz' },
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+interface HyperliquidCandle {
+  t: number;
+  T: number;
+  s: string;
+  i: string;
+  o: string;
+  c: string;
+  h: string;
+  l: string;
+  v: string;
+  n: number;
+}
+
+interface HyperliquidPerpUniverseItem {
+  name: string;
+}
+
+interface HyperliquidPerpAssetContext {
+  funding?: string;
+  openInterest?: string;
+  prevDayPx?: string;
+  dayNtlVlm?: string;
+  premium?: string | null;
+  oraclePx?: string;
+  markPx?: string;
+  midPx?: string | null;
+  dayBaseVlm?: string;
+}
+
+interface HyperliquidPerpMeta {
+  universe: HyperliquidPerpUniverseItem[];
+}
+
+type HyperliquidMetaAndAssetCtxs = [HyperliquidPerpMeta, HyperliquidPerpAssetContext[]];
+
+async function postHyperliquidInfo<T>(body: Record<string, unknown>, timeoutMs = 8000): Promise<T> {
+  const request = async (url: string) => fetch(url, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  try {
+    const direct = await request(HYPERLIQUID_INFO_URL);
+    if (direct.ok) return direct.json();
+  } catch {
+    // Fall back to the configured proxy below.
+  }
+
+  const proxied = await request(`${CORS_PROXY}${encodeURIComponent(HYPERLIQUID_INFO_URL)}`);
+  if (!proxied.ok) throw new Error(`Hyperliquid error: ${proxied.status}`);
+  return proxied.json();
+}
+
+function getChartInterval(days: number): string {
+  if (days <= 1) return '1h';
+  if (days <= 7) return '4h';
+  if (days <= 30) return '12h';
+  return '1d';
+}
+
+export function useCoinChart(market: HyperliquidMarketConfig, days: number, enabled: boolean) {
   return useQuery<number[][]>({
-    queryKey: ['coin-chart', coinId, days],
+    queryKey: ['coin-chart', market.coin, market.dex ?? '', days],
     queryFn: async () => {
-      const url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`;
-      let res: Response;
-      try {
-        res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-        if (!res.ok) throw new Error('direct failed');
-      } catch {
-        res = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(10000) });
-      }
-      if (!res.ok) throw new Error(`CoinGecko error: ${res.status}`);
-      const data = await res.json();
-      return data.prices as number[][];
+      const endTime = Date.now();
+      const startTime = endTime - days * DAY_MS;
+      const candles = await postHyperliquidInfo<HyperliquidCandle[]>({
+        type: 'candleSnapshot',
+        req: {
+          coin: market.coin,
+          interval: getChartInterval(days),
+          startTime,
+          endTime,
+        },
+      });
+
+      return candles
+        .map((candle) => [candle.t, Number(candle.c)] as [number, number])
+        .filter(([, close]) => Number.isFinite(close) && close > 0);
     },
     enabled,
     staleTime: 15 * 60 * 1000,
@@ -77,38 +161,68 @@ export interface CoinStats {
   priceChangePct30d: number | null;
 }
 
-export function useCoinStats(coinId: string, enabled: boolean) {
+function parseNumber(value: string | undefined | null): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function pctChange(current: number | null, previous: number | null): number | null {
+  if (current === null || previous === null || previous === 0) return null;
+  return ((current - previous) / previous) * 100;
+}
+
+async function fetchStatsForMarket(market: HyperliquidMarketConfig): Promise<CoinStats> {
+  const [metaAndContexts, candles] = await Promise.all([
+    postHyperliquidInfo<HyperliquidMetaAndAssetCtxs>({
+      type: 'metaAndAssetCtxs',
+      ...(market.dex !== undefined ? { dex: market.dex } : {}),
+    }),
+    postHyperliquidInfo<HyperliquidCandle[]>({
+      type: 'candleSnapshot',
+      req: {
+        coin: market.coin,
+        interval: '1h',
+        startTime: Date.now() - DAY_MS,
+        endTime: Date.now(),
+      },
+    }),
+  ]);
+
+  const [meta, contexts] = metaAndContexts;
+  const marketIndex = meta.universe.findIndex((item) => item.name === market.coin);
+  const context = marketIndex >= 0 ? contexts[marketIndex] : undefined;
+
+  const currentPrice = parseNumber(context?.midPx) ?? parseNumber(context?.markPx) ?? parseNumber(context?.oraclePx);
+  const prevDayPrice = parseNumber(context?.prevDayPx);
+  const priceChangePct24h = pctChange(currentPrice, prevDayPrice);
+  const priceChange24h = currentPrice !== null && prevDayPrice !== null ? currentPrice - prevDayPrice : null;
+
+  const highs = candles.map((candle) => Number(candle.h)).filter((value) => Number.isFinite(value) && value > 0);
+  const lows = candles.map((candle) => Number(candle.l)).filter((value) => Number.isFinite(value) && value > 0);
+
+  return {
+    marketCap: null,
+    volume24h: parseNumber(context?.dayNtlVlm),
+    high24h: highs.length > 0 ? Math.max(...highs) : null,
+    low24h: lows.length > 0 ? Math.min(...lows) : null,
+    ath: null,
+    athDate: null,
+    athChangePercent: null,
+    circulatingSupply: null,
+    totalSupply: null,
+    maxSupply: null,
+    priceChange24h,
+    priceChangePct24h,
+    priceChangePct7d: null,
+    priceChangePct30d: null,
+  };
+}
+
+export function useCoinStats(market: HyperliquidMarketConfig, enabled: boolean) {
   return useQuery<CoinStats>({
-    queryKey: ['coin-stats', coinId],
-    queryFn: async () => {
-      const url = `https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false`;
-      let res: Response;
-      try {
-        res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-        if (!res.ok) throw new Error('direct failed');
-      } catch {
-        res = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(10000) });
-      }
-      if (!res.ok) throw new Error(`CoinGecko error: ${res.status}`);
-      const data = await res.json();
-      const md = data.market_data;
-      return {
-        marketCap: md?.market_cap?.usd ?? null,
-        volume24h: md?.total_volume?.usd ?? null,
-        high24h: md?.high_24h?.usd ?? null,
-        low24h: md?.low_24h?.usd ?? null,
-        ath: md?.ath?.usd ?? null,
-        athDate: md?.ath_date?.usd ?? null,
-        athChangePercent: md?.ath_change_percentage?.usd ?? null,
-        circulatingSupply: md?.circulating_supply ?? null,
-        totalSupply: md?.total_supply ?? null,
-        maxSupply: md?.max_supply ?? null,
-        priceChange24h: md?.price_change_24h ?? null,
-        priceChangePct24h: md?.price_change_percentage_24h ?? null,
-        priceChangePct7d: md?.price_change_percentage_7d ?? null,
-        priceChangePct30d: md?.price_change_percentage_30d ?? null,
-      };
-    },
+    queryKey: ['coin-stats', market.coin, market.dex ?? ''],
+    queryFn: () => fetchStatsForMarket(market),
     enabled,
     staleTime: 15 * 60 * 1000,
     gcTime: 60 * 60 * 1000,

@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Bitcoin, TrendingUp, TrendingDown } from 'lucide-react';
+import { Bitcoin, TrendingUp, TrendingDown, LineChart, Droplets } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CHART_SPANS, useCoinChart, useCoinStats, getChange, formatPricePrecise, type CoinStats } from '@/lib/chartUtils';
+import { CHART_SPANS, MARKETS, useCoinChart, useCoinStats, getChange, formatPricePrecise, type CoinStats, type HyperliquidMarketConfig } from '@/lib/chartUtils';
 import { cn } from '@/lib/utils';
 
 // ── Responsive Sparkline Canvas ──────────────────────────────
@@ -132,7 +132,7 @@ function ChangeIndicator({ prices }: { prices: number[][] }) {
 // ── Single Chart Panel ───────────────────────────────────────
 
 interface ChartPanelProps {
-  coinId: string;
+  market: HyperliquidMarketConfig;
   title: string;
   icon: React.ReactNode;
   accentColor: string;
@@ -140,10 +140,10 @@ interface ChartPanelProps {
   sourceUrl: string;
 }
 
-function ChartPanel({ coinId, title, icon, accentColor, activeAccent, sourceUrl }: ChartPanelProps) {
+function ChartPanel({ market, title, icon, accentColor, activeAccent, sourceUrl }: ChartPanelProps) {
   const [activeIdx, setActiveIdx] = useState(2); // default 30D
   const span = CHART_SPANS[activeIdx];
-  const { data: prices, isLoading } = useCoinChart(coinId, span.days, true);
+  const { data: prices, isLoading } = useCoinChart(market, span.days, true);
 
   return (
     <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
@@ -339,44 +339,74 @@ function StatsSkeleton() {
 // ── Sidebar Exports ──────────────────────────────────────────
 
 export function BTCSidebarCharts() {
-  const { data: stats, isLoading: statsLoading } = useCoinStats('bitcoin', true);
+  const { data: btcStats, isLoading: btcStatsLoading } = useCoinStats(MARKETS.BTC, true);
+  const { data: sp500Stats, isLoading: sp500StatsLoading } = useCoinStats(MARKETS.SP500, true);
 
   return (
     <div className="space-y-3">
       <ChartPanel
-        coinId="bitcoin"
+        market={MARKETS.BTC}
         title="Bitcoin"
         icon={<Bitcoin className="h-3.5 w-3.5 text-amber-500" />}
         accentColor="#f59e0b"
         activeAccent="bg-amber-500/20 text-amber-400"
-        sourceUrl="https://www.coingecko.com/en/coins/bitcoin"
+        sourceUrl="https://app.hyperliquid.xyz/trade/BTC"
       />
-      {statsLoading ? (
+      {btcStatsLoading ? (
         <StatsSkeleton />
-      ) : stats ? (
-        <StatsPanel stats={stats} symbol="BTC" accentColor="#f59e0b" hideCirculating hideMaxSupply />
+      ) : btcStats ? (
+        <StatsPanel stats={btcStats} symbol="BTC" accentColor="#f59e0b" hideMarketCap hideCirculating hideMaxSupply />
+      ) : null}
+
+      <ChartPanel
+        market={MARKETS.SP500}
+        title="S&P 500"
+        icon={<LineChart className="h-3.5 w-3.5 text-sky-400" />}
+        accentColor="#38bdf8"
+        activeAccent="bg-sky-500/20 text-sky-400"
+        sourceUrl="https://app.hyperliquid.xyz/trade/xyz:SP500"
+      />
+      {sp500StatsLoading ? (
+        <StatsSkeleton />
+      ) : sp500Stats ? (
+        <StatsPanel stats={sp500Stats} symbol="SP500" accentColor="#38bdf8" hideMarketCap hideCirculating hideMaxSupply />
       ) : null}
     </div>
   );
 }
 
 export function XAUTSidebarCharts() {
-  const { data: stats, isLoading: statsLoading } = useCoinStats('tether-gold', true);
+  const { data: xautStats, isLoading: xautStatsLoading } = useCoinStats(MARKETS.XAUT, true);
+  const { data: brentStats, isLoading: brentStatsLoading } = useCoinStats(MARKETS.BRENTOIL, true);
 
   return (
     <div className="space-y-3">
       <ChartPanel
-        coinId="tether-gold"
+        market={MARKETS.XAUT}
         title="XAUT"
         icon={<span className="text-yellow-500 text-[11px] font-bold leading-none">Au</span>}
         accentColor="#eab308"
         activeAccent="bg-yellow-500/20 text-yellow-500"
-        sourceUrl="https://www.coingecko.com/en/coins/tether-gold"
+        sourceUrl="https://app.hyperliquid.xyz/trade/xyz:GOLD"
       />
-      {statsLoading ? (
+      {xautStatsLoading ? (
         <StatsSkeleton />
-      ) : stats ? (
-        <StatsPanel stats={stats} symbol="XAUT" accentColor="#eab308" hideMarketCap hideCirculating />
+      ) : xautStats ? (
+        <StatsPanel stats={xautStats} symbol="XAUT" accentColor="#eab308" hideMarketCap hideCirculating hideMaxSupply />
+      ) : null}
+
+      <ChartPanel
+        market={MARKETS.BRENTOIL}
+        title="Brent Oil"
+        icon={<Droplets className="h-3.5 w-3.5 text-orange-400" />}
+        accentColor="#fb923c"
+        activeAccent="bg-orange-500/20 text-orange-400"
+        sourceUrl="https://app.hyperliquid.xyz/trade/xyz:BRENTOIL"
+      />
+      {brentStatsLoading ? (
+        <StatsSkeleton />
+      ) : brentStats ? (
+        <StatsPanel stats={brentStats} symbol="BRENTOIL" accentColor="#fb923c" hideMarketCap hideCirculating hideMaxSupply />
       ) : null}
     </div>
   );

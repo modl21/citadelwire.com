@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Bitcoin, Box, Clock, TrendingUp, TrendingDown } from 'lucide-react';
-import { CHART_SPANS, useCoinChart, getChange, formatPricePrecise } from '@/lib/chartUtils';
+import { CHART_SPANS, MARKETS, useCoinChart, getChange, formatPricePrecise, type HyperliquidMarketConfig } from '@/lib/chartUtils';
 
 function formatPrice(value: number): string {
   return value.toLocaleString('en-US', {
@@ -166,7 +166,7 @@ function ChangeIndicator({ prices }: { prices: number[][] }) {
 interface ChartDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  coinId: string;
+  market: HyperliquidMarketConfig;
   title: string;
   icon: React.ReactNode;
   accentColor: string;
@@ -175,10 +175,10 @@ interface ChartDialogProps {
   sourceUrl: string;
 }
 
-function CoinChartDialog({ open, onOpenChange, coinId, title, icon, accentColor, activeAccent, sourceLabel, sourceUrl }: ChartDialogProps) {
+function CoinChartDialog({ open, onOpenChange, market, title, icon, accentColor, activeAccent, sourceLabel, sourceUrl }: ChartDialogProps) {
   const [activeIdx, setActiveIdx] = useState(2); // default 30D
   const span = CHART_SPANS[activeIdx];
-  const { data: prices, isLoading } = useCoinChart(coinId, span.days, open);
+  const { data: prices, isLoading } = useCoinChart(market, span.days, open);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -355,24 +355,24 @@ export function TickerBar({ live = true }: TickerBarProps) {
       <CoinChartDialog
         open={btcChartOpen}
         onOpenChange={setBtcChartOpen}
-        coinId="bitcoin"
+        market={MARKETS.BTC}
         title="Bitcoin"
         icon={<Bitcoin className="h-4 w-4 text-amber-500" />}
         accentColor="#f59e0b"
         activeAccent="bg-amber-500/20 text-amber-400"
-        sourceLabel="coingecko.com"
-        sourceUrl="https://www.coingecko.com/en/coins/bitcoin"
+        sourceLabel="hyperliquid.xyz"
+        sourceUrl="https://app.hyperliquid.xyz/trade/BTC"
       />
       <CoinChartDialog
         open={xautChartOpen}
         onOpenChange={setXautChartOpen}
-        coinId="tether-gold"
+        market={MARKETS.XAUT}
         title="XAUT"
         icon={<span className="text-yellow-500 text-sm font-bold leading-none">Au</span>}
         accentColor="#eab308"
         activeAccent="bg-yellow-500/20 text-yellow-500"
-        sourceLabel="coingecko.com"
-        sourceUrl="https://www.coingecko.com/en/coins/tether-gold"
+        sourceLabel="hyperliquid.xyz"
+        sourceUrl="https://app.hyperliquid.xyz/trade/xyz:GOLD"
       />
     </>
   );
