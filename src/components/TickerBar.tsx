@@ -4,7 +4,7 @@ import { fetchBlockHeight, useMarketData, type MarketData } from '@/hooks/useMar
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { Bitcoin, Box, Clock, TrendingUp, TrendingDown } from 'lucide-react';
+import { Bitcoin, Box, Clock, TrendingUp, Droplets } from 'lucide-react';
 import { CHART_SPANS, MARKETS, useCoinChart, getChange, formatPricePrecise, type HyperliquidMarketConfig } from '@/lib/chartUtils';
 
 function formatPrice(value: number): string {
@@ -250,6 +250,8 @@ export function TickerBar({ live = true }: TickerBarProps) {
   const { time: utcTime, date: utcDate } = useUTCClock();
   const [btcChartOpen, setBtcChartOpen] = useState(false);
   const [xautChartOpen, setXautChartOpen] = useState(false);
+  const [sp500ChartOpen, setSp500ChartOpen] = useState(false);
+  const [brentOilChartOpen, setBrentOilChartOpen] = useState(false);
 
   useEffect(() => {
     if (!live) return;
@@ -263,6 +265,8 @@ export function TickerBar({ live = true }: TickerBarProps) {
       queryClient.setQueryData<MarketData>(['market-data'], (current) => ({
         btcPrice: current?.btcPrice ?? null,
         goldPrice: current?.goldPrice ?? null,
+        sp500Price: current?.sp500Price ?? null,
+        brentOilPrice: current?.brentOilPrice ?? null,
         blockHeight: height,
       }));
     };
@@ -286,7 +290,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
 
   return (
     <>
-      <div className="flex items-center gap-2 sm:gap-5 text-[11px] sm:text-xs font-medium">
+      <div className="flex items-center gap-1.5 sm:gap-3 text-[10px] sm:text-[11px] font-medium">
         {/* Block Height */}
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <Box className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-purple-400" />
@@ -343,6 +347,42 @@ export function TickerBar({ live = true }: TickerBarProps) {
 
         <div className="w-px h-3 bg-border/50 shrink-0" />
 
+        {/* S&P 500 Price */}
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-sky-400" />
+          <span className="hidden sm:inline text-muted-foreground/60">SPX</span>
+          {isLoading || !data?.sp500Price ? (
+            <Skeleton className="h-3 sm:h-3.5 w-10 sm:w-14" />
+          ) : (
+            <button
+              onClick={() => setSp500ChartOpen(true)}
+              className="text-foreground font-semibold tabular-nums hover:text-sky-400 transition-colors cursor-pointer underline decoration-dotted decoration-muted-foreground/30 underline-offset-2 hover:decoration-sky-400/50"
+            >
+              {formatPrice(data.sp500Price)}
+            </button>
+          )}
+        </div>
+
+        <div className="w-px h-3 bg-border/50 shrink-0" />
+
+        {/* Brent Oil Price */}
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <Droplets className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-orange-400" />
+          <span className="hidden sm:inline text-muted-foreground/60">BRENT</span>
+          {isLoading || !data?.brentOilPrice ? (
+            <Skeleton className="h-3 sm:h-3.5 w-8 sm:w-12" />
+          ) : (
+            <button
+              onClick={() => setBrentOilChartOpen(true)}
+              className="text-foreground font-semibold tabular-nums hover:text-orange-400 transition-colors cursor-pointer underline decoration-dotted decoration-muted-foreground/30 underline-offset-2 hover:decoration-orange-400/50"
+            >
+              {formatPrice(data.brentOilPrice)}
+            </button>
+          )}
+        </div>
+
+        <div className="w-px h-3 bg-border/50 shrink-0" />
+
         {/* UTC Clock */}
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-sky-400" />
@@ -373,6 +413,28 @@ export function TickerBar({ live = true }: TickerBarProps) {
         activeAccent="bg-yellow-500/20 text-yellow-500"
         sourceLabel="hyperliquid.xyz"
         sourceUrl="https://app.hyperliquid.xyz/trade/xyz:GOLD"
+      />
+      <CoinChartDialog
+        open={sp500ChartOpen}
+        onOpenChange={setSp500ChartOpen}
+        market={MARKETS.SP500}
+        title="S&P 500"
+        icon={<TrendingUp className="h-4 w-4 text-sky-400" />}
+        accentColor="#38bdf8"
+        activeAccent="bg-sky-500/20 text-sky-400"
+        sourceLabel="hyperliquid.xyz"
+        sourceUrl="https://app.hyperliquid.xyz/trade/xyz:SP500"
+      />
+      <CoinChartDialog
+        open={brentOilChartOpen}
+        onOpenChange={setBrentOilChartOpen}
+        market={MARKETS.BRENTOIL}
+        title="Brent Oil"
+        icon={<Droplets className="h-4 w-4 text-orange-400" />}
+        accentColor="#fb923c"
+        activeAccent="bg-orange-500/20 text-orange-400"
+        sourceLabel="hyperliquid.xyz"
+        sourceUrl="https://app.hyperliquid.xyz/trade/xyz:BRENTOIL"
       />
     </>
   );

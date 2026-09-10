@@ -6,6 +6,8 @@ const HYPERLIQUID_INFO_URL = 'https://api.hyperliquid.xyz/info';
 export interface MarketData {
   btcPrice: number | null;
   goldPrice: number | null;
+  sp500Price: number | null;
+  brentOilPrice: number | null;
   blockHeight: number | null;
 }
 
@@ -31,7 +33,22 @@ interface HyperliquidSpotAssetContext {
   markPx?: string;
 }
 
+interface HyperliquidPerpUniverseItem {
+  name: string;
+}
+
+interface HyperliquidPerpAssetContext {
+  midPx?: string | null;
+  markPx?: string;
+  oraclePx?: string;
+}
+
+interface HyperliquidPerpMeta {
+  universe: HyperliquidPerpUniverseItem[];
+}
+
 type HyperliquidSpotMetaAndAssetCtxs = [HyperliquidSpotMeta, HyperliquidSpotAssetContext[]];
+type HyperliquidMetaAndAssetCtxs = [HyperliquidPerpMeta, HyperliquidPerpAssetContext[]];
 
 function withTimeout(ms: number): AbortSignal {
   return AbortSignal.timeout(ms);
@@ -85,32 +102,46 @@ function findSpotPairIndex(meta: HyperliquidSpotMeta, tokenName: string): number
   return pair?.index ?? null;
 }
 
-async function fetchHyperliquidPrices(): Promise<{ btcPrice: number | null; goldPrice: number | null }> {
+async function fetchHyperliquidPrices(): Promise<Pick<MarketData, 'btcPrice' | 'goldPrice' | 'sp500Price' | 'brentOilPrice'>> {
   try {
-    const data = await postHyperliquidInfoWithProxyFallback<HyperliquidSpotMetaAndAssetCtxs>(
-      { type: 'spotMetaAndAssetCtxs' },
-      5000,
-    );
-    const [meta, assetContexts] = data;
+    const [spotData, perpData] = await Promise.all([
+      postHyperliquidInfoWithProxyFallback<HyperliquidSpotMetaAndAssetCtxs>(
+        { type: 'spotMetaAndAssetCtxs' },
+        5000,
+      ),
+      postHyperliquidInfoWithProxyFallback<HyperliquidMetaAndAssetCtxs>(
+        { type: 'metaAndAssetCtxs', dex: 'xyz' },
+        5000,
+      ),
+    ]);
+    const [spotMeta, spotContexts] = spotData;
+    const [perpMeta, perpContexts] = perpData;
 
     // Hyperliquid spot mids are keyed as @{universe index}. The UI-facing BTC
     // market is UBTC/USDC, while XAUT0/USDC is the tokenized gold market.
-    const btcPairIndex = findSpotPairIndex(meta, 'UBTC');
-    const goldPairIndex = findSpotPairIndex(meta, 'XAUT0');
+    const btcPairIndex = findSpotPairIndex(spotMeta, 'UBTC');
+    const goldPairIndex = findSpotPairIndex(spotMeta, 'XAUT0');
 
     const btcContext = btcPairIndex === null
       ? undefined
-      : assetContexts.find((context) => context.coin === `@${btcPairIndex}`);
+      : spotContexts.find((context) => context.coin === `@${btcPairIndex}`);
     const goldContext = goldPairIndex === null
       ? undefined
-      : assetContexts.find((context) => context.coin === `@${goldPairIndex}`);
+      : spotContexts.find((context) => context.coin === `@${goldPairIndex}`);
+
+    const sp500Index = perpMeta.universe.findIndex((item) => item.name === 'xyz:SP500');
+    const brentOilIndex = perpMeta.universe.findIndex((item) => item.name === 'xyz:BRENTOIL');
+    const sp500Context = sp500Index >= 0 ? perpContexts[sp500Index] : undefined;
+    const brentOilContext = brentOilIndex >= 0 ? perpContexts[brentOilIndex] : undefined;
 
     return {
       btcPrice: parsePrice(btcContext?.midPx ?? btcContext?.markPx),
       goldPrice: parsePrice(goldContext?.midPx ?? goldContext?.markPx),
+      sp500Price: parsePrice(sp500Context?.midPx ?? sp500Context?.markPx ?? sp500Context?.oraclePx),
+      brentOilPrice: parsePrice(brentOilContext?.midPx ?? brentOilContext?.markPx ?? brentOilContext?.oraclePx),
     };
   } catch {
-    return { btcPrice: null, goldPrice: null };
+    return { btcPrice: null, goldPrice: null, sp500Price: null, brentOilPrice: null };
   }
 }
 
@@ -130,11 +161,11 @@ export function useMarketData(enabled = true) {
   return useQuery<MarketData>({
     queryKey: ['market-data'],
     queryFn: async () => {
-      const [{ btcPrice, goldPrice }, blockHeight] = await Promise.all([
+      const [{ btcPrice, goldPrice, sp500Price, brentOilPrice }, blockHeight] = await Promise.all([
         fetchHyperliquidPrices(),
         fetchBlockHeight(),
       ]);
-      return { btcPrice, goldPrice, blockHeight };
+      return { btcPrice, goldPrice, sp500Price, brentOilPrice, blockHeight };
     },
     enabled,
     staleTime: 60 * 1000,
