@@ -16,6 +16,19 @@ function formatPrice(value: number): string {
   });
 }
 
+function formatPriceTwoDecimals(value: number): string {
+  return value.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function formatYield(value: number): string {
+  return `${value.toFixed(2)}%`;
+}
+
 function formatBlockHeight(value: number): string {
   return value.toLocaleString('en-US');
 }
@@ -268,7 +281,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
             <Skeleton className="h-3 sm:h-3.5 w-14 sm:w-20" />
           ) : (
             <a
-              href={`https://mempool.space/block/${data.blockHeight}`}
+              href="https://mempool.space"
               target="_blank"
               rel="noopener noreferrer"
               className="text-foreground font-semibold tabular-nums hover:text-purple-400 transition-colors"
@@ -345,7 +358,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
               onClick={() => setBrentOilChartOpen(true)}
               className="text-foreground font-semibold tabular-nums hover:text-orange-400 transition-colors cursor-pointer underline decoration-dotted decoration-muted-foreground/30 underline-offset-2 hover:decoration-orange-400/50"
             >
-              {formatPrice(data.brentOilPrice)}
+              {formatPriceTwoDecimals(data.brentOilPrice)}
             </button>
           )}
         </div>
@@ -363,7 +376,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
               onClick={() => setUs10yChartOpen(true)}
               className="text-foreground font-semibold tabular-nums hover:text-violet-400 transition-colors cursor-pointer underline decoration-dotted decoration-muted-foreground/30 underline-offset-2 hover:decoration-violet-400/50"
             >
-              {formatPrice(data.us10yPrice)}
+              {formatYield(data.us10yPrice)}
             </button>
           )}
         </div>
