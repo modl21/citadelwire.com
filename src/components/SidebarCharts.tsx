@@ -344,8 +344,11 @@ function StatsSkeleton() {
 interface MempoolStats {
   fastestFee: number | null;
   difficultyChange: number | null;
-  latestRewardBtc: number | null;
+  difficultyRemainingDays: number | null;
+  avgBlockFeesBtc: number | null;
+  avgTxFeeSats: number | null;
   latestHashrateEh: number | null;
+  hashrateSeries: number[][];
 }
 
 function useMempoolStats() {
@@ -368,28 +371,39 @@ function useMempoolStats() {
         ? (fees as Record<string, number>).fastestFee
         : null;
 
-      const difficultyChange = difficulty && typeof difficulty === 'object' && typeof (difficulty as Record<string, unknown>).difficultyChange === 'number'
-        ? (difficulty as Record<string, number>).difficultyChange
-        : null;
+      const difficultyRecord = difficulty && typeof difficulty === 'object' ? difficulty as Record<string, unknown> : null;
+      const difficultyChange = typeof difficultyRecord?.difficultyChange === 'number' ? difficultyRecord.difficultyChange : null;
+      const remainingTime = typeof difficultyRecord?.remainingTime === 'number' ? difficultyRecord.remainingTime : null;
+      const difficultyRemainingDays = remainingTime !== null ? remainingTime / (24 * 60 * 60 * 1000) : null;
 
       const rewardRecord = reward && typeof reward === 'object' ? reward as Record<string, unknown> : null;
-      const totalReward = typeof rewardRecord?.totalReward === 'string' ? Number(rewardRecord.totalReward) : NaN;
       const totalFee = typeof rewardRecord?.totalFee === 'string' ? Number(rewardRecord.totalFee) : NaN;
-      const latestRewardBtc = Number.isFinite(totalReward) ? (totalReward + (Number.isFinite(totalFee) ? totalFee : 0)) / 100_000_000 : null;
+      const totalTx = typeof rewardRecord?.totalTx === 'string' ? Number(rewardRecord.totalTx) : NaN;
+      const startBlock = typeof rewardRecord?.startBlock === 'number' ? rewardRecord.startBlock : NaN;
+      const endBlock = typeof rewardRecord?.endBlock === 'number' ? rewardRecord.endBlock : NaN;
+      const blockCount = Number.isFinite(startBlock) && Number.isFinite(endBlock) && endBlock >= startBlock
+        ? endBlock - startBlock + 1
+        : NaN;
+      const avgBlockFeesBtc = Number.isFinite(totalFee) && Number.isFinite(blockCount) && blockCount > 0
+        ? totalFee / blockCount / 100_000_000
+        : null;
+      const avgTxFeeSats = Number.isFinite(totalFee) && Number.isFinite(totalTx) && totalTx > 0
+        ? totalFee / totalTx
+        : null;
 
       const hashrateRecord = hashrate && typeof hashrate === 'object' ? hashrate as Record<string, unknown> : null;
       const hashrates = Array.isArray(hashrateRecord?.hashrates) ? hashrateRecord.hashrates : [];
-      const latestHashrate = [...hashrates]
-        .reverse()
-        .map((entry) => {
-          if (!entry || typeof entry !== 'object') return null;
-          const value = (entry as Record<string, unknown>).avgHashrate;
-          return typeof value === 'number' && Number.isFinite(value) ? value : null;
-        })
-        .find((value): value is number => value !== null && value > 0);
-      const latestHashrateEh = latestHashrate ? latestHashrate / 1e18 : null;
+      const hashrateSeries = hashrates.flatMap((entry) => {
+        if (!entry || typeof entry !== 'object') return [];
+        const record = entry as Record<string, unknown>;
+        const timestamp = typeof record.timestamp === 'number' ? record.timestamp : null;
+        const avgHashrate = typeof record.avgHashrate === 'number' && Number.isFinite(record.avgHashrate) ? record.avgHashrate : null;
+        if (timestamp === null || avgHashrate === null || avgHashrate <= 0) return [];
+        return [[timestamp * 1000, avgHashrate / 1e18] as [number, number]];
+      });
+      const latestHashrateEh = hashrateSeries.length > 0 ? hashrateSeries[hashrateSeries.length - 1][1] : null;
 
-      return { fastestFee, difficultyChange, latestRewardBtc, latestHashrateEh };
+      return { fastestFee, difficultyChange, difficultyRemainingDays, avgBlockFeesBtc, avgTxFeeSats, latestHashrateEh, hashrateSeries };
     },
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -408,8 +422,16 @@ function formatDifficulty(value: number | null): string {
   return value === null ? '—' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
 }
 
-function formatReward(value: number | null): string {
-  return value === null ? '—' : `${value.toFixed(3)} BTC`;
+function formatDifficultyRemaining(value: number | null): string {
+  return value === null ? '—' : `${value.toFixed(1)}d`;
+}
+
+function formatBlockFees(value: number | null): string {
+  return value === null ? '—' : `${value.toFixed(4)} BTC`;
+}
+
+function formatTxFee(value: number | null): string {
+  return value === null ? '—' : `${value.toFixed(0)} sats`;
 }
 
 function formatHashrate(value: number | null): string {
@@ -418,6 +440,9 @@ function formatHashrate(value: number | null): string {
 
 function MempoolStatsPanel() {
   const { data, isLoading } = useMempoolStats();
+  const hashrateChart = data && data.hashrateSeries.length >= 2
+    ? data.hashrateSeries.map(([timestamp, hashrate]) => [timestamp, hashrate] as [number, number])
+    : null;
 
   return (
     <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
@@ -439,7 +464,7 @@ function MempoolStatsPanel() {
       <div className="px-3 py-1.5 divide-y divide-border/10">
         {isLoading || !data ? (
           <div className="space-y-2.5 py-1">
-            {Array.from({ length: 4 }).map((_, i) => (
+            {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="flex items-center justify-between">
                 <Skeleton className="h-2 w-20" />
                 <Skeleton className="h-2 w-16" />
@@ -450,11 +475,19 @@ function MempoolStatsPanel() {
           <>
             <StatRow label="Fastest Fee" value={formatMempoolFee(data.fastestFee)} />
             <StatRow label="Difficulty Adj" value={formatDifficulty(data.difficultyChange)} />
-            <StatRow label="Latest Reward" value={formatReward(data.latestRewardBtc)} />
+            <StatRow label="Next Adj In" value={formatDifficultyRemaining(data.difficultyRemainingDays)} />
+            <StatRow label="Avg Block Fees" value={formatBlockFees(data.avgBlockFeesBtc)} />
+            <StatRow label="Avg Tx Fee" value={formatTxFee(data.avgTxFeeSats)} />
             <StatRow label="Hashrate" value={formatHashrate(data.latestHashrateEh)} />
           </>
         )}
       </div>
+
+      {hashrateChart && (
+        <div className="border-t border-border/20 px-2 py-2" style={{ height: 92 }}>
+          <SidebarSparkline prices={hashrateChart} accentColor="#34d399" />
+        </div>
+      )}
     </div>
   );
 }
