@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Bitcoin, TrendingUp, TrendingDown, LineChart, Droplets } from 'lucide-react';
+import { Bitcoin, TrendingUp, TrendingDown, LineChart, Droplets, Landmark } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CHART_SPANS, MARKETS, useCoinChart, useCoinStats, getChange, formatPricePrecise, type CoinStats, type HyperliquidMarketConfig } from '@/lib/chartUtils';
 import { cn } from '@/lib/utils';
@@ -341,6 +341,7 @@ function StatsSkeleton() {
 export function BTCSidebarCharts() {
   const { data: btcStats, isLoading: btcStatsLoading } = useCoinStats(MARKETS.BTC, true);
   const { data: sp500Stats, isLoading: sp500StatsLoading } = useCoinStats(MARKETS.SP500, true);
+  const { data: us10yStats, isLoading: us10yStatsLoading } = useCoinStats(MARKETS.US10Y, true);
 
   return (
     <div className="space-y-3">
@@ -370,6 +371,20 @@ export function BTCSidebarCharts() {
         <StatsSkeleton />
       ) : sp500Stats ? (
         <StatsPanel stats={sp500Stats} symbol="SP500" accentColor="#38bdf8" hideMarketCap hideCirculating hideMaxSupply />
+      ) : null}
+
+      <ChartPanel
+        market={MARKETS.US10Y}
+        title="US 10Y Treasury"
+        icon={<Landmark className="h-3.5 w-3.5 text-violet-400" />}
+        accentColor="#a78bfa"
+        activeAccent="bg-violet-500/20 text-violet-300"
+        sourceUrl="https://app.hyperliquid.xyz/trade/para:10Y"
+      />
+      {us10yStatsLoading ? (
+        <StatsSkeleton />
+      ) : us10yStats ? (
+        <StatsPanel stats={us10yStats} symbol="10Y" accentColor="#a78bfa" hideMarketCap hideCirculating hideMaxSupply />
       ) : null}
     </div>
   );

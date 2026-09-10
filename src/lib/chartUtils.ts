@@ -20,6 +20,7 @@ export const MARKETS: Record<string, HyperliquidMarketConfig> = {
   SP500: { coin: 'xyz:SP500', dex: 'xyz' },
   XAUT: { coin: 'xyz:GOLD', dex: 'xyz' },
   BRENTOIL: { coin: 'xyz:BRENTOIL', dex: 'xyz' },
+  US10Y: { coin: 'para:10Y', dex: 'para' },
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;

@@ -4,7 +4,7 @@ import { fetchBlockHeight, useMarketData, type MarketData } from '@/hooks/useMar
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { Bitcoin, Box, TrendingUp, TrendingDown, Droplets } from 'lucide-react';
+import { Bitcoin, Box, TrendingUp, TrendingDown, Droplets, Landmark } from 'lucide-react';
 import { CHART_SPANS, MARKETS, useCoinChart, getChange, formatPricePrecise, type HyperliquidMarketConfig } from '@/lib/chartUtils';
 
 function formatPrice(value: number): string {
@@ -219,6 +219,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
   const [xautChartOpen, setXautChartOpen] = useState(false);
   const [sp500ChartOpen, setSp500ChartOpen] = useState(false);
   const [brentOilChartOpen, setBrentOilChartOpen] = useState(false);
+  const [us10yChartOpen, setUs10yChartOpen] = useState(false);
 
   useEffect(() => {
     if (!live) return;
@@ -234,6 +235,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
         goldPrice: current?.goldPrice ?? null,
         sp500Price: current?.sp500Price ?? null,
         brentOilPrice: current?.brentOilPrice ?? null,
+        us10yPrice: current?.us10yPrice ?? null,
         blockHeight: height,
       }));
     };
@@ -348,6 +350,24 @@ export function TickerBar({ live = true }: TickerBarProps) {
           )}
         </div>
 
+        <div className="w-px h-3 bg-border/50 shrink-0" />
+
+        {/* US 10Y Treasury Yield */}
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <Landmark className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-violet-400" />
+          <span className="hidden sm:inline text-muted-foreground/60">10Y</span>
+          {isLoading || !data?.us10yPrice ? (
+            <Skeleton className="h-3 sm:h-3.5 w-8 sm:w-12" />
+          ) : (
+            <button
+              onClick={() => setUs10yChartOpen(true)}
+              className="text-foreground font-semibold tabular-nums hover:text-violet-400 transition-colors cursor-pointer underline decoration-dotted decoration-muted-foreground/30 underline-offset-2 hover:decoration-violet-400/50"
+            >
+              {formatPrice(data.us10yPrice)}
+            </button>
+          )}
+        </div>
+
       </div>
 
       <CoinChartDialog
@@ -393,6 +413,17 @@ export function TickerBar({ live = true }: TickerBarProps) {
         activeAccent="bg-orange-500/20 text-orange-400"
         sourceLabel="hyperliquid.xyz"
         sourceUrl="https://app.hyperliquid.xyz/trade/xyz:BRENTOIL"
+      />
+      <CoinChartDialog
+        open={us10yChartOpen}
+        onOpenChange={setUs10yChartOpen}
+        market={MARKETS.US10Y}
+        title="US 10Y Treasury"
+        icon={<Landmark className="h-4 w-4 text-violet-400" />}
+        accentColor="#a78bfa"
+        activeAccent="bg-violet-500/20 text-violet-300"
+        sourceLabel="hyperliquid.xyz"
+        sourceUrl="https://app.hyperliquid.xyz/trade/para:10Y"
       />
     </>
   );
