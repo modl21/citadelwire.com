@@ -143,6 +143,14 @@ export function formatPricePrecise(value: number): string {
   });
 }
 
+export function formatYield(value: number): string {
+  return `${value.toFixed(2)}%`;
+}
+
+export function formatYieldChange(value: number): string {
+  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+}
+
 // ── Coin Stats ───────────────────────────────────────────────
 
 export interface CoinStats {
@@ -212,7 +220,7 @@ async function fetchStatsForMarket(market: HyperliquidMarketConfig): Promise<Coi
       },
     }),
     fetchHistoricalClose(market, now - (7 * DAY_MS) - (60 * 60 * 1000), now - (7 * DAY_MS) + (60 * 60 * 1000)),
-    fetchHistoricalClose(market, now - (30 * DAY_MS) - (60 * 60 * 1000), now - (30 * DAY_MS) + (60 * 60 * 1000)),
+    fetchHistoricalClose(market, now - (30 * DAY_MS) - (24 * 60 * 60 * 1000), now),
   ]);
 
   const [meta, contexts] = metaAndContexts;

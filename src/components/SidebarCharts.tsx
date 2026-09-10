@@ -1,12 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Bitcoin, TrendingUp, TrendingDown, LineChart, Droplets, Landmark } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CHART_SPANS, MARKETS, useCoinChart, useCoinStats, getChange, formatPricePrecise, type CoinStats, type HyperliquidMarketConfig } from '@/lib/chartUtils';
+import { CHART_SPANS, MARKETS, useCoinChart, useCoinStats, getChange, formatPricePrecise, formatYield, formatYieldChange, type CoinStats, type HyperliquidMarketConfig } from '@/lib/chartUtils';
 import { cn } from '@/lib/utils';
 
 // ── Responsive Sparkline Canvas ──────────────────────────────
 
-function SidebarSparkline({ prices, accentColor }: { prices: number[][]; accentColor: string }) {
+function SidebarSparkline({ prices, accentColor, isYield = false }: { prices: number[][]; accentColor: string; isYield?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -85,16 +85,16 @@ function SidebarSparkline({ prices, accentColor }: { prices: number[][]; accentC
     ctx.fillStyle = labelColor;
     ctx.font = '9px Inter Variable, Inter, system-ui, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`$${max.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, 4, padTop - 3);
-    ctx.fillText(`$${min.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, 4, padTop + chartH + 12);
+    ctx.fillText(isYield ? formatYield(max) : `$${max.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, 4, padTop - 3);
+    ctx.fillText(isYield ? formatYield(min) : `$${min.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, 4, padTop + chartH + 12);
 
     // Current price
     ctx.fillStyle = accentColor;
     ctx.font = 'bold 10px Inter Variable, Inter, system-ui, sans-serif';
     ctx.textAlign = 'right';
     const last = values[values.length - 1];
-    ctx.fillText(`$${last.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, chartW - 4, padTop - 3);
-  }, [prices, accentColor]);
+    ctx.fillText(isYield ? formatYield(last) : `$${last.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, chartW - 4, padTop - 3);
+  }, [prices, accentColor, isYield]);
 
   useEffect(() => {
     draw();
@@ -112,7 +112,7 @@ function SidebarSparkline({ prices, accentColor }: { prices: number[][]; accentC
 
 // ── Change Indicator ─────────────────────────────────────────
 
-function ChangeIndicator({ prices }: { prices: number[][] }) {
+function ChangeIndicator({ prices, isYield = false }: { prices: number[][]; isYield?: boolean }) {
   const { change, pct, isUp } = getChange(prices);
   const sign = isUp ? '+' : '';
 
@@ -120,7 +120,7 @@ function ChangeIndicator({ prices }: { prices: number[][] }) {
     <div className={`flex items-center gap-1 ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
       {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
       <span className="text-[11px] font-bold tabular-nums">
-        {sign}{formatPricePrecise(change)}
+        {isYield ? formatYieldChange(change) : `${sign}${formatPricePrecise(change)}`}
       </span>
       <span className="text-[10px] font-semibold tabular-nums opacity-70">
         ({sign}{pct.toFixed(2)}%)
@@ -138,9 +138,10 @@ interface ChartPanelProps {
   accentColor: string;
   activeAccent: string;
   sourceUrl: string;
+  isYield?: boolean;
 }
 
-function ChartPanel({ market, title, icon, accentColor, activeAccent, sourceUrl }: ChartPanelProps) {
+function ChartPanel({ market, title, icon, accentColor, activeAccent, sourceUrl, isYield = false }: ChartPanelProps) {
   const [activeIdx, setActiveIdx] = useState(2); // default 30D
   const span = CHART_SPANS[activeIdx];
   const { data: prices, isLoading } = useCoinChart(market, span.days, true);
@@ -159,7 +160,7 @@ function ChartPanel({ market, title, icon, accentColor, activeAccent, sourceUrl 
           >
             {title}
           </a>
-          <span className="text-[9px] text-muted-foreground/40 ml-auto">USD</span>
+          <span className="text-[9px] text-muted-foreground/40 ml-auto">{isYield ? 'Yield' : 'USD'}</span>
         </div>
         {/* Time span tabs */}
         <div className="flex items-center gap-0.5">
@@ -187,14 +188,14 @@ function ChartPanel({ market, title, icon, accentColor, activeAccent, sourceUrl 
             <Skeleton className="h-full w-full rounded" />
           </div>
         ) : (
-          <SidebarSparkline prices={prices} accentColor={accentColor} />
+          <SidebarSparkline prices={prices} accentColor={accentColor} isYield={isYield} />
         )}
       </div>
 
       {/* Change indicator footer */}
       {prices && prices.length >= 2 && (
         <div className="px-3 pb-2.5">
-          <ChangeIndicator prices={prices} />
+          <ChangeIndicator prices={prices} isYield={isYield} />
         </div>
       )}
     </div>
@@ -251,9 +252,10 @@ interface StatsPanelProps {
   hideMarketCap?: boolean;
   hideCirculating?: boolean;
   hideMaxSupply?: boolean;
+  isYield?: boolean;
 }
 
-function StatsPanel({ stats, symbol, hideMarketCap, hideCirculating, hideMaxSupply }: StatsPanelProps) {
+function StatsPanel({ stats, symbol, hideMarketCap, hideCirculating, hideMaxSupply, isYield = false }: StatsPanelProps) {
   return (
     <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
       <div className="px-3 py-2 border-b border-border/20">
@@ -278,9 +280,9 @@ function StatsPanel({ stats, symbol, hideMarketCap, hideCirculating, hideMaxSupp
             label="24h Range"
             value={
               <span className="text-[9px]">
-                <span className="text-red-400/70">{formatPricePrecise(stats.low24h)}</span>
+                <span className="text-red-400/70">{isYield ? formatYield(stats.low24h) : formatPricePrecise(stats.low24h)}</span>
                 <span className="text-muted-foreground/30 mx-0.5">–</span>
-                <span className="text-emerald-400/70">{formatPricePrecise(stats.high24h)}</span>
+                <span className="text-emerald-400/70">{isYield ? formatYield(stats.high24h) : formatPricePrecise(stats.high24h)}</span>
               </span>
             }
           />
@@ -295,7 +297,7 @@ function StatsPanel({ stats, symbol, hideMarketCap, hideCirculating, hideMaxSupp
         {stats.ath !== null && (
           <StatRow
             label="ATH"
-            value={formatPricePrecise(stats.ath)}
+            value={isYield ? formatYield(stats.ath) : formatPricePrecise(stats.ath)}
             sub={<PctBadge value={stats.athChangePercent} />}
           />
         )}
@@ -380,11 +382,12 @@ export function BTCSidebarCharts() {
         accentColor="#a78bfa"
         activeAccent="bg-violet-500/20 text-violet-300"
         sourceUrl="https://app.hyperliquid.xyz/trade/para:10Y"
+        isYield
       />
       {us10yStatsLoading ? (
         <StatsSkeleton />
       ) : us10yStats ? (
-        <StatsPanel stats={us10yStats} symbol="10Y" accentColor="#a78bfa" hideMarketCap hideCirculating hideMaxSupply />
+        <StatsPanel stats={us10yStats} symbol="10Y" accentColor="#a78bfa" hideMarketCap hideCirculating hideMaxSupply isYield />
       ) : null}
     </div>
   );
