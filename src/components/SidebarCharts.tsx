@@ -383,7 +383,7 @@ export function XAUTSidebarCharts() {
     <div className="space-y-3">
       <ChartPanel
         market={MARKETS.XAUT}
-        title="XAUT"
+        title="Gold"
         icon={<span className="text-yellow-500 text-[11px] font-bold leading-none">Au</span>}
         accentColor="#eab308"
         activeAccent="bg-yellow-500/20 text-yellow-500"

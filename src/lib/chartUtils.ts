@@ -172,8 +172,31 @@ function pctChange(current: number | null, previous: number | null): number | nu
   return ((current - previous) / previous) * 100;
 }
 
+async function fetchHistoricalClose(market: HyperliquidMarketConfig, startTime: number, endTime: number): Promise<number | null> {
+  try {
+    const candles = await postHyperliquidInfo<HyperliquidCandle[]>({
+      type: 'candleSnapshot',
+      req: {
+        coin: market.coin,
+        interval: '1h',
+        startTime,
+        endTime,
+      },
+    });
+
+    const firstClose = candles
+      .map((candle) => Number(candle.c))
+      .find((close) => Number.isFinite(close) && close > 0);
+
+    return firstClose ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchStatsForMarket(market: HyperliquidMarketConfig): Promise<CoinStats> {
-  const [metaAndContexts, candles] = await Promise.all([
+  const now = Date.now();
+  const [metaAndContexts, candles, close7dAgo, close30dAgo] = await Promise.all([
     postHyperliquidInfo<HyperliquidMetaAndAssetCtxs>({
       type: 'metaAndAssetCtxs',
       ...(market.dex !== undefined ? { dex: market.dex } : {}),
@@ -183,10 +206,12 @@ async function fetchStatsForMarket(market: HyperliquidMarketConfig): Promise<Coi
       req: {
         coin: market.coin,
         interval: '1h',
-        startTime: Date.now() - DAY_MS,
-        endTime: Date.now(),
+        startTime: now - DAY_MS,
+        endTime: now,
       },
     }),
+    fetchHistoricalClose(market, now - (7 * DAY_MS) - (60 * 60 * 1000), now - (7 * DAY_MS) + (60 * 60 * 1000)),
+    fetchHistoricalClose(market, now - (30 * DAY_MS) - (60 * 60 * 1000), now - (30 * DAY_MS) + (60 * 60 * 1000)),
   ]);
 
   const [meta, contexts] = metaAndContexts;
@@ -214,8 +239,8 @@ async function fetchStatsForMarket(market: HyperliquidMarketConfig): Promise<Coi
     maxSupply: null,
     priceChange24h,
     priceChangePct24h,
-    priceChangePct7d: null,
-    priceChangePct30d: null,
+    priceChangePct7d: pctChange(currentPrice, close7dAgo),
+    priceChangePct30d: pctChange(currentPrice, close30dAgo),
   };
 }
 

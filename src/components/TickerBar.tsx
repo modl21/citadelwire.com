@@ -367,7 +367,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
         open={xautChartOpen}
         onOpenChange={setXautChartOpen}
         market={MARKETS.XAUT}
-        title="XAUT"
+        title="Gold"
         icon={<span className="text-yellow-500 text-sm font-bold leading-none">Au</span>}
         accentColor="#eab308"
         activeAccent="bg-yellow-500/20 text-yellow-500"
