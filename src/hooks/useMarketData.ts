@@ -1,12 +1,37 @@
 import { useQuery } from '@tanstack/react-query';
 
 const CORS_PROXY = 'https://proxy.shakespeare.diy/?url=';
+const HYPERLIQUID_INFO_URL = 'https://api.hyperliquid.xyz/info';
 
 export interface MarketData {
   btcPrice: number | null;
   goldPrice: number | null;
   blockHeight: number | null;
 }
+
+interface HyperliquidSpotToken {
+  name: string;
+  index: number;
+}
+
+interface HyperliquidSpotUniverseItem {
+  name: string;
+  index: number;
+  tokens: number[];
+}
+
+interface HyperliquidSpotMeta {
+  tokens: HyperliquidSpotToken[];
+  universe: HyperliquidSpotUniverseItem[];
+}
+
+interface HyperliquidSpotAssetContext {
+  coin: string;
+  midPx?: string;
+  markPx?: string;
+}
+
+type HyperliquidSpotMetaAndAssetCtxs = [HyperliquidSpotMeta, HyperliquidSpotAssetContext[]];
 
 function withTimeout(ms: number): AbortSignal {
   return AbortSignal.timeout(ms);
@@ -23,30 +48,69 @@ async function fetchWithProxyFallback(url: string, timeoutMs: number): Promise<R
   return fetch(`${CORS_PROXY}${encodeURIComponent(url)}`, { signal: withTimeout(timeoutMs) });
 }
 
-async function fetchBtcPrice(): Promise<number | null> {
+async function postHyperliquidInfoWithProxyFallback<T>(body: Record<string, unknown>, timeoutMs: number): Promise<T> {
+  const request = async (url: string) => fetch(url, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+    signal: withTimeout(timeoutMs),
+  });
+
   try {
-    const res = await fetchWithProxyFallback('https://mempool.space/api/v1/prices', 5000);
-    if (!res.ok) throw new Error('Failed to fetch BTC price');
-    const data = await res.json();
-    return data.USD ?? null;
+    const direct = await request(HYPERLIQUID_INFO_URL);
+    if (direct.ok) return direct.json();
   } catch {
-    return null;
+    // Fall back to the configured proxy below.
   }
+
+  const proxied = await request(`${CORS_PROXY}${encodeURIComponent(HYPERLIQUID_INFO_URL)}`);
+  if (!proxied.ok) throw new Error(`Hyperliquid info error: ${proxied.status}`);
+  return proxied.json();
 }
 
-async function fetchGoldPrice(): Promise<number | null> {
+function parsePrice(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function findSpotPairIndex(meta: HyperliquidSpotMeta, tokenName: string): number | null {
+  const token = meta.tokens.find((item) => item.name === tokenName);
+  if (!token) return null;
+
+  const pair = meta.universe.find((item) => item.tokens[0] === token.index && item.tokens[1] === 0);
+  return pair?.index ?? null;
+}
+
+async function fetchHyperliquidPrices(): Promise<{ btcPrice: number | null; goldPrice: number | null }> {
   try {
-    // GeckoTerminal API — reads XAUT price from Uniswap on-chain pools
-    const res = await fetchWithProxyFallback(
-      'https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x68749665FF8D2d112Fa859AA293F07a622782F38',
+    const data = await postHyperliquidInfoWithProxyFallback<HyperliquidSpotMetaAndAssetCtxs>(
+      { type: 'spotMetaAndAssetCtxs' },
       5000,
     );
-    if (!res.ok) throw new Error('Failed to fetch gold price');
-    const data = await res.json();
-    const price = parseFloat(data?.data?.attributes?.price_usd);
-    return isNaN(price) ? null : price;
+    const [meta, assetContexts] = data;
+
+    // Hyperliquid spot mids are keyed as @{universe index}. The UI-facing BTC
+    // market is UBTC/USDC, while XAUT0/USDC is the tokenized gold market.
+    const btcPairIndex = findSpotPairIndex(meta, 'UBTC');
+    const goldPairIndex = findSpotPairIndex(meta, 'XAUT0');
+
+    const btcContext = btcPairIndex === null
+      ? undefined
+      : assetContexts.find((context) => context.coin === `@${btcPairIndex}`);
+    const goldContext = goldPairIndex === null
+      ? undefined
+      : assetContexts.find((context) => context.coin === `@${goldPairIndex}`);
+
+    return {
+      btcPrice: parsePrice(btcContext?.midPx ?? btcContext?.markPx),
+      goldPrice: parsePrice(goldContext?.midPx ?? goldContext?.markPx),
+    };
   } catch {
-    return null;
+    return { btcPrice: null, goldPrice: null };
   }
 }
 
@@ -66,9 +130,8 @@ export function useMarketData(enabled = true) {
   return useQuery<MarketData>({
     queryKey: ['market-data'],
     queryFn: async () => {
-      const [btcPrice, goldPrice, blockHeight] = await Promise.all([
-        fetchBtcPrice(),
-        fetchGoldPrice(),
+      const [{ btcPrice, goldPrice }, blockHeight] = await Promise.all([
+        fetchHyperliquidPrices(),
         fetchBlockHeight(),
       ]);
       return { btcPrice, goldPrice, blockHeight };
