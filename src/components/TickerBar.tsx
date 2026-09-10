@@ -4,7 +4,7 @@ import { fetchBlockHeight, useMarketData, type MarketData } from '@/hooks/useMar
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { Bitcoin, Box, TrendingUp, Droplets } from 'lucide-react';
+import { Bitcoin, Box, TrendingUp, TrendingDown, Droplets } from 'lucide-react';
 import { CHART_SPANS, MARKETS, useCoinChart, getChange, formatPricePrecise, type HyperliquidMarketConfig } from '@/lib/chartUtils';
 
 function formatPrice(value: number): string {
