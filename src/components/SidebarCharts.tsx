@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Bitcoin, TrendingUp, TrendingDown, LineChart, Droplets, Landmark } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Bitcoin, TrendingUp, TrendingDown, LineChart, Droplets, Landmark, Layers } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CHART_SPANS, MARKETS, useCoinChart, useCoinStats, getChange, formatPricePrecise, formatYield, formatYieldChange, type CoinStats, type HyperliquidMarketConfig } from '@/lib/chartUtils';
 import { cn } from '@/lib/utils';
@@ -338,6 +339,146 @@ function StatsSkeleton() {
   );
 }
 
+// ── Mempool Visualizer ───────────────────────────────────────
+
+interface MempoolSummary {
+  count: number;
+  vsize: number;
+  totalFee: number;
+}
+
+interface MempoolBlock {
+  nTx: number;
+  medianFee: number;
+  blockVSize: number;
+}
+
+function useMempoolSummary() {
+  return useQuery<{ summary: MempoolSummary; blocks: MempoolBlock[] }>({
+    queryKey: ['mempool-summary'],
+    queryFn: async () => {
+      const [mempoolRes, blocksRes] = await Promise.all([
+        fetch('https://mempool.space/api/mempool'),
+        fetch('https://mempool.space/api/v1/fees/mempool-blocks'),
+      ]);
+      if (!mempoolRes.ok) throw new Error('Failed to fetch mempool summary');
+      if (!blocksRes.ok) throw new Error('Failed to fetch mempool blocks');
+
+      const mempool: unknown = await mempoolRes.json();
+      const blocks: unknown = await blocksRes.json();
+
+      if (!mempool || typeof mempool !== 'object') throw new Error('Invalid mempool summary');
+      const mempoolRecord = mempool as Record<string, unknown>;
+      if (typeof mempoolRecord.count !== 'number' || typeof mempoolRecord.vsize !== 'number' || typeof mempoolRecord.total_fee !== 'number') {
+        throw new Error('Invalid mempool summary fields');
+      }
+
+      if (!Array.isArray(blocks)) throw new Error('Invalid mempool blocks');
+      const parsedBlocks = blocks.flatMap((block) => {
+        if (!block || typeof block !== 'object') return [];
+        const record = block as Record<string, unknown>;
+        if (typeof record.nTx !== 'number' || typeof record.medianFee !== 'number' || typeof record.blockVSize !== 'number') return [];
+        return [{ nTx: record.nTx, medianFee: record.medianFee, blockVSize: record.blockVSize }];
+      });
+
+      return {
+        summary: {
+          count: mempoolRecord.count,
+          vsize: mempoolRecord.vsize,
+          totalFee: mempoolRecord.total_fee,
+        },
+        blocks: parsedBlocks,
+      };
+    },
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: 30 * 1000,
+    retry: 1,
+    refetchOnMount: false,
+    refetchIntervalInBackground: false,
+  });
+}
+
+function formatMempoolCount(value: number): string {
+  return value.toLocaleString('en-US');
+}
+
+function formatMempoolVsize(value: number): string {
+  return `${(value / 1_000_000).toFixed(1)} MvB`;
+}
+
+function formatMempoolFee(value: number): string {
+  return `${(value / 100_000_000).toFixed(3)} BTC`;
+}
+
+function formatMedianFee(value: number): string {
+  return `${value.toFixed(value >= 10 ? 0 : 1)} sat/vB`;
+}
+
+function MempoolVisualizer() {
+  const { data, isLoading } = useMempoolSummary();
+
+  return (
+    <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
+      <div className="px-3 py-2.5 border-b border-border/20">
+        <div className="flex items-center gap-1.5">
+          <Layers className="h-3.5 w-3.5 text-emerald-400" />
+          <a
+            href="https://mempool.space"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] font-semibold text-foreground/90 hover:text-foreground transition-colors"
+          >
+            Mempool
+          </a>
+          <span className="text-[9px] text-muted-foreground/40 ml-auto">mempool.space</span>
+        </div>
+      </div>
+
+      <div className="px-3 py-2">
+        {isLoading || !data ? (
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-4/5" />
+            <Skeleton className="h-16 w-full rounded" />
+          </div>
+        ) : (
+          <>
+            <div className="mb-2 flex items-center justify-between gap-2 text-[10px] font-semibold tabular-nums">
+              <span className="text-foreground/85">{formatMempoolCount(data.summary.count)} tx</span>
+              <span className="text-emerald-300">{formatMempoolVsize(data.summary.vsize)}</span>
+              <span className="text-amber-300">{formatMempoolFee(data.summary.totalFee)}</span>
+            </div>
+
+            <div className="flex h-16 items-end gap-1 overflow-hidden rounded-md border border-border/20 bg-background/40 p-1">
+              {data.blocks.slice(0, 12).map((block, index) => {
+                const fill = Math.max(12, Math.min(100, (block.blockVSize / 1_000_000) * 100));
+                return (
+                  <div
+                    key={index}
+                    className="min-w-0 flex-1 rounded-sm border border-emerald-400/25 bg-emerald-400/10 transition-colors hover:border-emerald-300/50 hover:bg-emerald-400/20"
+                    title={`${block.nTx.toLocaleString('en-US')} tx · ${formatMedianFee(block.medianFee)}`}
+                  >
+                    <div
+                      className="w-full rounded-sm bg-gradient-to-t from-emerald-500/45 to-emerald-300/20"
+                      style={{ height: `${fill}%` }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-2 flex items-center justify-between text-[9px] font-medium text-muted-foreground/50">
+              <span>Next {Math.min(data.blocks.length, 12)} blocks</span>
+              <span>Median {data.blocks[0] ? formatMedianFee(data.blocks[0].medianFee) : '—'}</span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Sidebar Exports ──────────────────────────────────────────
 
 export function BTCSidebarCharts() {
@@ -426,6 +567,8 @@ export function XAUTSidebarCharts() {
       ) : brentStats ? (
         <StatsPanel stats={brentStats} symbol="BRENTOIL" accentColor="#fb923c" hideMarketCap hideCirculating hideMaxSupply />
       ) : null}
+
+      <MempoolVisualizer />
     </div>
   );
 }
