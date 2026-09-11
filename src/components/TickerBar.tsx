@@ -130,7 +130,7 @@ function SparklineCanvas({ prices, width, height, accentColor, isYield = false }
   );
 }
 
-function ChangeIndicator({ prices }: { prices: number[][] }) {
+function ChangeIndicator({ prices, isYield = false }: { prices: number[][]; isYield?: boolean }) {
   const { change, pct, isUp } = getChange(prices);
   const sign = isUp ? '+' : '';
 
@@ -138,7 +138,7 @@ function ChangeIndicator({ prices }: { prices: number[][] }) {
     <div className={`flex items-center gap-1.5 ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
       {isUp ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
       <span className="text-sm font-bold tabular-nums">
-        {sign}{formatPricePrecise(change)}
+        {isYield ? `${sign}${change.toFixed(2)}%` : `${sign}${formatPricePrecise(change)}`}
       </span>
       <span className="text-xs font-semibold tabular-nums opacity-70">
         ({sign}{pct.toFixed(2)}%)
@@ -197,7 +197,7 @@ function CoinChartDialog({ open, onOpenChange, market, title, icon, accentColor,
           {/* Change indicator */}
           {prices && prices.length >= 2 && (
             <div className="mt-2">
-              <ChangeIndicator prices={prices} />
+              <ChangeIndicator prices={prices} isYield={isYield} />
             </div>
           )}
         </div>
