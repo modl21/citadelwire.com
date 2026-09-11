@@ -33,7 +33,7 @@ function formatBlockHeight(value: number): string {
   return value.toLocaleString('en-US');
 }
 
-function SparklineCanvas({ prices, width, height, accentColor }: { prices: number[][]; width: number; height: number; accentColor: string }) {
+function SparklineCanvas({ prices, width, height, accentColor, isYield = false }: { prices: number[][]; width: number; height: number; accentColor: string; isYield?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const draw = useCallback(() => {
@@ -100,19 +100,24 @@ function SparklineCanvas({ prices, width, height, accentColor }: { prices: numbe
     const mutedFg = computedStyle.getPropertyValue('--muted-foreground').trim();
     const labelColor = mutedFg ? `hsl(${mutedFg} / 0.5)` : 'rgba(150,150,150,0.5)';
 
+    const formatValue = (value: number) => {
+      if (isYield) return formatYield(value);
+      return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+    };
+
     ctx.fillStyle = labelColor;
     ctx.font = '10px Inter Variable, Inter, system-ui, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`$${max.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, 4, padTop - 4);
-    ctx.fillText(`$${min.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, 4, padTop + chartH + 14);
+    ctx.fillText(formatValue(max), 4, padTop - 4);
+    ctx.fillText(formatValue(min), 4, padTop + chartH + 14);
 
     // Current price
     ctx.fillStyle = accentColor;
     ctx.font = 'bold 11px Inter Variable, Inter, system-ui, sans-serif';
     ctx.textAlign = 'right';
     const last = values[values.length - 1];
-    ctx.fillText(`$${last.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, chartW - 4, padTop - 4);
-  }, [prices, width, height, accentColor]);
+    ctx.fillText(formatValue(last), chartW - 4, padTop - 4);
+  }, [prices, width, height, accentColor, isYield]);
 
   useEffect(() => { draw(); }, [draw]);
 
@@ -154,9 +159,10 @@ interface ChartDialogProps {
   activeAccent: string;
   sourceLabel: string;
   sourceUrl: string;
+  isYield?: boolean;
 }
 
-function CoinChartDialog({ open, onOpenChange, market, title, icon, accentColor, activeAccent, sourceLabel, sourceUrl }: ChartDialogProps) {
+function CoinChartDialog({ open, onOpenChange, market, title, icon, accentColor, activeAccent, sourceLabel, sourceUrl, isYield = false }: ChartDialogProps) {
   const [activeIdx, setActiveIdx] = useState(2); // default 30D
   const span = CHART_SPANS[activeIdx];
   const { data: prices, isLoading } = useCoinChart(market, span.days, open);
@@ -186,7 +192,7 @@ function CoinChartDialog({ open, onOpenChange, market, title, icon, accentColor,
                 </button>
               ))}
             </div>
-            <span className="text-xs text-muted-foreground/50 ml-auto">USD</span>
+            <span className="text-xs text-muted-foreground/50 ml-auto">{isYield ? 'Yield' : 'USD'}</span>
           </div>
           {/* Change indicator */}
           {prices && prices.length >= 2 && (
@@ -201,7 +207,7 @@ function CoinChartDialog({ open, onOpenChange, market, title, icon, accentColor,
               <Skeleton className="h-full w-full rounded" />
             </div>
           ) : (
-            <SparklineCanvas prices={prices} width={460} height={200} accentColor={accentColor} />
+            <SparklineCanvas prices={prices} width={460} height={200} accentColor={accentColor} isYield={isYield} />
           )}
         </div>
         <div className="px-4 py-2 border-t border-border/40">
@@ -436,6 +442,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
         activeAccent="bg-violet-500/20 text-violet-300"
         sourceLabel="hyperliquid.xyz"
         sourceUrl="https://app.hyperliquid.xyz/trade/para:10Y"
+        isYield
       />
     </>
   );
