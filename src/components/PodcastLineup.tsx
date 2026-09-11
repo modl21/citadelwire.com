@@ -50,11 +50,11 @@ const PODCASTS: PodcastConfig[] = [
     titleTransform: (title) => title.replace(/^Ten31 Timestamp:\s*/i, ''),
   },
   {
-    id: 'blockspace',
-    feedUrl: 'https://rss.beehiiv.com/podcasts/019dbc32-d0bc-72d2-a970-951247013bb3.xml',
-    label: 'Latest Blockspace',
-    allEpisodesUrl: 'https://newsletter.blockspacemedia.com/',
-    accentColor: 'amber',
+    id: 'no-solutions',
+    feedUrl: 'https://sovereignengineering.io/dialogues.xml',
+    label: 'Latest No Solutions',
+    allEpisodesUrl: 'https://sovereignengineering.io/podcast',
+    accentColor: 'emerald',
   },
   {
     id: 'hell-money',
@@ -62,6 +62,13 @@ const PODCASTS: PodcastConfig[] = [
     label: 'Latest Hell Money',
     allEpisodesUrl: 'https://hellpodcast.money',
     accentColor: 'rose',
+  },
+  {
+    id: 'blockspace',
+    feedUrl: 'https://rss.beehiiv.com/podcasts/019dbc32-d0bc-72d2-a970-951247013bb3.xml',
+    label: 'Latest Blockspace',
+    allEpisodesUrl: 'https://newsletter.blockspacemedia.com/',
+    accentColor: 'amber',
   },
   {
     id: 'ungovernable',
@@ -106,13 +113,6 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'lime',
     predicate: (episode) => episode.title.toLowerCase().includes('diet tbpn'),
     titleTransform: (title) => title.replace(/\s*\|\s*Diet TBPN\s*$/i, ''),
-  },
-  {
-    id: 'no-solutions',
-    feedUrl: 'https://sovereignengineering.io/dialogues.xml',
-    label: 'Latest No Solutions',
-    allEpisodesUrl: 'https://sovereignengineering.io/podcast',
-    accentColor: 'emerald',
   },
   {
     id: 'opt-out',
