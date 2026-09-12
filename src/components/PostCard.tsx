@@ -6,7 +6,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { Check, Share2 } from 'lucide-react';
 import { NoteContent } from '@/components/NoteContent';
 import { cn } from '@/lib/utils';
-import { CITADEL_FEED_RELAYS } from '@/hooks/useCitadelFeed';
+import { CITADEL_FEED_RELAYS, getPostType, type PostType } from '@/hooks/useCitadelFeed';
 import { encodePostPath, getPostIdPrefix, getPostUtcSlug } from '@/lib/nostrPost';
 
 interface PostCardProps {
@@ -26,12 +26,23 @@ function isInteractiveElement(target: EventTarget | null): boolean {
   return target instanceof Element && Boolean(target.closest('a, button, input, textarea, select, [role="button"]'));
 }
 
+const POST_TYPE_STYLES: Record<PostType, string | null> = {
+  'standard': null,
+  'live-wire': 'border-red-400/45 bg-red-500/10 text-red-300',
+  'code-wire': 'border-yellow-400/45 bg-yellow-500/10 text-yellow-300',
+  'daily-wire': 'border-emerald-400/45 bg-emerald-500/10 text-emerald-300',
+  'weekly-wire': 'border-sky-400/45 bg-sky-500/10 text-sky-300',
+  'forward-wire': 'border-orange-400/45 bg-orange-500/10 text-orange-300',
+};
+
 export function PostCard({ event, isFirst }: PostCardProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
   const { relative, absolute } = formatTimestamp(event.created_at);
   const postPath = encodePostPath(event);
+  const postType = getPostType(event);
+  const postTypeClassName = POST_TYPE_STYLES[postType];
 
   const getShareUrl = () => {
     if (typeof window === 'undefined') return postPath;
@@ -84,10 +95,15 @@ export function PostCard({ event, isFirst }: PostCardProps) {
         <div className="flex min-w-0 items-center gap-1.5">
           <time
             dateTime={new Date(event.created_at * 1000).toISOString()}
-            className="truncate text-[11px] font-medium text-muted-foreground/50 tracking-wide uppercase"
+            className={cn(
+              'truncate text-[11px] font-medium tracking-wide uppercase',
+              postTypeClassName
+                ? `inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[8px] font-bold tracking-tight ${postTypeClassName}`
+                : 'text-muted-foreground/50',
+            )}
             title={absolute}
           >
-            {absolute}
+            {postTypeClassName ? postType.replace('-', ' ').toUpperCase() : absolute}
           </time>
           <span className="text-[11px] text-muted-foreground/30">·</span>
           <span className="shrink-0 text-[11px] text-muted-foreground/40">{relative}</span>

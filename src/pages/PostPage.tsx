@@ -24,11 +24,20 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLoginActions } from '@/hooks/useLoginActions';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { usePostEngagement } from '@/hooks/usePostEngagement';
-import { CITADEL_FEED_RELAYS, CITADEL_PUBKEY, getPostType } from '@/hooks/useCitadelFeed';
+import { CITADEL_FEED_RELAYS, CITADEL_PUBKEY, getPostType, type PostType } from '@/hooks/useCitadelFeed';
 import { genUserName } from '@/lib/genUserName';
 import { getEventTitle, parsePostPointer, useNostrEvent } from '@/lib/nostrPost';
 import { cn } from '@/lib/utils';
 import NotFound from '@/pages/NotFound';
+
+const POST_TYPE_BADGE_STYLES: Record<PostType, string> = {
+  'standard': 'border-amber-400/25 bg-amber-400/10 text-amber-200',
+  'live-wire': 'border-red-400/45 bg-red-500/10 text-red-300',
+  'code-wire': 'border-yellow-400/45 bg-yellow-500/10 text-yellow-300',
+  'daily-wire': 'border-emerald-400/45 bg-emerald-500/10 text-emerald-300',
+  'weekly-wire': 'border-sky-400/45 bg-sky-500/10 text-sky-300',
+  'forward-wire': 'border-orange-400/45 bg-orange-500/10 text-orange-300',
+};
 
 function PostPageSkeleton() {
   return (
@@ -172,7 +181,7 @@ export default function PostPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="border-amber-400/25 bg-amber-400/10 text-amber-200">
+                <Badge variant="outline" className={POST_TYPE_BADGE_STYLES[postType]}>
                   {postType === 'standard' ? 'MAIN WIRE' : postType.replace('-', ' ').toUpperCase()}
                 </Badge>
 
