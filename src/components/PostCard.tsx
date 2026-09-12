@@ -28,11 +28,11 @@ function isInteractiveElement(target: EventTarget | null): boolean {
 
 const POST_TYPE_STYLES: Record<PostType, string | null> = {
   'standard': null,
-  'live-wire': 'border-red-400/45 bg-red-500/10 text-red-300',
-  'code-wire': 'border-yellow-400/45 bg-yellow-500/10 text-yellow-300',
-  'daily-wire': 'border-emerald-400/45 bg-emerald-500/10 text-emerald-300',
-  'weekly-wire': 'border-sky-400/45 bg-sky-500/10 text-sky-300',
-  'forward-wire': 'border-orange-400/45 bg-orange-500/10 text-orange-300',
+  'live-wire': 'text-red-300',
+  'code-wire': 'text-yellow-300',
+  'daily-wire': 'text-emerald-300',
+  'weekly-wire': 'text-sky-300',
+  'forward-wire': 'text-orange-300',
 };
 
 export function PostCard({ event, isFirst }: PostCardProps) {
@@ -97,9 +97,7 @@ export function PostCard({ event, isFirst }: PostCardProps) {
             dateTime={new Date(event.created_at * 1000).toISOString()}
             className={cn(
               'truncate text-[11px] font-medium tracking-wide uppercase',
-              postTypeClassName
-                ? `inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[8px] font-bold tracking-tight ${postTypeClassName}`
-                : 'text-muted-foreground/50',
+              postTypeClassName ? `font-bold tracking-tight ${postTypeClassName}` : 'text-muted-foreground/50',
             )}
             title={absolute}
           >

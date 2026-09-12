@@ -6,7 +6,6 @@ import { nip19 } from 'nostr-tools';
 import { AlertTriangle, ArrowLeft, ArrowUpRight, Check, Copy, Rabbit, Radio, Shield, Sparkles } from 'lucide-react';
 import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,13 +29,13 @@ import { getEventTitle, parsePostPointer, useNostrEvent } from '@/lib/nostrPost'
 import { cn } from '@/lib/utils';
 import NotFound from '@/pages/NotFound';
 
-const POST_TYPE_BADGE_STYLES: Record<PostType, string> = {
-  'standard': 'border-amber-400/25 bg-amber-400/10 text-amber-200',
-  'live-wire': 'border-red-400/45 bg-red-500/10 text-red-300',
-  'code-wire': 'border-yellow-400/45 bg-yellow-500/10 text-yellow-300',
-  'daily-wire': 'border-emerald-400/45 bg-emerald-500/10 text-emerald-300',
-  'weekly-wire': 'border-sky-400/45 bg-sky-500/10 text-sky-300',
-  'forward-wire': 'border-orange-400/45 bg-orange-500/10 text-orange-300',
+const POST_TYPE_TEXT_STYLES: Record<PostType, string> = {
+  'standard': 'text-amber-200',
+  'live-wire': 'text-red-300',
+  'code-wire': 'text-yellow-300',
+  'daily-wire': 'text-emerald-300',
+  'weekly-wire': 'text-sky-300',
+  'forward-wire': 'text-orange-300',
 };
 
 function PostPageSkeleton() {
@@ -181,9 +180,9 @@ export default function PostPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className={POST_TYPE_BADGE_STYLES[postType]}>
+                <span className={`text-xs font-black uppercase tracking-wide ${POST_TYPE_TEXT_STYLES[postType]}`}>
                   {postType === 'standard' ? 'MAIN WIRE' : postType.replace('-', ' ').toUpperCase()}
-                </Badge>
+                </span>
 
               </div>
             </div>
