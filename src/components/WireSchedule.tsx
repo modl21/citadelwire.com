@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Clock, Radio } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -128,6 +128,8 @@ function getScheduleState(now: Date): ScheduleState {
 
 export function WireSchedule() {
   const [state, setState] = useState<ScheduleState>(() => getScheduleState(new Date()));
+  const scheduleScrollRef = useRef<HTMLDivElement | null>(null);
+  const currentHourRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
     const update = () => setState(getScheduleState(new Date()));
@@ -148,6 +150,15 @@ export function WireSchedule() {
 
   const { nowMs, utcTime, utcDate, nextHour, currentHourIndex } = state;
 
+  useEffect(() => {
+    const container = scheduleScrollRef.current;
+    const currentHour = currentHourRef.current;
+    if (!container || !currentHour) return;
+
+    const targetScrollLeft = currentHour.offsetLeft + currentHour.offsetWidth / 2 - container.clientWidth / 2;
+    container.scrollLeft = Math.max(0, targetScrollLeft);
+  }, [currentHourIndex]);
+
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -162,7 +173,7 @@ export function WireSchedule() {
         <div className="w-px h-3 bg-border/40 shrink-0" />
 
         {/* Schedule pills — scrollable on small screens */}
-        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none min-w-0 flex-1">
+        <div ref={scheduleScrollRef} className="flex items-center gap-1 overflow-x-auto scrollbar-none min-w-0 flex-1">
           {SCHEDULE_HOURS.map((hour, idx) => {
             const isNext = hour === nextHour;
             const isPast = idx <= currentHourIndex;
@@ -171,6 +182,7 @@ export function WireSchedule() {
             return (
               <span
                 key={hour}
+                ref={isCurrent ? currentHourRef : undefined}
                 title={`${pad(hour)}:00 UTC`}
                 className={cn(
                   'shrink-0 rounded px-1 py-0.5 text-[10px] font-mono font-semibold transition-all duration-500',

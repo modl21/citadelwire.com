@@ -7,6 +7,7 @@ interface NoteContentProps {
   event: NostrEvent;
   className?: string;
   showMoreInfo?: boolean;
+  titleClassName?: string;
 }
 
 const NOSTR_URI_REGEX = /nostr:(npub1|note1|nprofile1|nevent1)([023456789acdefghjklmnpqrstuvwxyz]+)/g;
@@ -163,7 +164,7 @@ function nestSubItems(items: string[]): string {
 }
 
 /** Parse the content into structured HTML. */
-function renderContent(content: string, showMoreInfo: boolean): string {
+function renderContent(content: string, showMoreInfo: boolean, titleClassName?: string): string {
   const lines = content.split('\n');
   const blocks: string[] = [];
   let i = 0;
@@ -180,7 +181,8 @@ function renderContent(content: string, showMoreInfo: boolean): string {
 
     // Title detection
     if (isTitleLine(trimmed, i, lines)) {
-      blocks.push(`<h3>${renderInline(trimmed)}</h3>`);
+      const titleClasses = titleClassName ? ` class="${escapeHtml(titleClassName)}"` : '';
+      blocks.push(`<h3${titleClasses}>${renderInline(trimmed)}</h3>`);
       i++;
       continue;
     }
@@ -267,8 +269,11 @@ function renderContent(content: string, showMoreInfo: boolean): string {
 }
 
 /** Parses content of text note events with smart formatting. */
-export function NoteContent({ event, className, showMoreInfo = false }: NoteContentProps) {
-  const html = useMemo(() => renderContent(event.content, showMoreInfo), [event.content, showMoreInfo]);
+export function NoteContent({ event, className, showMoreInfo = false, titleClassName }: NoteContentProps) {
+  const html = useMemo(
+    () => renderContent(event.content, showMoreInfo, titleClassName),
+    [event.content, showMoreInfo, titleClassName],
+  );
 
   return (
     <div

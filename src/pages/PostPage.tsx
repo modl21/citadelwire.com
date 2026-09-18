@@ -187,7 +187,12 @@ export default function PostPage() {
               </div>
             </div>
 
-            <NoteContent event={event} className="text-[17px] leading-8 text-foreground/95 sm:text-[18px]" showMoreInfo />
+            <NoteContent
+              event={event}
+              className="text-[17px] leading-8 text-foreground/95 sm:text-[18px]"
+              titleClassName={`font-black tracking-tight ${POST_TYPE_TEXT_STYLES[postType]}`}
+              showMoreInfo
+            />
 
             <PostActionBar
               event={event}
