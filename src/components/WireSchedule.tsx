@@ -217,7 +217,7 @@ export function WireSchedule() {
             <div
               key={slot.type}
               className={cn(
-                'inline-flex shrink-0 items-center gap-0.5 text-[7px] font-bold uppercase leading-none tracking-tight sm:gap-1 sm:text-[9px] sm:tracking-wide',
+                'inline-flex shrink-0 items-center gap-0.5 text-[8px] font-bold uppercase leading-none tracking-tight sm:gap-1 sm:text-[10px] sm:tracking-wide',
                 slot.accentClassName,
               )}
               title={`${slot.type} · ${new Date(nextTimestampMs).toUTCString()}`}
