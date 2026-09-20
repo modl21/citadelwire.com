@@ -321,13 +321,6 @@ const Index = () => {
                     </button>
                   );
                 })}
-                <span
-                  className="shrink-0 cursor-default rounded-full border border-cyan-500/40 bg-cyan-500/15 px-1 py-0.5 text-[7px] font-semibold leading-none tracking-tighter text-cyan-300 sm:px-2 sm:py-0.5 sm:text-[9px] sm:tracking-tight"
-                  title="Editor wires are always shown"
-                  aria-label="Editor wires are always shown"
-                >
-                  EDITOR WIRE
-                </span>
                 <Tooltip open={postTypeTooltipOpen} onOpenChange={setPostTypeTooltipOpen}>
                   <TooltipTrigger asChild>
                     <button
