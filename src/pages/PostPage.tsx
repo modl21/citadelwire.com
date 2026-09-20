@@ -36,6 +36,7 @@ const POST_TYPE_TEXT_STYLES: Record<PostType, string> = {
   'daily-wire': 'text-emerald-300',
   'weekly-wire': 'text-sky-300',
   'forward-wire': 'text-orange-300',
+  'editor-wire': 'text-cyan-300',
 };
 
 function PostPageSkeleton() {

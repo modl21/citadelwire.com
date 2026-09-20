@@ -53,6 +53,7 @@ const POST_TYPE_STYLES: Record<PostType, string | null> = {
   'daily-wire': 'text-emerald-300',
   'weekly-wire': 'text-sky-300',
   'forward-wire': 'text-orange-300',
+  'editor-wire': 'text-cyan-300',
 };
 
 export const PostCard = memo(function PostCard({ event, isFirst }: PostCardProps) {

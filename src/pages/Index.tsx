@@ -110,7 +110,8 @@ const Index = () => {
   );
   const filteredPosts = useMemo(
     () => searchIndex
-      .filter(({ type, text }) => visiblePostTypes.has(type) && (!normalizedSearchQuery || text.includes(normalizedSearchQuery)))
+      // Editor wires bypass the Show-bar filters entirely; search still applies.
+      .filter(({ type, text }) => (type === 'editor-wire' || visiblePostTypes.has(type)) && (!normalizedSearchQuery || text.includes(normalizedSearchQuery)))
       .map(({ post }) => post),
     [searchIndex, visiblePostTypes, normalizedSearchQuery],
   );
@@ -320,6 +321,13 @@ const Index = () => {
                     </button>
                   );
                 })}
+                <span
+                  className="shrink-0 cursor-default rounded-full border border-cyan-500/40 bg-cyan-500/15 px-1 py-0.5 text-[7px] font-semibold leading-none tracking-tighter text-cyan-300 sm:px-2 sm:py-0.5 sm:text-[9px] sm:tracking-tight"
+                  title="Editor wires are always shown"
+                  aria-label="Editor wires are always shown"
+                >
+                  EDITOR WIRE
+                </span>
                 <Tooltip open={postTypeTooltipOpen} onOpenChange={setPostTypeTooltipOpen}>
                   <TooltipTrigger asChild>
                     <button
@@ -340,6 +348,7 @@ const Index = () => {
                       <p><span className="font-black text-orange-200">DAILY WIRE</span> daily at 21:30 utc.</p>
                       <p><span className="font-black text-purple-200">WEEKLY WIRE</span> fridays at 22:00 utc.</p>
                       <p><span className="font-black text-rose-200">FORWARD WIRE</span> mondays at 11:00 utc.</p>
+                      <p><span className="font-black text-cyan-200">EDITOR WIRE</span> always shown.</p>
                     </div>
                   </TooltipContent>
                 </Tooltip>

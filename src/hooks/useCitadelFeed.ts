@@ -23,12 +23,24 @@ export const CITADEL_FEED_RELAYS = [
 
 export const CITADEL_FEED_LIMIT = 500;
 
-export type PostType = 'standard' | 'live-wire' | 'code-wire' | 'daily-wire' | 'weekly-wire' | 'forward-wire';
+export type PostType = 'standard' | 'live-wire' | 'code-wire' | 'daily-wire' | 'weekly-wire' | 'forward-wire' | 'editor-wire';
 
 export function getPostType(event: NostrEvent): PostType {
   const tags = event.tags.map((tag) => tag[1]?.toLowerCase()).filter(Boolean);
   const firstLine = event.content.split('\n')[0]?.toLowerCase() ?? '';
   const contentStart = event.content.trimStart().toLowerCase();
+
+  // Editor wires are exempt from the Show-bar filters, so detect them first.
+  if (
+    tags.includes('editor-wire') ||
+    tags.includes('editorwire') ||
+    firstLine.includes('editor wire') ||
+    firstLine.includes('editorwire') ||
+    contentStart.startsWith('editor wire') ||
+    contentStart.startsWith('editorwire')
+  ) {
+    return 'editor-wire';
+  }
 
   if (
     tags.includes('daily-wire') ||
