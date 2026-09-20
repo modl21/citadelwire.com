@@ -79,6 +79,14 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'emerald',
   },
   {
+    id: 'all-in',
+    feedUrl: 'https://allinchamathjason.libsyn.com/rss',
+    label: 'Latest All-In',
+    allEpisodesUrl: 'http://allinchamathjason.libsyn.com/website',
+    accentColor: 'rose',
+    predicate: (episode) => !/^\s*[^:]{2,80}\s*:\s+/u.test(episode.title),
+  },
+  {
     id: 'tbpn',
     feedUrl: 'https://feeds.transistor.fm/technology-brother',
     label: 'Latest TBPN',
@@ -86,14 +94,6 @@ const PODCASTS: PodcastConfig[] = [
     accentColor: 'lime',
     predicate: (episode) => episode.title.toLowerCase().includes('diet tbpn'),
     titleTransform: (title) => title.replace(/\s*\|\s*Diet TBPN\s*$/i, ''),
-  },
-  {
-    id: 'all-in',
-    feedUrl: 'https://allinchamathjason.libsyn.com/rss',
-    label: 'Latest All-In',
-    allEpisodesUrl: 'http://allinchamathjason.libsyn.com/website',
-    accentColor: 'rose',
-    predicate: (episode) => !/^\s*[^:]{2,80}\s*:\s+/u.test(episode.title),
   },
   {
     id: 'pbj',
