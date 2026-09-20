@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useNostr } from '@nostrify/react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { readCachedCitadelFeedState, readCachedCitadelPosts, writeCachedCitadelPosts } from '@/lib/citadelFeedStore';
 
@@ -88,41 +88,55 @@ export function getPostType(event: NostrEvent): PostType {
   return 'standard';
 }
 
+const FEED_QUERY_KEY = ['citadel-feed', CITADEL_FEED_RELAYS] as const;
+
+function mergeFeedPosts(...sources: NostrEvent[][]): NostrEvent[] {
+  const events = new Map<string, NostrEvent>();
+  for (const source of sources) {
+    for (const event of source) {
+      if (event.kind === 1 && event.pubkey === CITADEL_PUBKEY) events.set(event.id, event);
+    }
+  }
+  return Array.from(events.values())
+    .sort((a, b) => b.created_at - a.created_at || a.id.localeCompare(b.id))
+    .slice(0, CITADEL_FEED_LIMIT);
+}
+
 export function useCitadelFeed() {
   const { nostr } = useNostr();
-
+  const queryClient = useQueryClient();
+  const hasFullHistoryRef = useRef(false);
   const relayGroup = useMemo(() => nostr.group(CITADEL_FEED_RELAYS), [nostr]);
 
   const query = useQuery<NostrEvent[]>({
-    queryKey: ['citadel-feed', CITADEL_FEED_RELAYS],
-    queryFn: async () => {
-      const [cachedPosts, cachedState] = await Promise.all([
+    queryKey: FEED_QUERY_KEY,
+    queryFn: async ({ signal }) => {
+      const [storedPosts, cachedState] = await Promise.all([
         readCachedCitadelPosts(),
         readCachedCitadelFeedState(),
       ]);
-      const newestCachedAt = cachedPosts[0]?.created_at;
-      const shouldIncrementalSync = typeof newestCachedAt === 'number' && cachedState?.hasFullHistory === true;
+      signal.throwIfAborted();
+      const cachedPosts = mergeFeedPosts(storedPosts);
+      hasFullHistoryRef.current = cachedState?.hasFullHistory === true;
 
+      // Show the local cache immediately, while the same query syncs with relays.
+      if (cachedPosts.length && !queryClient.getQueryData(FEED_QUERY_KEY)) {
+        queryClient.setQueryData(FEED_QUERY_KEY, cachedPosts);
+      }
+      const newestCachedAt = cachedPosts[0]?.created_at;
+      const shouldIncrementalSync = typeof newestCachedAt === 'number' && hasFullHistoryRef.current;
       const events = await relayGroup.query([
         {
           kinds: [1],
           authors: [CITADEL_PUBKEY],
-          ...(shouldIncrementalSync ? { since: newestCachedAt + 1 } : { limit: CITADEL_FEED_LIMIT }),
+          // Include the boundary second so simultaneous posts cannot be missed.
+          ...(shouldIncrementalSync ? { since: newestCachedAt, limit: CITADEL_FEED_LIMIT } : { limit: CITADEL_FEED_LIMIT }),
         },
-      ]);
+      ], { signal });
+      hasFullHistoryRef.current = true;
 
-      const mergedEvents = new Map<string, NostrEvent>();
-      if (shouldIncrementalSync) {
-        for (const event of cachedPosts) mergedEvents.set(event.id, event);
-      }
-      for (const event of events) mergedEvents.set(event.id, event);
-
-      // Sort chronologically — newest first
-      const sortedEvents = Array.from(mergedEvents.values())
-        .sort((a, b) => b.created_at - a.created_at)
-        .slice(0, CITADEL_FEED_LIMIT);
-      await writeCachedCitadelPosts(sortedEvents, true);
-      return sortedEvents;
+      // Keep any live events that arrived while the historical query was running.
+      return mergeFeedPosts(cachedPosts, events, queryClient.getQueryData<NostrEvent[]>(FEED_QUERY_KEY) ?? []);
     },
     placeholderData: (previousData) => previousData,
     staleTime: 60 * 1000, // 1 minute
@@ -131,24 +145,30 @@ export function useCitadelFeed() {
     refetchOnMount: false,
   });
 
-  const newestSeenAtRef = useRef<number | undefined>(undefined);
-
+  // Persist after rendering, coalescing bursts from multiple relays into one write.
   useEffect(() => {
-    const newestCreatedAt = query.data?.[0]?.created_at;
-    if (newestCreatedAt) {
-      newestSeenAtRef.current = Math.max(newestSeenAtRef.current ?? 0, newestCreatedAt);
-    }
-  }, [query.data]);
+    if (!query.data || query.isFetching) return;
+    const posts = query.data;
+    const timer = setTimeout(() => {
+      void (async () => {
+        const hasFullHistory = hasFullHistoryRef.current || (await readCachedCitadelFeedState())?.hasFullHistory === true;
+        await writeCachedCitadelPosts(posts, hasFullHistory);
+      })();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [query.data, query.isFetching]);
 
+  const canSubscribe = query.data !== undefined && !query.isFetching;
   useEffect(() => {
-    const newestSeenAt = newestSeenAtRef.current;
-    if (!newestSeenAt) return;
-
+    if (!canSubscribe) return;
+    const newestSeenAt = queryClient.getQueryData<NostrEvent[]>(FEED_QUERY_KEY)?.[0]?.created_at
+      ?? Math.floor(Date.now() / 1000);
     const subscription = relayGroup.req([
       {
         kinds: [1],
         authors: [CITADEL_PUBKEY],
-        since: newestSeenAt + 1,
+        since: newestSeenAt,
+        limit: CITADEL_FEED_LIMIT,
       },
     ]);
     let isActive = true;
@@ -161,11 +181,15 @@ export function useCitadelFeed() {
 
           const event = msg[2];
           if (event.kind !== 1 || event.pubkey !== CITADEL_PUBKEY) continue;
-          if (event.created_at <= (newestSeenAtRef.current ?? 0)) continue;
+          if (event.created_at < newestSeenAt) continue;
 
-          newestSeenAtRef.current = event.created_at;
-          window.location.reload();
-          break;
+          const current = queryClient.getQueryData<NostrEvent[]>(FEED_QUERY_KEY);
+          if (current?.some((post) => post.id === event.id)) continue;
+          queryClient.setQueryData(FEED_QUERY_KEY, mergeFeedPosts(current ?? [], [event]));
+
+          // Refresh other visible widgets only when their existing freshness
+          // windows have expired, rather than downloading everything again.
+          void queryClient.refetchQueries({ type: 'active', stale: true });
         }
       } catch (error) {
         if (isActive) {
@@ -182,7 +206,7 @@ export function useCitadelFeed() {
         console.warn('Citadel feed live subscription cleanup failed', error);
       }
     };
-  }, [relayGroup, query.data]);
+  }, [relayGroup, queryClient, canSubscribe]);
 
   return query;
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useRSSEpisode, type RSSEpisode } from '@/hooks/useRSSEpisode';
@@ -186,9 +186,10 @@ const PODCASTS: PodcastConfig[] = [
 interface PodcastShowPlayerProps {
   config: PodcastConfig;
   onVisibilityChange: (id: string, visible: boolean) => void;
+  preloadMetadata: boolean;
 }
 
-function PodcastShowPlayer({ config, onVisibilityChange }: PodcastShowPlayerProps) {
+const PodcastShowPlayer = memo(function PodcastShowPlayer({ config, onVisibilityChange, preloadMetadata }: PodcastShowPlayerProps) {
   const { data: episode, isLoading } = useRSSEpisode(config.feedUrl, config.predicate, config.id);
   const isVisible = isLoading || Boolean(episode);
 
@@ -220,17 +221,19 @@ function PodcastShowPlayer({ config, onVisibilityChange }: PodcastShowPlayerProp
         allEpisodesUrl={config.allEpisodesUrl}
         accentColor={config.accentColor}
         storageKey={`${config.id}:${episode.guid}`}
+        preloadMetadata={preloadMetadata}
       />
     </div>
   );
-}
+});
 
 export function PodcastLineup() {
   const [expanded, setExpanded] = useState(false);
-  const [visibleIds, setVisibleIds] = useState<Set<string>>(() => new Set());
+  const [visibleIds, setVisibleIds] = useState<Set<string>>(() => new Set(PODCASTS.map(({ id }) => id)));
 
   const setPodcastVisibility = useCallback((id: string, visible: boolean) => {
     setVisibleIds((current) => {
+      if (current.has(id) === visible) return current;
       const next = new Set(current);
       if (visible) {
         next.add(id);
@@ -271,7 +274,11 @@ export function PodcastLineup() {
               </div>
             )}
             <div className={cn(hiddenBehindToggle && !expanded && 'hidden')}>
-              <PodcastShowPlayer config={config} onVisibilityChange={setPodcastVisibility} />
+              <PodcastShowPlayer
+                config={config}
+                onVisibilityChange={setPodcastVisibility}
+                preloadMetadata={expanded || !hiddenBehindToggle}
+              />
             </div>
           </div>
         );

@@ -60,7 +60,22 @@ interface HyperliquidPerpMeta {
 
 type HyperliquidMetaAndAssetCtxs = [HyperliquidPerpMeta, HyperliquidPerpAssetContext[]];
 
-async function postHyperliquidInfo<T>(body: Record<string, unknown>, timeoutMs = 8000): Promise<T> {
+const pendingInfoRequests = new Map<string, Promise<unknown>>();
+
+/** Share concurrent identical API requests; settled responses are not cached here. */
+export function postHyperliquidInfo<T>(body: Record<string, unknown>, timeoutMs = 8000): Promise<T> {
+  const key = JSON.stringify(body);
+  const existing = pendingInfoRequests.get(key);
+  if (existing) return existing as Promise<T>;
+
+  const pending = requestHyperliquidInfo<T>(body, timeoutMs).finally(() => {
+    pendingInfoRequests.delete(key);
+  });
+  pendingInfoRequests.set(key, pending);
+  return pending;
+}
+
+async function requestHyperliquidInfo<T>(body: Record<string, unknown>, timeoutMs: number): Promise<T> {
   const request = async (url: string) => fetch(url, {
     method: 'POST',
     headers: {

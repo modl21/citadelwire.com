@@ -143,6 +143,20 @@ html {
   color: hsl(var(--foreground)) !important;
 }
 
+/* Keep every wire in the DOM for find-in-page and assistive technology, but
+   let supporting browsers skip layout/painting of distant offscreen cards. */
+.wire-post-deferred {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
+}
+
+@media print {
+  .wire-post-deferred {
+    content-visibility: visible;
+    contain-intrinsic-size: none;
+  }
+}
+
 /* Note content prose styling */
 .note-content {
   font-feature-settings: 'kern' 1, 'liga' 1;

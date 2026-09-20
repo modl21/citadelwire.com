@@ -19,6 +19,7 @@ function SidebarSparkline({ prices, accentColor, isYield = false, isHashrate = f
     const rect = container.getBoundingClientRect();
     const width = rect.width;
     const height = rect.height;
+    if (width <= 0 || height <= 0) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -105,9 +106,17 @@ function SidebarSparkline({ prices, accentColor, isYield = false, isHashrate = f
 
   useEffect(() => {
     draw();
-    const handleResize = () => draw();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    let frame = 0;
+    const scheduleDraw = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(draw);
+    };
+    const observer = new ResizeObserver(scheduleDraw);
+    if (containerRef.current) observer.observe(containerRef.current);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
   }, [draw]);
 
   return (
@@ -146,12 +155,13 @@ interface ChartPanelProps {
   activeAccent: string;
   sourceUrl: string;
   isYield?: boolean;
+  enabled: boolean;
 }
 
-function ChartPanel({ market, title, icon, accentColor, activeAccent, sourceUrl, isYield = false }: ChartPanelProps) {
+function ChartPanel({ market, title, icon, accentColor, activeAccent, sourceUrl, isYield = false, enabled }: ChartPanelProps) {
   const [activeIdx, setActiveIdx] = useState(2); // default 30D
   const span = CHART_SPANS[activeIdx];
-  const { data: prices, isLoading } = useCoinChart(market, span.days, true);
+  const { data: prices, isLoading } = useCoinChart(market, span.days, enabled);
 
   return (
     <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
@@ -355,9 +365,10 @@ interface MempoolStats {
   avgTxFeeSats: number | null;
 }
 
-function useMempoolStats() {
+function useMempoolStats(enabled: boolean) {
   return useQuery<MempoolStats>({
     queryKey: ['mempool-stats'],
+    enabled,
     queryFn: async () => {
       const [feesRes, difficultyRes, rewardRes] = await Promise.all([
         fetch('https://mempool.space/api/v1/fees/recommended'),
@@ -397,7 +408,7 @@ function useMempoolStats() {
     },
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
-    refetchInterval: 30 * 1000,
+    refetchInterval: enabled ? 30 * 1000 : false,
     retry: 1,
     refetchOnMount: false,
     refetchIntervalInBackground: false,
@@ -455,10 +466,10 @@ function useMempoolHashrate(days: number, enabled: boolean) {
   });
 }
 
-function MempoolHashrateChart() {
+function MempoolHashrateChart({ enabled }: { enabled: boolean }) {
   const [activeIdx, setActiveIdx] = useState(2); // default 30D
   const span = CHART_SPANS[activeIdx];
-  const { data: hashrateSeries, isLoading } = useMempoolHashrate(span.days, true);
+  const { data: hashrateSeries, isLoading } = useMempoolHashrate(span.days, enabled);
 
   return (
     <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
@@ -512,8 +523,8 @@ function MempoolHashrateChart() {
   );
 }
 
-function MempoolStatsPanel() {
-  const { data, isLoading } = useMempoolStats();
+function MempoolStatsPanel({ enabled }: { enabled: boolean }) {
+  const { data, isLoading } = useMempoolStats(enabled);
 
   return (
     <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
@@ -558,14 +569,15 @@ function MempoolStatsPanel() {
 
 // ── Sidebar Exports ──────────────────────────────────────────
 
-export function BTCSidebarCharts() {
-  const { data: btcStats, isLoading: btcStatsLoading } = useCoinStats(MARKETS.BTC, true);
-  const { data: sp500Stats, isLoading: sp500StatsLoading } = useCoinStats(MARKETS.SP500, true);
-  const { data: us10yStats, isLoading: us10yStatsLoading } = useCoinStats(MARKETS.US10Y, true);
+export function BTCSidebarCharts({ enabled = true }: { enabled?: boolean }) {
+  const { data: btcStats, isLoading: btcStatsLoading } = useCoinStats(MARKETS.BTC, enabled);
+  const { data: sp500Stats, isLoading: sp500StatsLoading } = useCoinStats(MARKETS.SP500, enabled);
+  const { data: us10yStats, isLoading: us10yStatsLoading } = useCoinStats(MARKETS.US10Y, enabled);
 
   return (
     <div className="space-y-3">
       <ChartPanel
+        enabled={enabled}
         market={MARKETS.BTC}
         title="Bitcoin"
         icon={<Bitcoin className="h-3.5 w-3.5 text-amber-500" />}
@@ -580,6 +592,7 @@ export function BTCSidebarCharts() {
       ) : null}
 
       <ChartPanel
+        enabled={enabled}
         market={MARKETS.SP500}
         title="S&P 500"
         icon={<LineChart className="h-3.5 w-3.5 text-sky-400" />}
@@ -594,6 +607,7 @@ export function BTCSidebarCharts() {
       ) : null}
 
       <ChartPanel
+        enabled={enabled}
         market={MARKETS.US10Y}
         title="US 10Y Treasury"
         icon={<Landmark className="h-3.5 w-3.5 text-violet-400" />}
@@ -611,13 +625,14 @@ export function BTCSidebarCharts() {
   );
 }
 
-export function XAUTSidebarCharts() {
-  const { data: xautStats, isLoading: xautStatsLoading } = useCoinStats(MARKETS.XAUT, true);
-  const { data: brentStats, isLoading: brentStatsLoading } = useCoinStats(MARKETS.BRENTOIL, true);
+export function XAUTSidebarCharts({ enabled = true }: { enabled?: boolean }) {
+  const { data: xautStats, isLoading: xautStatsLoading } = useCoinStats(MARKETS.XAUT, enabled);
+  const { data: brentStats, isLoading: brentStatsLoading } = useCoinStats(MARKETS.BRENTOIL, enabled);
 
   return (
     <div className="space-y-3">
       <ChartPanel
+        enabled={enabled}
         market={MARKETS.XAUT}
         title="Gold"
         icon={<span className="text-yellow-500 text-[11px] font-bold leading-none">Au</span>}
@@ -632,6 +647,7 @@ export function XAUTSidebarCharts() {
       ) : null}
 
       <ChartPanel
+        enabled={enabled}
         market={MARKETS.BRENTOIL}
         title="Brent Oil"
         icon={<Droplets className="h-3.5 w-3.5 text-orange-400" />}
@@ -645,8 +661,8 @@ export function XAUTSidebarCharts() {
         <StatsPanel stats={brentStats} symbol="BRENTOIL" accentColor="#fb923c" hideMarketCap hideCirculating hideMaxSupply />
       ) : null}
 
-      <MempoolHashrateChart />
-      <MempoolStatsPanel />
+      <MempoolHashrateChart enabled={enabled} />
+      <MempoolStatsPanel enabled={enabled} />
     </div>
   );
 }

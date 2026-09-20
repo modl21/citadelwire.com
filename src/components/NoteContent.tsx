@@ -1,6 +1,5 @@
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { type NostrEvent } from '@nostrify/nostrify';
-import { nip19 } from 'nostr-tools';
 import { cn } from '@/lib/utils';
 
 interface NoteContentProps {
@@ -9,13 +8,6 @@ interface NoteContentProps {
   showMoreInfo?: boolean;
   titleClassName?: string;
 }
-
-const NOSTR_URI_REGEX = /nostr:(npub1|note1|nprofile1|nevent1)([023456789acdefghjklmnpqrstuvwxyz]+)/g;
-const HASHTAG_REGEX = /(^|\s)(#[A-Za-z]\w*)/g;
-const URL_REGEX = /(https?:\/\/[^\s<]+)/g;
-const BOLD_REGEX = /\*\*(.+?)\*\*/g;
-const ITALIC_REGEX = /(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g;
-const INLINE_CODE_REGEX = /`([^`]+)`/g;
 
 function escapeHtml(str: string): string {
   return str
@@ -269,7 +261,7 @@ function renderContent(content: string, showMoreInfo: boolean, titleClassName?: 
 }
 
 /** Parses content of text note events with smart formatting. */
-export function NoteContent({ event, className, showMoreInfo = false, titleClassName }: NoteContentProps) {
+export const NoteContent = memo(function NoteContent({ event, className, showMoreInfo = false, titleClassName }: NoteContentProps) {
   const html = useMemo(
     () => renderContent(event.content, showMoreInfo, titleClassName),
     [event.content, showMoreInfo, titleClassName],
@@ -281,4 +273,4 @@ export function NoteContent({ event, className, showMoreInfo = false, titleClass
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
-}
+});

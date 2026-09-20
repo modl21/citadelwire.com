@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
+import { postHyperliquidInfo } from '@/lib/chartUtils';
 
 const CORS_PROXY = 'https://proxy.shakespeare.diy/?url=';
-const HYPERLIQUID_INFO_URL = 'https://api.hyperliquid.xyz/info';
 
 export interface MarketData {
   btcPrice: number | null;
@@ -66,29 +66,6 @@ async function fetchWithProxyFallback(url: string, timeoutMs: number): Promise<R
   return fetch(`${CORS_PROXY}${encodeURIComponent(url)}`, { signal: withTimeout(timeoutMs) });
 }
 
-async function postHyperliquidInfoWithProxyFallback<T>(body: Record<string, unknown>, timeoutMs: number): Promise<T> {
-  const request = async (url: string) => fetch(url, {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-    signal: withTimeout(timeoutMs),
-  });
-
-  try {
-    const direct = await request(HYPERLIQUID_INFO_URL);
-    if (direct.ok) return direct.json();
-  } catch {
-    // Fall back to the configured proxy below.
-  }
-
-  const proxied = await request(`${CORS_PROXY}${encodeURIComponent(HYPERLIQUID_INFO_URL)}`);
-  if (!proxied.ok) throw new Error(`Hyperliquid info error: ${proxied.status}`);
-  return proxied.json();
-}
-
 function parsePrice(value: string | undefined): number | null {
   if (!value) return null;
   const parsed = Number(value);
@@ -106,15 +83,15 @@ function findSpotPairIndex(meta: HyperliquidSpotMeta, tokenName: string): number
 async function fetchHyperliquidPrices(): Promise<Pick<MarketData, 'btcPrice' | 'goldPrice' | 'sp500Price' | 'brentOilPrice' | 'us10yPrice'>> {
   try {
     const [spotData, xyzPerpData, paraPerpData] = await Promise.all([
-      postHyperliquidInfoWithProxyFallback<HyperliquidSpotMetaAndAssetCtxs>(
+      postHyperliquidInfo<HyperliquidSpotMetaAndAssetCtxs>(
         { type: 'spotMetaAndAssetCtxs' },
         5000,
       ),
-      postHyperliquidInfoWithProxyFallback<HyperliquidMetaAndAssetCtxs>(
+      postHyperliquidInfo<HyperliquidMetaAndAssetCtxs>(
         { type: 'metaAndAssetCtxs', dex: 'xyz' },
         5000,
       ),
-      postHyperliquidInfoWithProxyFallback<HyperliquidMetaAndAssetCtxs>(
+      postHyperliquidInfo<HyperliquidMetaAndAssetCtxs>(
         { type: 'metaAndAssetCtxs', dex: 'para' },
         5000,
       ),

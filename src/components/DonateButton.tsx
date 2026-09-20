@@ -17,7 +17,6 @@ import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useToast } from '@/hooks/useToast';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import QRCode from 'qrcode';
 
 const LIGHTNING_ADDRESS = 'odellxyz@lexe.app';
 const MONERO_ADDRESS = '8ApUq9t1xVpUP6fPWgePGQKPZfJWuTuoT7W5GiQk4SQnXpGHivsRo2tHbJ8czD66249Ggn1bte4ZoDdsYWve1kAo6Ldy9MS';
@@ -264,15 +263,17 @@ const DonateContent = memo(function DonateContent({
       return;
     }
     let cancelled = false;
-    QRCode.toDataURL(invoice.toUpperCase(), {
+    import('qrcode').then(({ default: QRCode }) => QRCode.toDataURL(invoice.toUpperCase(), {
       width: 400,
       margin: 2,
       color: { dark: '#000000', light: '#FFFFFF' },
-    }).then((url) => {
+    })).then((url) => {
       if (!cancelled) setQrCodeUrl(url);
+    }).catch(() => {
+      if (!cancelled) toast({ title: 'QR code unavailable', description: 'You can still copy the invoice or open it in your wallet.' });
     });
     return () => { cancelled = true; };
-  }, [invoice]);
+  }, [invoice, toast]);
 
   // Generate the Monero QR code when that donation view opens
   useEffect(() => {
@@ -281,15 +282,17 @@ const DonateContent = memo(function DonateContent({
       return;
     }
     let cancelled = false;
-    QRCode.toDataURL(`monero:${MONERO_ADDRESS}`, {
+    import('qrcode').then(({ default: QRCode }) => QRCode.toDataURL(`monero:${MONERO_ADDRESS}`, {
       width: 400,
       margin: 2,
       color: { dark: '#000000', light: '#FFFFFF' },
-    }).then((url) => {
+    })).then((url) => {
       if (!cancelled) setMoneroQrCodeUrl(url);
+    }).catch(() => {
+      if (!cancelled) toast({ title: 'QR code unavailable', description: 'You can still copy the Monero address or open it in your wallet.' });
     });
     return () => { cancelled = true; };
-  }, [showMonero]);
+  }, [showMonero, toast]);
 
   if (donationCompleted) {
     return (

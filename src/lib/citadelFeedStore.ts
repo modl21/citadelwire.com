@@ -15,14 +15,34 @@ export interface CitadelFeedState {
   cachedAt: number;
 }
 
-async function openDatabase(): Promise<IDBPDatabase> {
-  return openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      }
-    },
+let databasePromise: Promise<IDBPDatabase> | undefined;
+
+function resetDatabaseConnection(): void {
+  const previous = databasePromise;
+  databasePromise = undefined;
+  void previous?.then((db) => db.close()).catch(() => {
+    // An unsuccessful open has no connection to close.
   });
+}
+
+function openDatabase(): Promise<IDBPDatabase> {
+  if (!databasePromise) {
+    databasePromise = openDB(DB_NAME, DB_VERSION, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME);
+        }
+      },
+      blocking: resetDatabaseConnection,
+      terminated() {
+        databasePromise = undefined;
+      },
+    }).catch((error: unknown) => {
+      databasePromise = undefined;
+      throw error;
+    });
+  }
+  return databasePromise;
 }
 
 function isValidEvent(event: unknown): event is NostrEvent {
@@ -53,6 +73,9 @@ export async function readCachedCitadelFeedState(): Promise<CitadelFeedState | n
       cachedAt: typeof state.cachedAt === 'number' ? state.cachedAt : 0,
     };
   } catch (error) {
+    // Browser storage may be cleared or evicted while the page is open.
+    // Do not keep reusing a closing/deleted connection on later operations.
+    resetDatabaseConnection();
     console.warn('Failed to read cached CITADEL WIRE feed state:', error);
     return null;
   }
@@ -65,6 +88,9 @@ export async function readCachedCitadelPosts(): Promise<NostrEvent[]> {
     if (!Array.isArray(data)) return [];
     return data.filter(isValidEvent).sort((a, b) => b.created_at - a.created_at);
   } catch (error) {
+    // Browser storage may be cleared or evicted while the page is open.
+    // Do not keep reusing a closing/deleted connection on later operations.
+    resetDatabaseConnection();
     console.warn('Failed to read cached CITADEL WIRE posts:', error);
     return [];
   }
@@ -73,14 +99,21 @@ export async function readCachedCitadelPosts(): Promise<NostrEvent[]> {
 export async function writeCachedCitadelPosts(posts: NostrEvent[], hasFullHistory: boolean): Promise<void> {
   try {
     const db = await openDatabase();
-    await db.put(STORE_NAME, posts, FEED_KEY);
-    await db.put(STORE_NAME, {
-      version: CACHE_VERSION,
-      hasFullHistory,
-      postCount: posts.length,
-      cachedAt: Date.now(),
-    } satisfies CitadelFeedState, FEED_STATE_KEY);
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    await Promise.all([
+      transaction.store.put(posts, FEED_KEY),
+      transaction.store.put({
+        version: CACHE_VERSION,
+        hasFullHistory,
+        postCount: posts.length,
+        cachedAt: Date.now(),
+      } satisfies CitadelFeedState, FEED_STATE_KEY),
+      transaction.done,
+    ]);
   } catch (error) {
+    // Browser storage may be cleared or evicted while the page is open.
+    // Do not keep reusing a closing/deleted connection on later operations.
+    resetDatabaseConnection();
     console.warn('Failed to cache CITADEL WIRE posts:', error);
   }
 }

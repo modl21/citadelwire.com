@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/useToast';
-import { LN } from '@getalby/sdk';
+import type { LN } from '@getalby/sdk';
 
 export interface NWCConnection {
   connectionString: string;
@@ -61,6 +61,7 @@ export function useNWCInternal() {
     }
 
     try {
+      const { LN } = await import('@getalby/sdk');
       let timeoutId: NodeJS.Timeout | undefined;
       const testPromise = new Promise((resolve, reject) => {
         try {
@@ -167,6 +168,7 @@ export function useNWCInternal() {
 
     let client: LN;
     try {
+      const { LN } = await import('@getalby/sdk');
       client = new LN(connection.connectionString);
     } catch (error) {
       console.error('Failed to create NWC client:', error);

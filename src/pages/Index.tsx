@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useSeoMeta } from '@unhead/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -14,6 +14,7 @@ import { WireSchedule } from '@/components/WireSchedule';
 import { PolymarketSection } from '@/components/PolymarketSection';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTheme } from '@/hooks/useTheme';
+import { useMediaQuery } from '@/hooks/useIsMobile';
 
 const BTCSidebarCharts = lazy(() =>
   import('@/components/SidebarCharts').then((module) => ({ default: module.BTCSidebarCharts })),
@@ -97,14 +98,21 @@ const Index = () => {
     typeof window === 'undefined' ? 'https://wire.shakespeare.wtf/' : window.location.href,
   );
   const visiblePosts = useMemo(() => posts?.slice(0, CITADEL_FEED_LIMIT) ?? [], [posts]);
-  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const isWidescreen = useMediaQuery('(min-width: 1280px)');
+  const [hasShownSidebars, setHasShownSidebars] = useState(isWidescreen);
+  useEffect(() => {
+    if (isWidescreen) setHasShownSidebars(true);
+  }, [isWidescreen]);
+  const normalizedSearchQuery = useDeferredValue(searchQuery.trim().toLowerCase());
+  const searchIndex = useMemo(
+    () => visiblePosts.map((post) => ({ post, type: getPostType(post), text: post.content.toLowerCase() })),
+    [visiblePosts],
+  );
   const filteredPosts = useMemo(
-    () => visiblePosts.filter((post) => {
-      if (!visiblePostTypes.has(getPostType(post))) return false;
-      if (!normalizedSearchQuery) return true;
-      return post.content.toLowerCase().includes(normalizedSearchQuery);
-    }),
-    [visiblePosts, visiblePostTypes, normalizedSearchQuery],
+    () => searchIndex
+      .filter(({ type, text }) => visiblePostTypes.has(type) && (!normalizedSearchQuery || text.includes(normalizedSearchQuery)))
+      .map(({ post }) => post),
+    [searchIndex, visiblePostTypes, normalizedSearchQuery],
   );
 
   const togglePostType = (type: PostType) => {
@@ -168,7 +176,7 @@ const Index = () => {
             </div>
             <div
               className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-400"
-              title="Auto refresh is enabled. New CITADEL WIRE posts refresh the page automatically."
+              title="Auto refresh is enabled. New CITADEL WIRE posts appear automatically without interrupting playback."
               aria-label="Auto refresh enabled"
             >
               <Radio className="h-3.5 w-3.5 animate-pulse" />
@@ -232,9 +240,11 @@ const Index = () => {
       <div className="flex justify-center gap-6 xl:px-6">
         {/* Left sidebar — BTC charts (widescreen only) */}
         <aside className="hidden xl:block w-[260px] 2xl:w-[300px] shrink-0 sticky top-[130px] self-start max-h-[calc(100vh-150px)] overflow-y-auto py-4 scrollbar-none">
-          <Suspense fallback={null}>
-            <BTCSidebarCharts />
-          </Suspense>
+          {(isWidescreen || hasShownSidebars) && (
+            <Suspense fallback={<Skeleton className="h-[240px] w-full rounded-xl" />}>
+              <BTCSidebarCharts enabled={isWidescreen} />
+            </Suspense>
+          )}
         </aside>
 
         {/* Center column — main content */}
@@ -358,13 +368,19 @@ const Index = () => {
                 )}
               </div>
             </div>
+            {isError && visiblePosts.length > 0 && (
+              <div role="status" className="px-4 py-2 text-xs text-muted-foreground sm:px-6">
+                Showing saved wires. Live sync could not finish.{' '}
+                <button onClick={() => refetch()} className="font-medium text-primary underline underline-offset-2">Retry</button>
+              </div>
+            )}
             {isLoading ? (
               <div>
                 {Array.from({ length: 8 }).map((_, i) => (
                   <PostSkeleton key={i} />
                 ))}
               </div>
-            ) : isError ? (
+            ) : isError && visiblePosts.length === 0 ? (
               <div className="py-16 px-4 text-center">
                 <p className="text-muted-foreground text-sm">
                   Failed to load posts. Please try again.
@@ -417,9 +433,11 @@ const Index = () => {
 
         {/* Right sidebar — XAUT charts (widescreen only) */}
         <aside className="hidden xl:block w-[260px] 2xl:w-[300px] shrink-0 sticky top-[130px] self-start max-h-[calc(100vh-150px)] overflow-y-auto py-4 scrollbar-none">
-          <Suspense fallback={null}>
-            <XAUTSidebarCharts />
-          </Suspense>
+          {(isWidescreen || hasShownSidebars) && (
+            <Suspense fallback={<Skeleton className="h-[240px] w-full rounded-xl" />}>
+              <XAUTSidebarCharts enabled={isWidescreen} />
+            </Suspense>
+          )}
         </aside>
       </div>
     </div>

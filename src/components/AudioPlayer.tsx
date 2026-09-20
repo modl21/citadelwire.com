@@ -21,6 +21,7 @@ interface AudioPlayerProps {
   allEpisodesUrl: string;
   accentColor: 'purple' | 'orange' | 'emerald' | 'sky' | 'rose' | 'zinc' | 'lime' | 'amber';
   storageKey?: string;
+  preloadMetadata?: boolean;
 }
 
 const PLAYBACK_POSITION_PREFIX = 'citadel-wire:podcast-position:';
@@ -206,7 +207,7 @@ export function AudioPlayerSkeleton() {
   );
 }
 
-export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, accentColor, storageKey }: AudioPlayerProps) {
+export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, accentColor, storageKey, preloadMetadata = true }: AudioPlayerProps) {
   const c = colorMap[accentColor];
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -221,6 +222,10 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
   const isPageUnloadingRef = useRef(false);
   const speeds = useMemo(() => [1, 1.25, 1.5, 1.75, 2] as const, []);
   const [speedIndex, setSpeedIndex] = useState(() => getStoredPlaybackSpeedIndex(speeds));
+  const resumeOnLoad = useMemo(
+    () => Boolean(storageKey && getStoredActivePlaybackKey() === storageKey),
+    [storageKey],
+  );
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -232,6 +237,9 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
   useEffect(() => {
     const onBeforeUnload = () => {
       isPageUnloadingRef.current = true;
+      if (audioRef.current && audioRef.current.readyState >= 1) {
+        saveStoredPosition(storageKey, audioRef.current.currentTime, audioRef.current.duration);
+      }
       if (storageKey && audioRef.current && !audioRef.current.paused && !audioRef.current.ended) {
         saveStoredActivePlaybackKey(storageKey);
       }
@@ -250,9 +258,15 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
     const audio = audioRef.current;
     if (!audio) return;
 
+    let lastSavedAt = 0;
+    const savePosition = () => {
+      if (audio.readyState < 1) return;
+      saveStoredPosition(storageKey, audio.currentTime, audio.duration);
+      lastSavedAt = Date.now();
+    };
     const onTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
-      saveStoredPosition(storageKey, audio.currentTime, audio.duration);
+      if (Date.now() - lastSavedAt >= 5000) savePosition();
     };
     const restorePosition = () => {
       if (hasRestoredPositionRef.current) return;
@@ -282,7 +296,7 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
     };
     const onEnded = () => {
       setIsPlaying(false);
-      saveStoredPosition(storageKey, 0, 0);
+      savePosition();
       clearStoredActivePlaybackKey(storageKey);
     };
     const onPlay = () => {
@@ -290,6 +304,7 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
       saveStoredActivePlaybackKey(storageKey);
     };
     const onPause = () => {
+      savePosition();
       setIsPlaying(false);
       if (!isPageUnloadingRef.current) {
         clearStoredActivePlaybackKey(storageKey);
@@ -302,8 +317,14 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
     audio.addEventListener('ended', onEnded);
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') savePosition();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
+      savePosition();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('durationchange', onDurationChange);
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
@@ -361,7 +382,7 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
 
   return (
     <div className={`rounded-lg bg-gradient-to-br ${c.gradient} border ${c.border} px-2.5 py-1.5 sm:px-3 sm:py-2 transition-all`}>
-      <audio ref={audioRef} src={mp3Url} preload="metadata" />
+      <audio ref={audioRef} src={mp3Url} preload={preloadMetadata || resumeOnLoad ? 'metadata' : 'none'} />
 
       {/* Single row: play button + info + controls */}
       <div className="flex items-center gap-1.5 sm:gap-2">

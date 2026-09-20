@@ -1,22 +1,23 @@
-import { useSyncExternalStore } from "react"
+import { useMemo, useSyncExternalStore } from 'react';
 
-const MOBILE_BREAKPOINT = 768;
-const MOBILE_QUERY = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`;
+const MOBILE_QUERY = '(max-width: 767px)';
 
-function subscribe(callback: () => void) {
-  const mql = window.matchMedia(MOBILE_QUERY);
-  mql.addEventListener("change", callback);
-  return () => mql.removeEventListener("change", callback);
-}
+/** Subscribe only to breakpoint changes, rather than every window resize. */
+export function useMediaQuery(query: string): boolean {
+  const store = useMemo(() => {
+    const media = typeof window === 'undefined' ? undefined : window.matchMedia(query);
+    return {
+      subscribe(callback: () => void) {
+        media?.addEventListener('change', callback);
+        return () => media?.removeEventListener('change', callback);
+      },
+      getSnapshot: () => media?.matches ?? false,
+    };
+  }, [query]);
 
-function getSnapshot(): boolean {
-  return window.matchMedia(MOBILE_QUERY).matches;
-}
-
-function getServerSnapshot(): boolean {
-  return false;
+  return useSyncExternalStore(store.subscribe, store.getSnapshot, () => false);
 }
 
 export function useIsMobile(): boolean {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useMediaQuery(MOBILE_QUERY);
 }

@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 const CORS_PROXY = 'https://proxy.shakespeare.diy/?url=';
@@ -11,73 +12,69 @@ export interface RSSEpisode {
 
 const MAX_EPISODE_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 
-function isOlderThanThreeDays(pubDate: string): boolean {
-  const publishedAt = new Date(pubDate).getTime();
-  if (!Number.isFinite(publishedAt)) return true;
-  return Date.now() - publishedAt > MAX_EPISODE_AGE_MS;
+function isRecentEpisode(episode: RSSEpisode): boolean {
+  const publishedAt = new Date(episode.pubDate).getTime();
+  return Number.isFinite(publishedAt) && Date.now() - publishedAt <= MAX_EPISODE_AGE_MS;
 }
 
-async function fetchFeed(feedUrl: string): Promise<Response> {
+async function fetchFeed(feedUrl: string, signal: AbortSignal): Promise<Response> {
   try {
     const direct = await fetch(feedUrl, {
-      cache: 'reload',
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-      },
-      signal: AbortSignal.timeout(5000),
+      // Revalidate using HTTP validators instead of discarding cached responses.
+      // No custom request headers: avoid an unnecessary CORS preflight.
+      cache: 'no-cache',
+      signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
     });
     if (direct.ok) return direct;
   } catch {
+    signal.throwIfAborted();
     // Fall back to the configured proxy below.
   }
 
   return fetch(`${CORS_PROXY}${encodeURIComponent(feedUrl)}`, {
-    cache: 'reload',
-    headers: {
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache',
-    },
-    signal: AbortSignal.timeout(8000),
+    cache: 'no-cache',
+    signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]),
   });
+}
+
+async function fetchEpisodes(feedUrl: string, signal: AbortSignal): Promise<RSSEpisode[]> {
+  const res = await fetchFeed(feedUrl, signal);
+  if (!res.ok) throw new Error('Failed to fetch RSS feed');
+  const text = await res.text();
+  const xml = new DOMParser().parseFromString(text, 'text/xml');
+  const episodes: RSSEpisode[] = [];
+
+  for (const item of Array.from(xml.querySelectorAll('item'))) {
+    const title = item.querySelector('title')?.textContent ?? 'Latest Episode';
+    const pubDate = item.querySelector('pubDate')?.textContent ?? '';
+    const mp3Url = item.querySelector('enclosure')?.getAttribute('url') ?? '';
+    const guid = item.querySelector('guid')?.textContent?.trim() || mp3Url;
+    const episode = { title, mp3Url, pubDate, guid };
+    if (mp3Url && isRecentEpisode(episode)) episodes.push(episode);
+  }
+  return episodes;
 }
 
 export function useRSSEpisode(
   feedUrl: string,
   predicate?: (episode: RSSEpisode) => boolean,
-  cacheKey?: string,
+  _cacheKey?: string,
 ) {
-  return useQuery<RSSEpisode | null>({
-    queryKey: ['rss-episode', feedUrl, cacheKey ?? (predicate ? 'filtered' : 'latest')],
-    queryFn: async () => {
-      const res = await fetchFeed(feedUrl);
-      if (!res.ok) throw new Error('Failed to fetch RSS feed');
-      const text = await res.text();
+  const selectEpisode = useCallback(
+    (episodes: RSSEpisode[]) => episodes.find((episode) => isRecentEpisode(episode) && (!predicate || predicate(episode))) ?? null,
+    [predicate],
+  );
 
-      const parser = new DOMParser();
-      const xml = parser.parseFromString(text, 'text/xml');
-
-      const items = Array.from(xml.querySelectorAll('item'));
-      for (const item of items) {
-        const title = item.querySelector('title')?.textContent ?? 'Latest Episode';
-        const pubDate = item.querySelector('pubDate')?.textContent ?? '';
-
-        // Get mp3 URL from enclosure tag
-        const enclosure = item.querySelector('enclosure');
-        const mp3Url = enclosure?.getAttribute('url') ?? '';
-        const guid = item.querySelector('guid')?.textContent?.trim() || mp3Url;
-
-        if (!mp3Url) continue;
-        if (!pubDate || isOlderThanThreeDays(pubDate)) continue;
-
-        const episode = { title, mp3Url, pubDate, guid };
-        if (!predicate || predicate(episode)) return episode;
-      }
-
-      return null;
-    },
+  // A single fetch/XML parse per feed, with independent episode selection for
+  // shows such as Ten31 and TFTC that share a feed but use different filters.
+  return useQuery({
+    queryKey: ['rss-feed', feedUrl],
+    queryFn: ({ signal }) => fetchEpisodes(feedUrl, signal),
+    select: selectEpisode,
     staleTime: 15 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
+    refetchInterval: 15 * 60 * 1000,
+    refetchIntervalInBackground: false,
     retry: 1,
     refetchOnMount: false,
   });

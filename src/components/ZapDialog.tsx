@@ -32,7 +32,6 @@ import { useZaps } from '@/hooks/useZaps';
 import { useWallet } from '@/hooks/useWallet';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import type { Event } from 'nostr-tools';
-import QRCode from 'qrcode';
 import type { WebLNProvider } from "@webbtc/webln-types";
 
 interface ZapDialogProps {
@@ -272,6 +271,7 @@ export function ZapDialog({ target, children, className, onZapSuccess }: ZapDial
       }
 
       try {
+        const { default: QRCode } = await import('qrcode');
         const url = await QRCode.toDataURL(invoice.toUpperCase(), {
           width: 512,
           margin: 2,

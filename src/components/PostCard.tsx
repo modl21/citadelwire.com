@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState, useSyncExternalStore } from 'react';
 import { type NostrEvent } from '@nostrify/nostrify';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -14,13 +14,33 @@ interface PostCardProps {
   isFirst?: boolean;
 }
 
-function formatTimestamp(unixTimestamp: number): { relative: string; absolute: string } {
-  const date = new Date(unixTimestamp * 1000);
-  return {
-    relative: formatDistanceToNow(date, { addSuffix: true }),
-    absolute: format(date, 'MMM d, yyyy · h:mm a'),
+// One clock for the whole feed. Only the small relative-time labels update;
+// unrelated header/search state does not re-render every post's rich content.
+const clockListeners = new Set<() => void>();
+let clockTimer: ReturnType<typeof setInterval> | undefined;
+const getMinute = () => Math.floor(Date.now() / 60_000);
+function subscribeToClock(listener: () => void) {
+  clockListeners.add(listener);
+  if (!clockTimer) {
+    clockTimer = setInterval(() => clockListeners.forEach((notify) => notify()), 60_000);
+  }
+  return () => {
+    clockListeners.delete(listener);
+    if (clockListeners.size === 0) {
+      clearInterval(clockTimer);
+      clockTimer = undefined;
+    }
   };
 }
+
+const RelativeTimestamp = memo(function RelativeTimestamp({ timestamp }: { timestamp: number }) {
+  useSyncExternalStore(subscribeToClock, getMinute, getMinute);
+  return (
+    <span className="shrink-0 text-[11px] text-muted-foreground/40">
+      {formatDistanceToNow(new Date(timestamp * 1000), { addSuffix: true })}
+    </span>
+  );
+});
 
 function isInteractiveElement(target: EventTarget | null): boolean {
   return target instanceof Element && Boolean(target.closest('a, button, input, textarea, select, [role="button"]'));
@@ -35,11 +55,11 @@ const POST_TYPE_STYLES: Record<PostType, string | null> = {
   'forward-wire': 'text-orange-300',
 };
 
-export function PostCard({ event, isFirst }: PostCardProps) {
+export const PostCard = memo(function PostCard({ event, isFirst }: PostCardProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
-  const { relative, absolute } = formatTimestamp(event.created_at);
+  const absolute = format(new Date(event.created_at * 1000), 'MMM d, yyyy · h:mm a');
   const postPath = encodePostPath(event);
   const postType = getPostType(event);
   const postTypeClassName = POST_TYPE_STYLES[postType];
@@ -86,7 +106,7 @@ export function PostCard({ event, isFirst }: PostCardProps) {
       }}
       className={cn(
         'group relative block cursor-pointer py-4 sm:py-5 px-4 sm:px-6 transition-colors duration-200 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40',
-        !isFirst && 'border-t border-border/40',
+        !isFirst && 'wire-post-deferred border-t border-border/40',
       )}
       aria-label="Open post discussion"
     >
@@ -104,7 +124,7 @@ export function PostCard({ event, isFirst }: PostCardProps) {
             {postTypeClassName ? postType.replace('-', ' ').toUpperCase() : absolute}
           </time>
           <span className="text-[11px] text-muted-foreground/30">·</span>
-          <span className="shrink-0 text-[11px] text-muted-foreground/40">{relative}</span>
+          <RelativeTimestamp timestamp={event.created_at} />
         </div>
         <button
           type="button"
@@ -128,4 +148,4 @@ export function PostCard({ event, isFirst }: PostCardProps) {
 
     </article>
   );
-}
+});
