@@ -97,7 +97,7 @@ async function fetchInvoice(amountSats: number, comment?: string): Promise<Light
   };
 }
 
-const DonateContent = memo(function DonateContent({
+export const DonateContent = memo(function DonateContent({
   onClose,
 }: {
   onClose: () => void;
