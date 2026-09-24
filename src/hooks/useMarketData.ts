@@ -143,7 +143,7 @@ export async function fetchBlockHeight(): Promise<number | null> {
   }
 }
 
-export function useMarketData(enabled = true) {
+export function useMarketData(live = true) {
   return useQuery<MarketData>({
     queryKey: ['market-data'],
     queryFn: async () => {
@@ -153,10 +153,11 @@ export function useMarketData(enabled = true) {
       ]);
       return { btcPrice, goldPrice, sp500Price, brentOilPrice, us10yPrice, blockHeight };
     },
-    enabled,
     staleTime: 60 * 1000,
     gcTime: 30 * 60 * 1000,
-    refetchInterval: enabled ? 60 * 1000 : false,
+    // Non-live tickers still fetch once on mount when the cache is empty,
+    // they just don't poll on an interval.
+    refetchInterval: live ? 60 * 1000 : false,
     retry: 1,
     refetchOnMount: false,
     refetchIntervalInBackground: false,
