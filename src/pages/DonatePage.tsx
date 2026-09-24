@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { EyeOff, Heart, ShieldCheck, Zap } from 'lucide-react';
+import { Heart, ShieldCheck, Sparkles, Zap } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { TickerBar } from '@/components/TickerBar';
@@ -37,7 +37,7 @@ function DonateHeader() {
 
 const VALUE_POINTS = [
   { icon: Heart, label: '100% reader funded' },
-  { icon: EyeOff, label: 'No ads or sponsors' },
+  { icon: Sparkles, label: 'Best AI models available' },
   { icon: ShieldCheck, label: 'No clickbait' },
 ] as const;
 
