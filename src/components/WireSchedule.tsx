@@ -23,15 +23,15 @@ const RECURRING_WIRE_SLOTS: RecurringWireSlot[] = [
   {
     type: 'WEEKLY WIRE',
     weekday: 5,
-    hour: 22,
-    minute: 0,
+    hour: 21,
+    minute: 15,
     accentClassName: 'text-purple-300',
   },
   {
     type: 'FORWARD WIRE',
     weekday: 1,
     hour: 11,
-    minute: 0,
+    minute: 15,
     accentClassName: 'text-rose-300',
   },
 ];
