@@ -339,7 +339,6 @@ const Index = () => {
                   <TooltipContent side="bottom" align="end" className="max-w-[290px] border-amber-400/30 bg-[#080b12]/95 px-4 py-3 text-xs leading-5 text-white shadow-2xl shadow-amber-500/15 backdrop-blur-xl">
                     <div className="space-y-2">
                       <p><span className="font-black text-amber-200">MAIN WIRE</span> 120+ global sources.</p>
-                      <p><span className="font-black text-sky-200">LIVE WIRE</span> breaking news detection.</p>
                       <p><span className="font-black text-emerald-200">CODE WIRE</span> 400+ open source projects.</p>
                       <p><span className="font-black text-orange-200">DAILY WIRE</span> daily at 21:30 utc.</p>
                       <p><span className="font-black text-purple-200">WEEKLY WIRE</span> fridays at 22:00 utc.</p>
