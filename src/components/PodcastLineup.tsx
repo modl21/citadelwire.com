@@ -39,7 +39,10 @@ const PODCASTS: PodcastConfig[] = [
     label: 'Latest JMS',
     allEpisodesUrl: 'https://podcasters.spotify.com/pod/show/thejackmallersshow',
     accentColor: 'emerald',
-    predicate: (episode) => !/^lesson\b/i.test(episode.title.trim()),
+    predicate: (episode) => {
+      const title = episode.title.trim();
+      return !/^lesson\b/i.test(title) && !/^ask jack\b/i.test(title);
+    },
   },
   {
     id: 'tftc',

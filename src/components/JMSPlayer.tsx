@@ -5,7 +5,13 @@ import { formatDistanceToNow } from 'date-fns';
 const JMS_FEED_URL = 'https://anchor.fm/s/e29097f4/podcast/rss';
 
 export function JMSPlayer() {
-  const { data: episode, isLoading } = useRSSEpisode(JMS_FEED_URL);
+  const { data: episode, isLoading } = useRSSEpisode(
+    JMS_FEED_URL,
+    (candidate) => {
+      const title = candidate.title.trim();
+      return !/^lesson\b/i.test(title) && !/^ask jack\b/i.test(title);
+    },
+  );
 
   if (isLoading) {
     return (
