@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Clock, Radio } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const SCHEDULE_HOURS = [0, 3, 6, 9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
+// A wire drops every hour, on the hour (UTC).
+const SCHEDULE_HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
 interface RecurringWireSlot {
   type: 'DAILY WIRE' | 'WEEKLY WIRE' | 'FORWARD WIRE';
