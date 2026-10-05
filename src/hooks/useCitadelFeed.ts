@@ -30,7 +30,7 @@ export function getPostType(event: NostrEvent): PostType {
   const firstLine = event.content.split('\n')[0]?.toLowerCase() ?? '';
   const contentStart = event.content.trimStart().toLowerCase();
 
-  // Editor wires are exempt from the Show-bar filters, so detect them first.
+  // Editor wires are detected first so they take classification precedence.
   if (
     tags.includes('editor-wire') ||
     tags.includes('editorwire') ||

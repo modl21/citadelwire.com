@@ -25,7 +25,7 @@ const XAUTSidebarCharts = lazy(() =>
 
 const POST_TYPE_FILTERS: { type: PostType; label: string }[] = [
   { type: 'standard', label: 'MAIN WIRE' },
-  { type: 'live-wire', label: 'LIVE WIRE' },
+  { type: 'editor-wire', label: 'EDITOR WIRE' },
   { type: 'code-wire', label: 'CODE WIRE' },
   { type: 'daily-wire', label: 'DAILY WIRE' },
   { type: 'weekly-wire', label: 'WEEKLY WIRE' },
@@ -48,9 +48,12 @@ function getStoredVisiblePostTypes(): Set<PostType> {
     if (!Array.isArray(storedTypes)) return getDefaultVisiblePostTypes();
 
     const allowedTypes = getDefaultVisiblePostTypes();
-    const visibleTypes = storedTypes.filter((type): type is PostType =>
-      typeof type === 'string' && allowedTypes.has(type as PostType),
-    );
+    const visibleTypes = storedTypes
+      // Migrate legacy stored sets: the old LIVE WIRE toggle slot is now EDITOR WIRE.
+      .map((type) => (type === 'live-wire' ? 'editor-wire' : type))
+      .filter((type): type is PostType =>
+        typeof type === 'string' && allowedTypes.has(type as PostType),
+      );
 
     return new Set(visibleTypes);
   } catch {
@@ -110,8 +113,8 @@ const Index = () => {
   );
   const filteredPosts = useMemo(
     () => searchIndex
-      // Editor wires bypass the Show-bar filters entirely; search still applies.
-      .filter(({ type, text }) => (type === 'editor-wire' || visiblePostTypes.has(type)) && (!normalizedSearchQuery || text.includes(normalizedSearchQuery)))
+      // Live wires bypass the Show-bar filters entirely; search still applies.
+      .filter(({ type, text }) => (type === 'live-wire' || visiblePostTypes.has(type)) && (!normalizedSearchQuery || text.includes(normalizedSearchQuery)))
       .map(({ post }) => post),
     [searchIndex, visiblePostTypes, normalizedSearchQuery],
   );
@@ -341,7 +344,7 @@ const Index = () => {
                       <p><span className="font-black text-orange-200">DAILY WIRE</span> daily at 21:30 utc.</p>
                       <p><span className="font-black text-purple-200">WEEKLY WIRE</span> fridays at 22:00 utc.</p>
                       <p><span className="font-black text-rose-200">FORWARD WIRE</span> mondays at 11:00 utc.</p>
-                      <p><span className="font-black text-cyan-200">EDITOR WIRE</span> always shown.</p>
+                      <p><span className="font-black text-cyan-200">EDITOR WIRE</span> hand-picked by the editor.</p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
