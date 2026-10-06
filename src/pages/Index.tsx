@@ -338,7 +338,7 @@ const Index = () => {
                       <p><span className="font-black text-amber-200">MAIN WIRE</span> 120+ global sources.</p>
                       <p><span className="font-black text-emerald-200">CODE WIRE</span> 400+ open source projects.</p>
                       <p><span className="font-black text-orange-200">DAILY WIRE</span> daily at 21:30 utc.</p>
-                      <p><span className="font-black text-purple-200">WEEKLY WIRE</span> fridays at 21:15 utc.</p>
+                      <p><span className="font-black text-purple-200">WEEKLY WIRE</span> fridays at 21:45 utc.</p>
                       <p><span className="font-black text-rose-200">FORWARD WIRE</span> mondays at 11:15 utc.</p>
                       <p><span className="font-black text-cyan-200">EDITOR WIRE</span> hand-picked by the editor.</p>
                     </div>

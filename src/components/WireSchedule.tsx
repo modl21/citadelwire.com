@@ -24,7 +24,7 @@ const RECURRING_WIRE_SLOTS: RecurringWireSlot[] = [
     type: 'WEEKLY WIRE',
     weekday: 5,
     hour: 21,
-    minute: 15,
+    minute: 45,
     accentClassName: 'text-purple-300',
   },
   {
