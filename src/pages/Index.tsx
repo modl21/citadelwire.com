@@ -303,9 +303,6 @@ const Index = () => {
           <main>
             <div className="px-4 sm:px-6 py-2.5 border-b border-border/30">
               <div className="flex items-center gap-1 overflow-x-auto scrollbar-none sm:gap-1.5" aria-label="Post type filters">
-                <span className="shrink-0 text-[8px] font-semibold text-muted-foreground/50 uppercase tracking-tight mr-0.5 sm:text-[9px] sm:tracking-wider">
-                  Show
-                </span>
                 {POST_TYPE_FILTERS.map(({ type, label }) => {
                   const isActive = visiblePostTypes.has(type);
                   return (
