@@ -7,6 +7,8 @@ interface NoteContentProps {
   className?: string;
   showMoreInfo?: boolean;
   titleClassName?: string;
+  /** Render with editor-wire formatting: bold headline line + clean sources list. */
+  editorWire?: boolean;
 }
 
 function escapeHtml(str: string): string {
@@ -260,11 +262,138 @@ function renderContent(content: string, showMoreInfo: boolean, titleClassName?: 
   return blocks.join('');
 }
 
+// ── Editor wire formatting ──────────────────────────────────
+
+interface WireSource {
+  num: number;
+  url: string;
+  title?: string;
+}
+
+function getDomain(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
+/** Short "domain/path" display for sources that have no title. */
+function getDisplayUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const display = parsed.hostname.replace(/^www\./, '') + (parsed.pathname === '/' ? '' : parsed.pathname);
+    return display.length > 64 ? `${display.slice(0, 61)}…` : display;
+  } catch {
+    return url;
+  }
+}
+
+/** Parse the lines of an editor wire's trailing sources section. */
+function parseWireSources(sourceLines: string[]): WireSource[] {
+  const sources: WireSource[] = [];
+  let nextNum = 1;
+
+  for (const rawLine of sourceLines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    // "[n] url — title" or "[n] url"
+    const numbered = line.match(/^\[(\d+)\]\s*(https?:\/\/\S+?)(?:\s+[—–-]\s*(.+))?$/);
+    if (numbered) {
+      const num = parseInt(numbered[1], 10);
+      sources.push({ num, url: numbered[2], title: numbered[3]?.trim() });
+      nextNum = num + 1;
+      continue;
+    }
+
+    // Bare "url — title" or "url"
+    const bare = line.match(/^(https?:\/\/\S+?)(?:\s+[—–-]\s*(.+))?$/);
+    if (bare) {
+      sources.push({ num: nextNum++, url: bare[1], title: bare[2]?.trim() });
+      continue;
+    }
+
+    // Anything else is continuation text for the previous source.
+    const last = sources[sources.length - 1];
+    if (last) last.title = last.title ? `${last.title} ${line}` : line;
+  }
+
+  return sources;
+}
+
+function renderWireSources(sources: WireSource[]): string {
+  const items = sources.map(({ num, url, title }) => {
+    const label = title || getDisplayUrl(url);
+    const domainHtml = title ? `<span class="wire-source-domain">${escapeHtml(getDomain(url))}</span>` : '';
+    return `<li><span class="wire-source-num">${num}</span><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>${domainHtml}</li>`;
+  });
+
+  return `<div class="wire-sources"><div class="wire-sources-label">Sources</div><ol class="wire-sources-list">${items.join('')}</ol></div>`;
+}
+
+/** Find the index of the headline line: the first text line after the metadata headers. */
+function findEditorWireHeadlineIndex(bodyLines: string[]): number {
+  let i = 0;
+  const skipBlank = () => { while (i < bodyLines.length && !bodyLines[i].trim()) i++; };
+
+  skipBlank();
+  // "EDITOR WIRE | …" metadata line
+  if (i < bodyLines.length && /^editor\s*wire\b/i.test(bodyLines[i].trim())) {
+    i++;
+    skipBlank();
+  }
+  // "BITCOIN $… | GOLD $…" markets line
+  if (i < bodyLines.length && /^bitcoin\s*\$/i.test(bodyLines[i].trim())) {
+    i++;
+    skipBlank();
+  }
+
+  return i < bodyLines.length ? i : -1;
+}
+
+/** Render an editor wire: bold headline after the headers, clean sources list at the end. */
+function renderEditorWireContent(content: string, showMoreInfo: boolean, titleClassName?: string): string {
+  const lines = content.split('\n');
+
+  // Split off the trailing "Sources" / "## Sources" section.
+  const sourcesHeaderIndex = lines.findIndex((line) => /^\s*(?:#{1,6}\s*)?sources:?\s*$/i.test(line));
+  const bodyLines = sourcesHeaderIndex === -1 ? lines : lines.slice(0, sourcesHeaderIndex);
+  const sourceLines = sourcesHeaderIndex === -1 ? [] : lines.slice(sourcesHeaderIndex + 1);
+
+  const headlineIndex = findEditorWireHeadlineIndex(bodyLines);
+
+  const blocks: string[] = [];
+
+  if (headlineIndex === -1) {
+    blocks.push(renderContent(bodyLines.join('\n'), showMoreInfo, titleClassName));
+  } else {
+    // Header lines (EDITOR WIRE metadata + markets) keep their heading style.
+    const titleClasses = titleClassName ? ` class="${escapeHtml(titleClassName)}"` : '';
+    for (const headerLine of bodyLines.slice(0, headlineIndex)) {
+      if (!headerLine.trim()) continue;
+      blocks.push(`<h3${titleClasses}>${renderInline(headerLine.trim())}</h3>`);
+    }
+    // The headline is always the first line of text — render it bold.
+    blocks.push(`<p class="editor-wire-headline">${renderInline(bodyLines[headlineIndex].trim())}</p>`);
+    blocks.push(renderContent(bodyLines.slice(headlineIndex + 1).join('\n'), showMoreInfo, titleClassName));
+  }
+
+  const sources = parseWireSources(sourceLines);
+  if (sources.length > 0) {
+    blocks.push(renderWireSources(sources));
+  }
+
+  return blocks.join('');
+}
+
 /** Parses content of text note events with smart formatting. */
-export const NoteContent = memo(function NoteContent({ event, className, showMoreInfo = false, titleClassName }: NoteContentProps) {
+export const NoteContent = memo(function NoteContent({ event, className, showMoreInfo = false, titleClassName, editorWire = false }: NoteContentProps) {
   const html = useMemo(
-    () => renderContent(event.content, showMoreInfo, titleClassName),
-    [event.content, showMoreInfo, titleClassName],
+    () => editorWire
+      ? renderEditorWireContent(event.content, showMoreInfo, titleClassName)
+      : renderContent(event.content, showMoreInfo, titleClassName),
+    [event.content, showMoreInfo, titleClassName, editorWire],
   );
 
   return (

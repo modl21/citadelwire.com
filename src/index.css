@@ -352,6 +352,66 @@ html {
   max-width: 100%;
 }
 
+/* Editor wire headline (first line of text after the metadata headers) */
+.note-content .editor-wire-headline {
+  font-weight: 700;
+  color: hsl(var(--foreground));
+  letter-spacing: -0.01em;
+}
+
+/* Editor wire sources */
+.note-content .wire-sources {
+  margin-top: 1.1em;
+  padding-top: 0.75em;
+  border-top: 1px solid hsl(var(--border) / 0.5);
+}
+.note-content .wire-sources-label {
+  font-size: 0.68em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: hsl(var(--muted-foreground) / 0.55);
+  margin-bottom: 0.45em;
+}
+.note-content .wire-sources-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+}
+.note-content .wire-sources-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55em;
+  min-width: 0;
+  margin: 0;
+  padding-left: 0;
+  font-weight: 400;
+  font-size: 0.84em;
+  line-height: 1.5;
+}
+.note-content .wire-source-num {
+  flex-shrink: 0;
+  min-width: 1.4em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground) / 0.4);
+}
+.note-content .wire-sources-list li a {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.note-content .wire-source-domain {
+  flex-shrink: 0;
+  font-size: 0.92em;
+  color: hsl(var(--muted-foreground) / 0.45);
+}
+
 /* Hide scrollbar but keep scrolling */
 .scrollbar-none {
   -ms-overflow-style: none;

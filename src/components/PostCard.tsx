@@ -144,6 +144,7 @@ export const PostCard = memo(function PostCard({ event, isFirst }: PostCardProps
         event={event}
         className="text-[15px] sm:text-[15px] text-foreground/95 leading-[1.75] tracking-[-0.01em]"
         titleClassName={postTypeClassName ? `font-black tracking-tight ${postTypeClassName}` : undefined}
+        editorWire={postType === 'editor-wire'}
         showMoreInfo
       />
 
