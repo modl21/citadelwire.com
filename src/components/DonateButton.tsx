@@ -19,8 +19,8 @@ import { useToast } from '@/hooks/useToast';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
 const LIGHTNING_ADDRESS = 'odellxyz@lexe.app';
-const MONERO_ADDRESS = '8ApUq9t1xVpUP6fPWgePGQKPZfJWuTuoT7W5GiQk4SQnXpGHivsRo2tHbJ8czD66249Ggn1bte4ZoDdsYWve1kAo6Ldy9MS';
-const CRYPTO_DONATION_URL = 'https://trocador.app/anonpay/?ticker_to=xmr&network_to=Mainnet&address=8ApUq9t1xVpUP6fPWgePGQKPZfJWuTuoT7W5GiQk4SQnXpGHivsRo2tHbJ8czD66249Ggn1bte4ZoDdsYWve1kAo6Ldy9MS&fiat_equiv=USD&name=Donate&description=Support+Wire&ticker_from=usdc&network_from=base&bgcolor=00000000';
+const MONERO_ADDRESS = '88QY5YvXaBHHwLNdpHBZ8M5vuw9HcqHCKhGrzhwLYKDaKSyoZVMNVmcfytToVjYU8bDPyrFn8d529bE7wgTr4s2FRLdxq4R';
+const CRYPTO_DONATION_URL = 'https://trocador.app/anonpay/?ticker_to=xmr&network_to=Mainnet&address=88QY5YvXaBHHwLNdpHBZ8M5vuw9HcqHCKhGrzhwLYKDaKSyoZVMNVmcfytToVjYU8bDPyrFn8d529bE7wgTr4s2FRLdxq4R&fiat_equiv=USD&name=Donate&description=Support+Wire&ticker_from=usdc&network_from=base&bgcolor=00000000';
 
 function MoneroIcon({ className }: { className?: string }) {
   return (
