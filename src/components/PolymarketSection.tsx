@@ -48,8 +48,8 @@ function MarketRow({ market }: { market: ParsedMarket }) {
         <div className="text-[11px] sm:text-xs font-bold tabular-nums text-foreground/80">
           {formatVolume(market.volumeTotal)}
         </div>
-        <div className="text-[9px] tabular-nums text-muted-foreground/50">
-          <span className="font-semibold text-amber-400/90">24h</span> {formatVolume(market.volume24hr)}
+        <div className="text-[9px] tabular-nums text-amber-400/90">
+          <span className="font-semibold">24h</span> {formatVolume(market.volume24hr)}
         </div>
       </div>
     </a>
