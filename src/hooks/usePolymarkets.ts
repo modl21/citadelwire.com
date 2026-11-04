@@ -12,7 +12,9 @@ export interface ParsedMarket {
   leadPrice: number;
   /** Whether this is a simple Yes/No market vs multi-choice */
   isMultiChoice: boolean;
-  /** Aggregate 24h volume across all markets in the event */
+  /** Lifetime volume in USD across all markets in the event (open and closed) */
+  volumeTotal: number;
+  /** Aggregate 24h volume across all open markets in the event */
   volume24hr: number;
 }
 
@@ -234,6 +236,16 @@ async function fetchFromGammaAPI(useProxy: boolean): Promise<ParsedMarket[]> {
 
     if (totalVolume < 1000) continue;
 
+    // Lifetime volume: prefer the event-level field Polymarket's own pages use,
+    // falling back to summing every market (open and closed) in the event.
+    const eventVolume = parseVolume(event.volume);
+    const lifetimeVolume = eventVolume > 0
+      ? eventVolume
+      : event.markets.reduce<number>(
+        (sum, m: Record<string, unknown>) => sum + parseVolume(m.volume),
+        0,
+      );
+
     let leadName = '';
     let leadPrice = 0;
 
@@ -281,6 +293,7 @@ async function fetchFromGammaAPI(useProxy: boolean): Promise<ParsedMarket[]> {
       leadName,
       leadPrice,
       isMultiChoice,
+      volumeTotal: lifetimeVolume,
       volume24hr: totalVolume,
     });
   }

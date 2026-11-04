@@ -39,10 +39,18 @@ function MarketRow({ market }: { market: ParsedMarket }) {
         </div>
       </div>
 
-      {/* 24h Volume */}
-      <span className="shrink-0 text-[10px] sm:text-[11px] text-foreground/70 font-semibold tabular-nums">
-        {formatVolume(market.volume24hr)}
-      </span>
+      {/* Volume: lifetime (primary) with 24h activity underneath */}
+      <div
+        className="shrink-0 text-right leading-tight"
+        title={`${formatVolume(market.volumeTotal)} total volume · ${formatVolume(market.volume24hr)} in the last 24h`}
+      >
+        <div className="text-[11px] sm:text-xs font-bold tabular-nums text-foreground/80">
+          {formatVolume(market.volumeTotal)}
+        </div>
+        <div className="text-[9px] tabular-nums text-muted-foreground/50">
+          24h {formatVolume(market.volume24hr)}
+        </div>
+      </div>
     </a>
   );
 }
