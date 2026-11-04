@@ -308,9 +308,9 @@ export function usePolymarkets() {
   return useQuery<ParsedMarket[]>({
     queryKey: ['polymarkets'],
     queryFn: fetchPolymarkets,
-    staleTime: 15 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
-    refetchInterval: 15 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
     retry: 1,
     refetchOnMount: false,
   });
