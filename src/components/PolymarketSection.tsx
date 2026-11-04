@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown } from 'lucide-react';
 
 function formatVolume(usd: number): string {
+  if (usd >= 1_000_000_000) return `$${(usd / 1_000_000_000).toFixed(1)}B`;
   if (usd >= 1_000_000) return `$${(usd / 1_000_000).toFixed(1)}M`;
   if (usd >= 1_000) return `$${(usd / 1_000).toFixed(0)}K`;
   return `$${usd.toFixed(0)}`;
@@ -48,7 +49,7 @@ function MarketRow({ market }: { market: ParsedMarket }) {
           {formatVolume(market.volumeTotal)}
         </div>
         <div className="text-[9px] tabular-nums text-muted-foreground/50">
-          24h {formatVolume(market.volume24hr)}
+          <span className="font-semibold text-amber-400/90">24h</span> {formatVolume(market.volume24hr)}
         </div>
       </div>
     </a>
