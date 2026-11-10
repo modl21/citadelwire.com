@@ -15,6 +15,7 @@ import { PolymarketSection } from '@/components/PolymarketSection';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTheme } from '@/hooks/useTheme';
 import { useMediaQuery } from '@/hooks/useIsMobile';
+import { cn } from '@/lib/utils';
 
 const BTCSidebarCharts = lazy(() =>
   import('@/components/SidebarCharts').then((module) => ({ default: module.BTCSidebarCharts })),
@@ -101,7 +102,9 @@ const Index = () => {
     typeof window === 'undefined' ? 'https://wire.shakespeare.wtf/' : window.location.href,
   );
   const visiblePosts = useMemo(() => posts?.slice(0, CITADEL_FEED_LIMIT) ?? [], [posts]);
-  const isWidescreen = useMediaQuery('(min-width: 1280px)');
+  // Side charts show on wide desktops, and on touch devices in landscape
+  // (including foldable inside screens) once there is room for slimmer rails.
+  const isWidescreen = useMediaQuery('(min-width: 1280px), (orientation: landscape) and (min-width: 768px) and (pointer: coarse)');
   const [hasShownSidebars, setHasShownSidebars] = useState(isWidescreen);
   useEffect(() => {
     if (isWidescreen) setHasShownSidebars(true);
@@ -242,8 +245,11 @@ const Index = () => {
 
       {/* 3-column layout wrapper: sidebar charts on widescreen, hidden on smaller */}
       <div className="flex justify-center gap-6 xl:px-6">
-        {/* Left sidebar — BTC charts (widescreen only) */}
-        <aside className="hidden xl:block w-[260px] 2xl:w-[300px] shrink-0 sticky top-[130px] self-start max-h-[calc(100vh-150px)] overflow-y-auto py-4 scrollbar-none">
+        {/* Left sidebar — BTC charts (widescreen and landscape touch) */}
+        <aside className={cn(
+          'w-[170px] xl:w-[260px] 2xl:w-[300px] shrink-0 sticky top-[130px] self-start max-h-[calc(100vh-150px)] overflow-y-auto py-4 scrollbar-none',
+          isWidescreen ? 'block' : 'hidden',
+        )}>
           {(isWidescreen || hasShownSidebars) && (
             <Suspense fallback={<Skeleton className="h-[240px] w-full rounded-xl" />}>
               <BTCSidebarCharts enabled={isWidescreen} />
@@ -432,8 +438,11 @@ const Index = () => {
           </footer>
         </div>
 
-        {/* Right sidebar — XAUT charts (widescreen only) */}
-        <aside className="hidden xl:block w-[260px] 2xl:w-[300px] shrink-0 sticky top-[130px] self-start max-h-[calc(100vh-150px)] overflow-y-auto py-4 scrollbar-none">
+        {/* Right sidebar — XAUT charts (widescreen and landscape touch) */}
+        <aside className={cn(
+          'w-[170px] xl:w-[260px] 2xl:w-[300px] shrink-0 sticky top-[130px] self-start max-h-[calc(100vh-150px)] overflow-y-auto py-4 scrollbar-none',
+          isWidescreen ? 'block' : 'hidden',
+        )}>
           {(isWidescreen || hasShownSidebars) && (
             <Suspense fallback={<Skeleton className="h-[240px] w-full rounded-xl" />}>
               <XAUTSidebarCharts enabled={isWidescreen} />
