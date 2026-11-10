@@ -1,6 +1,10 @@
 import { useMemo, useSyncExternalStore } from 'react';
 
-const MOBILE_QUERY = '(max-width: 767px)';
+// Treat a viewport as mobile only in portrait. A landscape viewport that is
+// at least 640px wide — e.g. a foldable's inside screen rotated landscape —
+// has enough horizontal room for the desktop layout, so don't serve it the
+// mobile UI (bottom sheets, single-row previews, etc.).
+const MOBILE_QUERY = '(max-width: 767px) and (orientation: portrait), (max-width: 639px)';
 
 /** Subscribe only to breakpoint changes, rather than every window resize. */
 export function useMediaQuery(query: string): boolean {
