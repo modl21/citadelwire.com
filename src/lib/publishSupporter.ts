@@ -1,4 +1,5 @@
 import { NLogin, NUser } from '@nostrify/react/login';
+import type { NostrEvent } from '@nostrify/nostrify';
 import { generateSecretKey, nip19 } from 'nostr-tools';
 import { SUPPORTER_DONATION_KIND } from '@/hooks/useTopSupporters';
 
@@ -44,7 +45,7 @@ export function getVisitorSigner(): NUser {
 }
 
 type NostrClientLike = {
-  event(event: Record<string, unknown>, opts?: Record<string, unknown>): Promise<unknown>;
+  event(event: NostrEvent, opts?: { signal?: AbortSignal }): Promise<unknown>;
 };
 
 export async function publishSupporterEvent(

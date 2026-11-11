@@ -241,8 +241,8 @@ async function fetchFromGammaAPI(useProxy: boolean): Promise<ParsedMarket[]> {
     const eventVolume = parseVolume(event.volume);
     const lifetimeVolume = eventVolume > 0
       ? eventVolume
-      : event.markets.reduce<number>(
-        (sum, m: Record<string, unknown>) => sum + parseVolume(m.volume),
+      : event.markets.reduce(
+        (sum: number, m: Record<string, unknown>) => sum + parseVolume(m.volume),
         0,
       );
 

@@ -175,6 +175,7 @@ export function useCitadelFeed() {
     if (!canSubscribe) return;
     const newestSeenAt = queryClient.getQueryData<NostrEvent[]>(FEED_QUERY_KEY)?.[0]?.created_at
       ?? Math.floor(Date.now() / 1000);
+    const controller = new AbortController();
     const subscription = relayGroup.req([
       {
         kinds: [1],
@@ -182,7 +183,7 @@ export function useCitadelFeed() {
         since: newestSeenAt,
         limit: CITADEL_FEED_LIMIT,
       },
-    ]);
+    ], { signal: controller.signal });
     let isActive = true;
 
     void (async () => {
@@ -212,11 +213,7 @@ export function useCitadelFeed() {
 
     return () => {
       isActive = false;
-      try {
-        subscription.close();
-      } catch (error) {
-        console.warn('Citadel feed live subscription cleanup failed', error);
-      }
+      controller.abort();
     };
   }, [relayGroup, queryClient, canSubscribe]);
 

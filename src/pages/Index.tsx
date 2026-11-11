@@ -1,4 +1,4 @@
-import { lazy, Suspense, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { lazy, memo, Suspense, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useSeoMeta } from '@unhead/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -23,6 +23,35 @@ const BTCSidebarCharts = lazy(() =>
 const XAUTSidebarCharts = lazy(() =>
   import('@/components/SidebarCharts').then((module) => ({ default: module.XAUTSidebarCharts })),
 );
+
+const CHART_SIDEBAR_QUERY = '(min-width: 1280px), (orientation: landscape) and (min-width: 768px) and (pointer: coarse)';
+
+// Breakpoint updates stay inside these rails, not the entire news feed.
+const ChartSidebar = memo(function ChartSidebar({ side }: { side: 'left' | 'right' }) {
+  const visible = useMediaQuery(CHART_SIDEBAR_QUERY);
+  const [hasShown, setHasShown] = useState(visible);
+  useEffect(() => {
+    if (visible) setHasShown(true);
+  }, [visible]);
+  const Charts = side === 'left' ? BTCSidebarCharts : XAUTSidebarCharts;
+
+  return (
+    <aside
+      aria-label={side === 'left' ? 'Bitcoin and financial charts' : 'Gold, oil and mining charts'}
+      className={cn(
+        'w-[170px] xl:w-[260px] 2xl:w-[300px] shrink-0 sticky top-[130px] self-start max-h-[calc(100vh-150px)] overflow-y-auto py-4 scrollbar-none',
+        visible ? 'block' : 'hidden',
+      )}
+    >
+      {(visible || hasShown) && (
+        <Suspense fallback={<Skeleton className="h-[240px] w-full rounded-xl" />}>
+          {/* Keep selections/cache on rotation, but suspend work when hidden. */}
+          <Charts enabled={visible} />
+        </Suspense>
+      )}
+    </aside>
+  );
+});
 
 const POST_TYPE_FILTERS: { type: PostType; label: string }[] = [
   { type: 'standard', label: 'MAIN WIRE' },
@@ -102,13 +131,6 @@ const Index = () => {
     typeof window === 'undefined' ? 'https://wire.shakespeare.wtf/' : window.location.href,
   );
   const visiblePosts = useMemo(() => posts?.slice(0, CITADEL_FEED_LIMIT) ?? [], [posts]);
-  // Side charts show on wide desktops, and on touch devices in landscape
-  // (including foldable inside screens) once there is room for slimmer rails.
-  const isWidescreen = useMediaQuery('(min-width: 1280px), (orientation: landscape) and (min-width: 768px) and (pointer: coarse)');
-  const [hasShownSidebars, setHasShownSidebars] = useState(isWidescreen);
-  useEffect(() => {
-    if (isWidescreen) setHasShownSidebars(true);
-  }, [isWidescreen]);
   const normalizedSearchQuery = useDeferredValue(searchQuery.trim().toLowerCase());
   const searchIndex = useMemo(
     () => visiblePosts.map((post) => ({ post, type: getPostType(post), text: post.content.toLowerCase() })),
@@ -243,19 +265,9 @@ const Index = () => {
         </div>
       </header>
 
-      {/* 3-column layout wrapper: sidebar charts on widescreen, hidden on smaller */}
+      {/* Chart rails on wide desktops and landscape touch viewports. */}
       <div className="flex justify-center gap-6 xl:px-6">
-        {/* Left sidebar — BTC charts (widescreen and landscape touch) */}
-        <aside className={cn(
-          'w-[170px] xl:w-[260px] 2xl:w-[300px] shrink-0 sticky top-[130px] self-start max-h-[calc(100vh-150px)] overflow-y-auto py-4 scrollbar-none',
-          isWidescreen ? 'block' : 'hidden',
-        )}>
-          {(isWidescreen || hasShownSidebars) && (
-            <Suspense fallback={<Skeleton className="h-[240px] w-full rounded-xl" />}>
-              <BTCSidebarCharts enabled={isWidescreen} />
-            </Suspense>
-          )}
-        </aside>
+        <ChartSidebar side="left" />
 
         {/* Center column — main content */}
         <div className="w-full max-w-2xl min-w-0">
@@ -438,17 +450,7 @@ const Index = () => {
           </footer>
         </div>
 
-        {/* Right sidebar — XAUT charts (widescreen and landscape touch) */}
-        <aside className={cn(
-          'w-[170px] xl:w-[260px] 2xl:w-[300px] shrink-0 sticky top-[130px] self-start max-h-[calc(100vh-150px)] overflow-y-auto py-4 scrollbar-none',
-          isWidescreen ? 'block' : 'hidden',
-        )}>
-          {(isWidescreen || hasShownSidebars) && (
-            <Suspense fallback={<Skeleton className="h-[240px] w-full rounded-xl" />}>
-              <XAUTSidebarCharts enabled={isWidescreen} />
-            </Suspense>
-          )}
-        </aside>
+        <ChartSidebar side="right" />
       </div>
     </div>
   );

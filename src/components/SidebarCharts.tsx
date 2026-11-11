@@ -1,13 +1,22 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useInView } from 'react-intersection-observer';
 import { Bitcoin, TrendingUp, TrendingDown, LineChart, Droplets, Landmark, Gauge } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CHART_SPANS, MARKETS, useCoinChart, useCoinStats, getChange, formatPricePrecise, formatYield, formatYieldChange, type CoinStats, type HyperliquidMarketConfig } from '@/lib/chartUtils';
 import { cn } from '@/lib/utils';
 
+// IntersectionObserver respects the scrollable rail's clipping rectangle.
+// The library pools observers; hidden rails disconnect entirely. Keep panels
+// mounted for range selection/cache, but only fetch or draw visible panels.
+function useVisiblePanel(enabled: boolean) {
+  const { ref, inView } = useInView({ skip: !enabled, fallbackInView: true });
+  return { ref, active: enabled && inView };
+}
+
 // ── Responsive Sparkline Canvas ──────────────────────────────
 
-function SidebarSparkline({ prices, accentColor, isYield = false, isHashrate = false }: { prices: number[][]; accentColor: string; isYield?: boolean; isHashrate?: boolean }) {
+const SidebarSparkline = memo(function SidebarSparkline({ prices, accentColor, enabled, isYield = false, isHashrate = false }: { prices: number[][]; accentColor: string; enabled: boolean; isYield?: boolean; isHashrate?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -105,26 +114,28 @@ function SidebarSparkline({ prices, accentColor, isYield = false, isHashrate = f
   }, [prices, accentColor, isYield, isHashrate]);
 
   useEffect(() => {
-    draw();
+    if (!enabled) return;
     let frame = 0;
     const scheduleDraw = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(draw);
     };
+    // Coalesce data and size changes into one paint per frame, including mount.
+    scheduleDraw();
     const observer = new ResizeObserver(scheduleDraw);
     if (containerRef.current) observer.observe(containerRef.current);
     return () => {
       observer.disconnect();
       cancelAnimationFrame(frame);
     };
-  }, [draw]);
+  }, [draw, enabled]);
 
   return (
     <div ref={containerRef} className="w-full h-full">
       <canvas ref={canvasRef} className="block" />
     </div>
   );
-}
+});
 
 // ── Change Indicator ─────────────────────────────────────────
 
@@ -161,10 +172,11 @@ interface ChartPanelProps {
 function ChartPanel({ market, title, icon, accentColor, activeAccent, sourceUrl, isYield = false, enabled }: ChartPanelProps) {
   const [activeIdx, setActiveIdx] = useState(2); // default 30D
   const span = CHART_SPANS[activeIdx];
-  const { data: prices, isLoading } = useCoinChart(market, span.days, enabled);
+  const { ref, active } = useVisiblePanel(enabled);
+  const { data: prices, isLoading } = useCoinChart(market, span.days, active);
 
   return (
-    <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
+    <div ref={ref} className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
       {/* Header */}
       <div className="px-3 py-2.5 border-b border-border/20">
         <div className="flex items-center gap-1.5 mb-1.5">
@@ -205,7 +217,7 @@ function ChartPanel({ market, title, icon, accentColor, activeAccent, sourceUrl,
             <Skeleton className="h-full w-full rounded" />
           </div>
         ) : (
-          <SidebarSparkline prices={prices} accentColor={accentColor} isYield={isYield} />
+          <SidebarSparkline prices={prices} accentColor={accentColor} isYield={isYield} enabled={active} />
         )}
       </div>
 
@@ -452,8 +464,9 @@ function useMempoolHashrate(days: number, enabled: boolean) {
 
       return hashrates.flatMap((entry) => {
         if (!entry || typeof entry !== 'object') return [];
-        const timestamp = typeof entry.timestamp === 'number' ? entry.timestamp : null;
-        const avgHashrate = typeof entry.avgHashrate === 'number' && Number.isFinite(entry.avgHashrate) ? entry.avgHashrate : null;
+        const record = entry as Record<string, unknown>;
+        const timestamp = typeof record.timestamp === 'number' ? record.timestamp : null;
+        const avgHashrate = typeof record.avgHashrate === 'number' && Number.isFinite(record.avgHashrate) ? record.avgHashrate : null;
         if (timestamp === null || avgHashrate === null || avgHashrate <= 0) return [];
         return [[timestamp * 1000, avgHashrate / 1e18] as [number, number]];
       });
@@ -469,10 +482,11 @@ function useMempoolHashrate(days: number, enabled: boolean) {
 function MempoolHashrateChart({ enabled }: { enabled: boolean }) {
   const [activeIdx, setActiveIdx] = useState(2); // default 30D
   const span = CHART_SPANS[activeIdx];
-  const { data: hashrateSeries, isLoading } = useMempoolHashrate(span.days, enabled);
+  const { ref, active } = useVisiblePanel(enabled);
+  const { data: hashrateSeries, isLoading } = useMempoolHashrate(span.days, active);
 
   return (
-    <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
+    <div ref={ref} className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
       <div className="px-3 py-2.5 border-b border-border/20">
         <div className="flex items-center gap-1.5 mb-1.5">
           <Gauge className="h-3.5 w-3.5 text-emerald-400" />
@@ -510,7 +524,7 @@ function MempoolHashrateChart({ enabled }: { enabled: boolean }) {
             <Skeleton className="h-full w-full rounded" />
           </div>
         ) : (
-          <SidebarSparkline prices={hashrateSeries} accentColor="#34d399" isHashrate />
+          <SidebarSparkline prices={hashrateSeries} accentColor="#34d399" isHashrate enabled={active} />
         )}
       </div>
 
@@ -524,10 +538,11 @@ function MempoolHashrateChart({ enabled }: { enabled: boolean }) {
 }
 
 function MempoolStatsPanel({ enabled }: { enabled: boolean }) {
-  const { data, isLoading } = useMempoolStats(enabled);
+  const { ref, active } = useVisiblePanel(enabled);
+  const { data, isLoading } = useMempoolStats(active);
 
   return (
-    <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
+    <div ref={ref} className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
       <div className="px-3 py-2.5 border-b border-border/20">
         <div className="flex items-center gap-1.5">
           <Gauge className="h-3.5 w-3.5 text-emerald-400" />
@@ -567,13 +582,33 @@ function MempoolStatsPanel({ enabled }: { enabled: boolean }) {
   );
 }
 
+// Fetch stats only when their own panel is in the visible part of the rail,
+// rather than launching every market's history requests on first rotation.
+function MarketStatsPanel({ market, symbol, accentColor, enabled, isYield = false }: {
+  market: HyperliquidMarketConfig;
+  symbol: string;
+  accentColor: string;
+  enabled: boolean;
+  isYield?: boolean;
+}) {
+  const { ref, active } = useVisiblePanel(enabled);
+  const { data: stats } = useCoinStats(market, active);
+  return (
+    <div ref={ref}>
+      {stats ? (
+        <StatsPanel stats={stats} symbol={symbol} accentColor={accentColor} hideMarketCap hideCirculating hideMaxSupply isYield={isYield} />
+      ) : (
+        // Reserve space even before the query is enabled so lower panels don't
+        // slide into view and all start fetching at once.
+        <StatsSkeleton />
+      )}
+    </div>
+  );
+}
+
 // ── Sidebar Exports ──────────────────────────────────────────
 
-export function BTCSidebarCharts({ enabled = true }: { enabled?: boolean }) {
-  const { data: btcStats, isLoading: btcStatsLoading } = useCoinStats(MARKETS.BTC, enabled);
-  const { data: sp500Stats, isLoading: sp500StatsLoading } = useCoinStats(MARKETS.SP500, enabled);
-  const { data: us10yStats, isLoading: us10yStatsLoading } = useCoinStats(MARKETS.US10Y, enabled);
-
+export const BTCSidebarCharts = memo(function BTCSidebarCharts({ enabled = true }: { enabled?: boolean }) {
   return (
     <div className="space-y-3">
       <ChartPanel
@@ -585,11 +620,7 @@ export function BTCSidebarCharts({ enabled = true }: { enabled?: boolean }) {
         activeAccent="bg-amber-500/20 text-amber-400"
         sourceUrl="https://app.hyperliquid.xyz/trade/BTC"
       />
-      {btcStatsLoading ? (
-        <StatsSkeleton />
-      ) : btcStats ? (
-        <StatsPanel stats={btcStats} symbol="BTC" accentColor="#f59e0b" hideMarketCap hideCirculating hideMaxSupply />
-      ) : null}
+      <MarketStatsPanel market={MARKETS.BTC} symbol="BTC" accentColor="#f59e0b" enabled={enabled} />
 
       <ChartPanel
         enabled={enabled}
@@ -600,11 +631,7 @@ export function BTCSidebarCharts({ enabled = true }: { enabled?: boolean }) {
         activeAccent="bg-sky-500/20 text-sky-400"
         sourceUrl="https://app.hyperliquid.xyz/trade/xyz:SP500"
       />
-      {sp500StatsLoading ? (
-        <StatsSkeleton />
-      ) : sp500Stats ? (
-        <StatsPanel stats={sp500Stats} symbol="SP500" accentColor="#38bdf8" hideMarketCap hideCirculating hideMaxSupply />
-      ) : null}
+      <MarketStatsPanel market={MARKETS.SP500} symbol="SP500" accentColor="#38bdf8" enabled={enabled} />
 
       <ChartPanel
         enabled={enabled}
@@ -616,19 +643,12 @@ export function BTCSidebarCharts({ enabled = true }: { enabled?: boolean }) {
         sourceUrl="https://app.hyperliquid.xyz/trade/para:10Y"
         isYield
       />
-      {us10yStatsLoading ? (
-        <StatsSkeleton />
-      ) : us10yStats ? (
-        <StatsPanel stats={us10yStats} symbol="10Y" accentColor="#a78bfa" hideMarketCap hideCirculating hideMaxSupply isYield />
-      ) : null}
+      <MarketStatsPanel market={MARKETS.US10Y} symbol="10Y" accentColor="#a78bfa" enabled={enabled} isYield />
     </div>
   );
-}
+});
 
-export function XAUTSidebarCharts({ enabled = true }: { enabled?: boolean }) {
-  const { data: xautStats, isLoading: xautStatsLoading } = useCoinStats(MARKETS.XAUT, enabled);
-  const { data: brentStats, isLoading: brentStatsLoading } = useCoinStats(MARKETS.BRENTOIL, enabled);
-
+export const XAUTSidebarCharts = memo(function XAUTSidebarCharts({ enabled = true }: { enabled?: boolean }) {
   return (
     <div className="space-y-3">
       <ChartPanel
@@ -640,11 +660,7 @@ export function XAUTSidebarCharts({ enabled = true }: { enabled?: boolean }) {
         activeAccent="bg-yellow-500/20 text-yellow-500"
         sourceUrl="https://app.hyperliquid.xyz/trade/xyz:GOLD"
       />
-      {xautStatsLoading ? (
-        <StatsSkeleton />
-      ) : xautStats ? (
-        <StatsPanel stats={xautStats} symbol="XAUT" accentColor="#eab308" hideMarketCap hideCirculating hideMaxSupply />
-      ) : null}
+      <MarketStatsPanel market={MARKETS.XAUT} symbol="XAUT" accentColor="#eab308" enabled={enabled} />
 
       <ChartPanel
         enabled={enabled}
@@ -655,14 +671,10 @@ export function XAUTSidebarCharts({ enabled = true }: { enabled?: boolean }) {
         activeAccent="bg-orange-500/20 text-orange-400"
         sourceUrl="https://app.hyperliquid.xyz/trade/xyz:BRENTOIL"
       />
-      {brentStatsLoading ? (
-        <StatsSkeleton />
-      ) : brentStats ? (
-        <StatsPanel stats={brentStats} symbol="BRENTOIL" accentColor="#fb923c" hideMarketCap hideCirculating hideMaxSupply />
-      ) : null}
+      <MarketStatsPanel market={MARKETS.BRENTOIL} symbol="BRENTOIL" accentColor="#fb923c" enabled={enabled} />
 
       <MempoolHashrateChart enabled={enabled} />
       <MempoolStatsPanel enabled={enabled} />
     </div>
   );
-}
+});

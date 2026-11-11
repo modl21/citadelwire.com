@@ -128,9 +128,9 @@ export const DonateContent = memo(function DonateContent({
     setIsLoading(true);
     try {
       // Try WebLN first
-      if (typeof window !== 'undefined' && 'webln' in window) {
+      if (typeof window !== 'undefined' && window.webln) {
         try {
-          const webln = (window as Record<string, unknown>).webln as { enable: () => Promise<void>; sendPayment: (invoice: string) => Promise<void> };
+          const webln = window.webln;
           await webln.enable();
           const invoice = await fetchInvoice(finalAmount, memo);
           await webln.sendPayment(invoice.pr);
