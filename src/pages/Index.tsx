@@ -15,7 +15,6 @@ import { PolymarketSection } from '@/components/PolymarketSection';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTheme } from '@/hooks/useTheme';
 import { useMediaQuery } from '@/hooks/useIsMobile';
-import { cn } from '@/lib/utils';
 
 const BTCSidebarCharts = lazy(() =>
   import('@/components/SidebarCharts').then((module) => ({ default: module.BTCSidebarCharts })),
@@ -29,25 +28,34 @@ const CHART_SIDEBAR_QUERY = '(min-width: 1280px), (orientation: landscape) and (
 // Breakpoint updates stay inside these rails, not the entire news feed.
 const ChartSidebar = memo(function ChartSidebar({ side }: { side: 'left' | 'right' }) {
   const visible = useMediaQuery(CHART_SIDEBAR_QUERY);
-  const [hasShown, setHasShown] = useState(visible);
-  useEffect(() => {
-    if (visible) setHasShown(true);
-  }, [visible]);
+  const [armed, setArmed] = useState(false);
   const Charts = side === 'left' ? BTCSidebarCharts : XAUTSidebarCharts;
+
+  useEffect(() => {
+    if (!visible) {
+      // Drop the rails entirely on portrait so the feed repaints alone.
+      setArmed(false);
+      return;
+    }
+    // Let the rotation animation finish before mounting charts and their
+    // requests. Cached data means this does not refetch.
+    const timer = setTimeout(() => setArmed(true), 150);
+    return () => clearTimeout(timer);
+  }, [visible]);
+
+  if (!visible) return null;
 
   return (
     <aside
       aria-label={side === 'left' ? 'Bitcoin and financial charts' : 'Gold, oil and mining charts'}
-      className={cn(
-        'w-[170px] xl:w-[260px] 2xl:w-[300px] shrink-0 sticky top-[130px] self-start max-h-[calc(100vh-150px)] overflow-y-auto py-4 scrollbar-none',
-        visible ? 'block' : 'hidden',
-      )}
+      className="w-[170px] xl:w-[260px] 2xl:w-[300px] shrink-0 sticky top-[130px] self-start max-h-[calc(100vh-150px)] overflow-y-auto py-4 scrollbar-none"
     >
-      {(visible || hasShown) && (
+      {armed ? (
         <Suspense fallback={<Skeleton className="h-[240px] w-full rounded-xl" />}>
-          {/* Keep selections/cache on rotation, but suspend work when hidden. */}
           <Charts enabled={visible} />
         </Suspense>
+      ) : (
+        <Skeleton className="h-[240px] w-full rounded-xl" />
       )}
     </aside>
   );
