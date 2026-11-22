@@ -227,6 +227,68 @@ function CoinChartDialog({ open, onOpenChange, market, title, icon, accentColor,
 
 // ── Ticker Bar ──────────────────────────────────────────────
 
+type ActiveChartKey = 'BTC' | 'XAUT' | 'SP500' | 'BRENTOIL' | 'US10Y';
+
+interface ChartDialogConfig {
+  market: HyperliquidMarketConfig;
+  title: string;
+  icon: React.ReactNode;
+  accentColor: string;
+  activeAccent: string;
+  sourceLabel: string;
+  sourceUrl: string;
+  isYield?: boolean;
+}
+
+const CHART_DIALOG_CONFIGS: Record<ActiveChartKey, ChartDialogConfig> = {
+  BTC: {
+    market: MARKETS.BTC,
+    title: 'Bitcoin',
+    icon: <Bitcoin className="h-4 w-4 text-amber-500" />,
+    accentColor: '#f59e0b',
+    activeAccent: 'bg-amber-500/20 text-amber-400',
+    sourceLabel: 'hyperliquid.xyz',
+    sourceUrl: 'https://app.hyperliquid.xyz/trade/BTC',
+  },
+  XAUT: {
+    market: MARKETS.XAUT,
+    title: 'Gold',
+    icon: <span className="text-yellow-500 text-sm font-bold leading-none">Au</span>,
+    accentColor: '#eab308',
+    activeAccent: 'bg-yellow-500/20 text-yellow-500',
+    sourceLabel: 'hyperliquid.xyz',
+    sourceUrl: 'https://app.hyperliquid.xyz/trade/xyz:GOLD',
+  },
+  SP500: {
+    market: MARKETS.SP500,
+    title: 'S&P 500',
+    icon: <TrendingUp className="h-4 w-4 text-sky-400" />,
+    accentColor: '#38bdf8',
+    activeAccent: 'bg-sky-500/20 text-sky-400',
+    sourceLabel: 'hyperliquid.xyz',
+    sourceUrl: 'https://app.hyperliquid.xyz/trade/xyz:SP500',
+  },
+  BRENTOIL: {
+    market: MARKETS.BRENTOIL,
+    title: 'Brent Oil',
+    icon: <Droplets className="h-4 w-4 text-orange-400" />,
+    accentColor: '#fb923c',
+    activeAccent: 'bg-orange-500/20 text-orange-400',
+    sourceLabel: 'hyperliquid.xyz',
+    sourceUrl: 'https://app.hyperliquid.xyz/trade/xyz:BRENTOIL',
+  },
+  US10Y: {
+    market: MARKETS.US10Y,
+    title: 'US 10Y Treasury',
+    icon: <Landmark className="h-4 w-4 text-violet-400" />,
+    accentColor: '#a78bfa',
+    activeAccent: 'bg-violet-500/20 text-violet-300',
+    sourceLabel: 'hyperliquid.xyz',
+    sourceUrl: 'https://app.hyperliquid.xyz/trade/para:10Y',
+    isYield: true,
+  },
+};
+
 interface TickerBarProps {
   live?: boolean;
 }
@@ -234,21 +296,21 @@ interface TickerBarProps {
 export function TickerBar({ live = true }: TickerBarProps) {
   const { data, isLoading } = useMarketData(live);
   const queryClient = useQueryClient();
-  const [btcChartOpen, setBtcChartOpen] = useState(false);
-  const [xautChartOpen, setXautChartOpen] = useState(false);
-  const [sp500ChartOpen, setSp500ChartOpen] = useState(false);
-  const [brentOilChartOpen, setBrentOilChartOpen] = useState(false);
-  const [us10yChartOpen, setUs10yChartOpen] = useState(false);
+  const [activeChart, setActiveChart] = useState<ActiveChartKey | null>(null);
+  const lastSeenHeightRef = useRef<number | null>(data?.blockHeight ?? null);
+
+  if (data?.blockHeight && data.blockHeight > (lastSeenHeightRef.current ?? 0)) {
+    lastSeenHeightRef.current = data.blockHeight;
+  }
 
   useEffect(() => {
     if (!live) return;
 
     let cancelled = false;
-    let lastSeenHeight = data?.blockHeight ?? null;
 
     const applyBlockHeight = (height: number) => {
-      if (!Number.isSafeInteger(height) || height <= (lastSeenHeight ?? 0)) return;
-      lastSeenHeight = height;
+      if (!Number.isSafeInteger(height) || height <= (lastSeenHeightRef.current ?? 0)) return;
+      lastSeenHeightRef.current = height;
       queryClient.setQueryData<MarketData>(['market-data'], (current) => ({
         btcPrice: current?.btcPrice ?? null,
         goldPrice: current?.goldPrice ?? null,
@@ -260,21 +322,29 @@ export function TickerBar({ live = true }: TickerBarProps) {
     };
 
     const pollBlockHeight = async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       const height = await fetchBlockHeight();
       if (!cancelled && height !== null) applyBlockHeight(height);
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) void pollBlockHeight();
     };
 
     const intervalId = setInterval(() => {
       void pollBlockHeight();
     }, 10 * 1000);
 
-    void pollBlockHeight();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       cancelled = true;
       clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [data?.blockHeight, live, queryClient]);
+  }, [live, queryClient]);
+
+  const activeConfig = activeChart ? CHART_DIALOG_CONFIGS[activeChart] : null;
 
   return (
     <>
@@ -306,7 +376,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
             <Skeleton className="h-3 sm:h-3.5 w-12 sm:w-16" />
           ) : (
             <button
-              onClick={() => setBtcChartOpen(true)}
+              onClick={() => setActiveChart('BTC')}
               className="text-foreground font-semibold tabular-nums hover:text-amber-500 transition-colors cursor-pointer underline decoration-dotted decoration-muted-foreground/30 underline-offset-2 hover:decoration-amber-500/50"
             >
               {formatPrice(data.btcPrice)}
@@ -324,7 +394,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
             <Skeleton className="h-3 sm:h-3.5 w-12 sm:w-16" />
           ) : (
             <button
-              onClick={() => setXautChartOpen(true)}
+              onClick={() => setActiveChart('XAUT')}
               className="text-foreground font-semibold tabular-nums hover:text-yellow-500 transition-colors cursor-pointer underline decoration-dotted decoration-muted-foreground/30 underline-offset-2 hover:decoration-yellow-500/50"
             >
               {formatPrice(data.goldPrice)}
@@ -342,7 +412,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
             <Skeleton className="h-3 sm:h-3.5 w-10 sm:w-14" />
           ) : (
             <button
-              onClick={() => setSp500ChartOpen(true)}
+              onClick={() => setActiveChart('SP500')}
               className="text-foreground font-semibold tabular-nums hover:text-sky-400 transition-colors cursor-pointer underline decoration-dotted decoration-muted-foreground/30 underline-offset-2 hover:decoration-sky-400/50"
             >
               {formatPrice(data.sp500Price)}
@@ -360,7 +430,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
             <Skeleton className="h-3 sm:h-3.5 w-8 sm:w-12" />
           ) : (
             <button
-              onClick={() => setBrentOilChartOpen(true)}
+              onClick={() => setActiveChart('BRENTOIL')}
               className="text-foreground font-semibold tabular-nums hover:text-orange-400 transition-colors cursor-pointer underline decoration-dotted decoration-muted-foreground/30 underline-offset-2 hover:decoration-orange-400/50"
             >
               {formatPriceTwoDecimals(data.brentOilPrice)}
@@ -378,7 +448,7 @@ export function TickerBar({ live = true }: TickerBarProps) {
             <Skeleton className="h-3 sm:h-3.5 w-8 sm:w-12" />
           ) : (
             <button
-              onClick={() => setUs10yChartOpen(true)}
+              onClick={() => setActiveChart('US10Y')}
               className="text-foreground font-semibold tabular-nums tracking-tighter hover:text-violet-400 transition-colors cursor-pointer underline decoration-dotted decoration-muted-foreground/30 underline-offset-2 hover:decoration-violet-400/50 sm:tracking-normal"
             >
               {formatYield(data.us10yPrice)}
@@ -388,62 +458,21 @@ export function TickerBar({ live = true }: TickerBarProps) {
 
       </div>
 
-      <CoinChartDialog
-        open={btcChartOpen}
-        onOpenChange={setBtcChartOpen}
-        market={MARKETS.BTC}
-        title="Bitcoin"
-        icon={<Bitcoin className="h-4 w-4 text-amber-500" />}
-        accentColor="#f59e0b"
-        activeAccent="bg-amber-500/20 text-amber-400"
-        sourceLabel="hyperliquid.xyz"
-        sourceUrl="https://app.hyperliquid.xyz/trade/BTC"
-      />
-      <CoinChartDialog
-        open={xautChartOpen}
-        onOpenChange={setXautChartOpen}
-        market={MARKETS.XAUT}
-        title="Gold"
-        icon={<span className="text-yellow-500 text-sm font-bold leading-none">Au</span>}
-        accentColor="#eab308"
-        activeAccent="bg-yellow-500/20 text-yellow-500"
-        sourceLabel="hyperliquid.xyz"
-        sourceUrl="https://app.hyperliquid.xyz/trade/xyz:GOLD"
-      />
-      <CoinChartDialog
-        open={sp500ChartOpen}
-        onOpenChange={setSp500ChartOpen}
-        market={MARKETS.SP500}
-        title="S&P 500"
-        icon={<TrendingUp className="h-4 w-4 text-sky-400" />}
-        accentColor="#38bdf8"
-        activeAccent="bg-sky-500/20 text-sky-400"
-        sourceLabel="hyperliquid.xyz"
-        sourceUrl="https://app.hyperliquid.xyz/trade/xyz:SP500"
-      />
-      <CoinChartDialog
-        open={brentOilChartOpen}
-        onOpenChange={setBrentOilChartOpen}
-        market={MARKETS.BRENTOIL}
-        title="Brent Oil"
-        icon={<Droplets className="h-4 w-4 text-orange-400" />}
-        accentColor="#fb923c"
-        activeAccent="bg-orange-500/20 text-orange-400"
-        sourceLabel="hyperliquid.xyz"
-        sourceUrl="https://app.hyperliquid.xyz/trade/xyz:BRENTOIL"
-      />
-      <CoinChartDialog
-        open={us10yChartOpen}
-        onOpenChange={setUs10yChartOpen}
-        market={MARKETS.US10Y}
-        title="US 10Y Treasury"
-        icon={<Landmark className="h-4 w-4 text-violet-400" />}
-        accentColor="#a78bfa"
-        activeAccent="bg-violet-500/20 text-violet-300"
-        sourceLabel="hyperliquid.xyz"
-        sourceUrl="https://app.hyperliquid.xyz/trade/para:10Y"
-        isYield
-      />
+      {activeConfig && (
+        <CoinChartDialog
+          key={activeChart}
+          open
+          onOpenChange={(open) => { if (!open) setActiveChart(null); }}
+          market={activeConfig.market}
+          title={activeConfig.title}
+          icon={activeConfig.icon}
+          accentColor={activeConfig.accentColor}
+          activeAccent={activeConfig.activeAccent}
+          sourceLabel={activeConfig.sourceLabel}
+          sourceUrl={activeConfig.sourceUrl}
+          isYield={activeConfig.isYield}
+        />
+      )}
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { usePolymarkets, type ParsedMarket } from '@/hooks/usePolymarkets';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -66,7 +66,7 @@ function MarketSkeleton() {
   );
 }
 
-export function PolymarketSection() {
+export const PolymarketSection = memo(function PolymarketSection() {
   const { data: markets, isLoading, isError } = usePolymarkets();
   const [expanded, setExpanded] = useState(false);
   const isMobile = useIsMobile();
@@ -118,4 +118,4 @@ export function PolymarketSection() {
       )}
     </div>
   );
-}
+});

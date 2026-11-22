@@ -12,6 +12,8 @@ import { encodePostPath, getPostIdPrefix, getPostUtcSlug } from '@/lib/nostrPost
 interface PostCardProps {
   event: NostrEvent;
   isFirst?: boolean;
+  /** Optional precomputed PostType from the feed index to avoid re-scanning tags/content. */
+  postType?: PostType;
 }
 
 // One clock for the whole feed. Only the small relative-time labels update;
@@ -56,13 +58,13 @@ const POST_TYPE_STYLES: Record<PostType, string | null> = {
   'editor-wire': 'text-cyan-300',
 };
 
-export const PostCard = memo(function PostCard({ event, isFirst }: PostCardProps) {
+export const PostCard = memo(function PostCard({ event, isFirst, postType: providedPostType }: PostCardProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
   const absolute = format(new Date(event.created_at * 1000), 'MMM d, yyyy · h:mm a');
   const postPath = encodePostPath(event);
-  const postType = getPostType(event);
+  const postType = providedPostType ?? getPostType(event);
   const postTypeClassName = POST_TYPE_STYLES[postType];
 
   const getShareUrl = () => {

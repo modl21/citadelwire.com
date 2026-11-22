@@ -59,6 +59,7 @@ export function useRSSEpisode(
   feedUrl: string,
   predicate?: (episode: RSSEpisode) => boolean,
   _cacheKey?: string,
+  enabled = true,
 ) {
   const selectEpisode = useCallback(
     (episodes: RSSEpisode[]) => episodes.find((episode) => isRecentEpisode(episode) && (!predicate || predicate(episode))) ?? null,
@@ -71,9 +72,10 @@ export function useRSSEpisode(
     queryKey: ['rss-feed', feedUrl],
     queryFn: ({ signal }) => fetchEpisodes(feedUrl, signal),
     select: selectEpisode,
+    enabled,
     staleTime: 15 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
-    refetchInterval: 15 * 60 * 1000,
+    refetchInterval: enabled ? 15 * 60 * 1000 : false,
     refetchIntervalInBackground: false,
     retry: 1,
     refetchOnMount: false,

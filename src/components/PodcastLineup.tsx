@@ -186,21 +186,32 @@ const PODCASTS: PodcastConfig[] = [
   },
 ];
 
+// Priority shows fetch immediately to populate the top 2 preview slots quickly;
+// remaining shows wait briefly until the browser is idle (or the user expands)
+// so 20+ RSS fetches don't contend with the initial news feed render.
+const PRIORITY_PODCAST_COUNT = 6;
+
 interface PodcastShowPlayerProps {
   config: PodcastConfig;
   onVisibilityChange: (id: string, visible: boolean) => void;
   preloadMetadata: boolean;
+  fetchEnabled: boolean;
 }
 
-const PodcastShowPlayer = memo(function PodcastShowPlayer({ config, onVisibilityChange, preloadMetadata }: PodcastShowPlayerProps) {
-  const { data: episode, isLoading } = useRSSEpisode(config.feedUrl, config.predicate, config.id);
-  const isVisible = isLoading || Boolean(episode);
+const PodcastShowPlayer = memo(function PodcastShowPlayer({
+  config,
+  onVisibilityChange,
+  preloadMetadata,
+  fetchEnabled,
+}: PodcastShowPlayerProps) {
+  const { data: episode, isLoading } = useRSSEpisode(config.feedUrl, config.predicate, config.id, fetchEnabled);
+  const isVisible = !fetchEnabled || isLoading || Boolean(episode);
 
   useEffect(() => {
     onVisibilityChange(config.id, isVisible);
   }, [config.id, isVisible, onVisibilityChange]);
 
-  if (isLoading) {
+  if (!fetchEnabled || isLoading) {
     return (
       <div className="px-4 sm:px-6 py-1.5">
         <AudioPlayerSkeleton />
@@ -230,9 +241,30 @@ const PodcastShowPlayer = memo(function PodcastShowPlayer({ config, onVisibility
   );
 });
 
-export function PodcastLineup() {
+export const PodcastLineup = memo(function PodcastLineup() {
   const [expanded, setExpanded] = useState(false);
+  const [deferredReady, setDeferredReady] = useState(false);
   const [visibleIds, setVisibleIds] = useState<Set<string>>(() => new Set(PODCASTS.map(({ id }) => id)));
+
+  useEffect(() => {
+    if (expanded) {
+      setDeferredReady(true);
+      return;
+    }
+    if (deferredReady) return;
+
+    const ric = typeof window !== 'undefined'
+      ? (window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void })
+      : undefined;
+
+    if (ric?.requestIdleCallback) {
+      const idleId = ric.requestIdleCallback(() => setDeferredReady(true), { timeout: 2500 });
+      return () => ric.cancelIdleCallback?.(idleId);
+    }
+
+    const timer = setTimeout(() => setDeferredReady(true), 1200);
+    return () => clearTimeout(timer);
+  }, [expanded, deferredReady]);
 
   const setPodcastVisibility = useCallback((id: string, visible: boolean) => {
     setVisibleIds((current) => {
@@ -257,9 +289,10 @@ export function PodcastLineup() {
 
   return (
     <div>
-      {PODCASTS.map((config) => {
+      {PODCASTS.map((config, index) => {
         const hiddenBehindToggle = hiddenPodcastIds.has(config.id);
         const showMoreToggle = hiddenCount > 0 && config.id === firstHiddenPodcastId;
+        const fetchEnabled = index < PRIORITY_PODCAST_COUNT || deferredReady || expanded;
 
         return (
           <div key={config.id}>
@@ -281,6 +314,7 @@ export function PodcastLineup() {
                 config={config}
                 onVisibilityChange={setPodcastVisibility}
                 preloadMetadata={expanded || !hiddenBehindToggle}
+                fetchEnabled={fetchEnabled}
               />
             </div>
           </div>
@@ -288,4 +322,4 @@ export function PodcastLineup() {
       })}
     </div>
   );
-}
+});

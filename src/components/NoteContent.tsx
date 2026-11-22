@@ -387,14 +387,44 @@ function renderEditorWireContent(content: string, showMoreInfo: boolean, titleCl
   return blocks.join('');
 }
 
+// Bounded LRU cache for parsed HTML so toggling filters, progressive scrolling,
+// and returning from a post page avoid re-running regex/markdown parsing.
+const RENDERED_HTML_CACHE = new Map<string, string>();
+const RENDERED_HTML_CACHE_MAX = 600;
+
+function getCachedRenderedHtml(
+  cacheKey: string,
+  content: string,
+  showMoreInfo: boolean,
+  titleClassName: string | undefined,
+  editorWire: boolean,
+): string {
+  const existing = RENDERED_HTML_CACHE.get(cacheKey);
+  if (existing !== undefined) {
+    // Refresh recency
+    RENDERED_HTML_CACHE.delete(cacheKey);
+    RENDERED_HTML_CACHE.set(cacheKey, existing);
+    return existing;
+  }
+
+  const html = editorWire
+    ? renderEditorWireContent(content, showMoreInfo, titleClassName)
+    : renderContent(content, showMoreInfo, titleClassName);
+
+  RENDERED_HTML_CACHE.set(cacheKey, html);
+  if (RENDERED_HTML_CACHE.size > RENDERED_HTML_CACHE_MAX) {
+    const oldestKey = RENDERED_HTML_CACHE.keys().next().value;
+    if (oldestKey !== undefined) RENDERED_HTML_CACHE.delete(oldestKey);
+  }
+  return html;
+}
+
 /** Parses content of text note events with smart formatting. */
 export const NoteContent = memo(function NoteContent({ event, className, showMoreInfo = false, titleClassName, editorWire = false }: NoteContentProps) {
-  const html = useMemo(
-    () => editorWire
-      ? renderEditorWireContent(event.content, showMoreInfo, titleClassName)
-      : renderContent(event.content, showMoreInfo, titleClassName),
-    [event.content, showMoreInfo, titleClassName, editorWire],
-  );
+  const html = useMemo(() => {
+    const cacheKey = `${event.id}|${showMoreInfo ? 1 : 0}|${editorWire ? 1 : 0}|${titleClassName ?? ''}`;
+    return getCachedRenderedHtml(cacheKey, event.content, showMoreInfo, titleClassName, editorWire);
+  }, [event.id, event.content, showMoreInfo, titleClassName, editorWire]);
 
   return (
     <div

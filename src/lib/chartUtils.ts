@@ -61,16 +61,34 @@ interface HyperliquidPerpMeta {
 type HyperliquidMetaAndAssetCtxs = [HyperliquidPerpMeta, HyperliquidPerpAssetContext[]];
 
 const pendingInfoRequests = new Map<string, Promise<unknown>>();
+const cachedMetaResponses = new Map<string, { expiresAt: number; data: unknown }>();
+const META_CACHE_TTL_MS = 30 * 1000;
 
-/** Share concurrent identical API requests; settled responses are not cached here. */
+/** Share concurrent identical API requests and briefly reuse meta snapshots across ticker & stats. */
 export function postHyperliquidInfo<T>(body: Record<string, unknown>, timeoutMs = 8000): Promise<T> {
   const key = JSON.stringify(body);
+  const isMetaRequest = body.type === 'metaAndAssetCtxs' || body.type === 'spotMetaAndAssetCtxs';
+
+  if (isMetaRequest) {
+    const cached = cachedMetaResponses.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      return Promise.resolve(cached.data as T);
+    }
+  }
+
   const existing = pendingInfoRequests.get(key);
   if (existing) return existing as Promise<T>;
 
-  const pending = requestHyperliquidInfo<T>(body, timeoutMs).finally(() => {
-    pendingInfoRequests.delete(key);
-  });
+  const pending = requestHyperliquidInfo<T>(body, timeoutMs)
+    .then((data) => {
+      if (isMetaRequest) {
+        cachedMetaResponses.set(key, { expiresAt: Date.now() + META_CACHE_TTL_MS, data });
+      }
+      return data;
+    })
+    .finally(() => {
+      pendingInfoRequests.delete(key);
+    });
   pendingInfoRequests.set(key, pending);
   return pending;
 }
@@ -196,13 +214,18 @@ function pctChange(current: number | null, previous: number | null): number | nu
   return ((current - previous) / previous) * 100;
 }
 
-async function fetchHistoricalClose(market: HyperliquidMarketConfig, startTime: number, endTime: number): Promise<number | null> {
+async function fetchHistoricalClose(
+  market: HyperliquidMarketConfig,
+  startTime: number,
+  endTime: number,
+  interval: '1h' | '1d' = '1h',
+): Promise<number | null> {
   try {
     const candles = await postHyperliquidInfo<HyperliquidCandle[]>({
       type: 'candleSnapshot',
       req: {
         coin: market.coin,
-        interval: '1h',
+        interval,
         startTime,
         endTime,
       },
@@ -234,8 +257,9 @@ async function fetchStatsForMarket(market: HyperliquidMarketConfig): Promise<Coi
         endTime: now,
       },
     }),
-    fetchHistoricalClose(market, now - (7 * DAY_MS) - (60 * 60 * 1000), now - (7 * DAY_MS) + (60 * 60 * 1000)),
-    fetchHistoricalClose(market, now - (30 * DAY_MS) - (24 * 60 * 60 * 1000), now),
+    fetchHistoricalClose(market, now - (7 * DAY_MS) - (60 * 60 * 1000), now - (7 * DAY_MS) + (60 * 60 * 1000), '1h'),
+    // Fetch a small daily slice around 30 days ago (handles weekend gaps) instead of 720 hourly candles.
+    fetchHistoricalClose(market, now - (31 * DAY_MS), now - (27 * DAY_MS), '1d'),
   ]);
 
   const [meta, contexts] = metaAndContexts;

@@ -1,5 +1,6 @@
 import { lazy, memo, Suspense, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useSeoMeta } from '@unhead/react';
+import { useInView } from 'react-intersection-observer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { PostCard } from '@/components/PostCard';
@@ -24,6 +25,8 @@ const XAUTSidebarCharts = lazy(() =>
 );
 
 const CHART_SIDEBAR_QUERY = '(min-width: 1280px), (orientation: landscape) and (min-width: 768px) and (pointer: coarse)';
+const INITIAL_RENDER_COUNT = 30;
+const RENDER_BATCH_SIZE = 40;
 
 // Breakpoint updates stay inside these rails, not the entire news feed.
 const ChartSidebar = memo(function ChartSidebar({ side }: { side: 'left' | 'right' }) {
@@ -58,6 +61,114 @@ const ChartSidebar = memo(function ChartSidebar({ side }: { side: 'left' | 'righ
         <Skeleton className="h-[240px] w-full rounded-xl" />
       )}
     </aside>
+  );
+});
+
+/** Isolated so page-view fetches/updates never re-render the feed or header siblings. */
+const VisitorCounter = memo(function VisitorCounter() {
+  const { count: pageViews, isLoading: isPageViewsLoading } = usePageViewCount(
+    HOME_PAGE_VIEW_ID,
+    typeof window === 'undefined' ? 'https://wire.shakespeare.wtf/' : window.location.href,
+  );
+
+  return (
+    <div
+      className="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/30 px-2.5 py-1 text-[11px] font-medium text-muted-foreground/80"
+      title="Visitors"
+      aria-label={`Visitors ${pageViews.toLocaleString('en-US')}`}
+    >
+      <Eye className="h-3.5 w-3.5 text-sky-400" />
+      <span className="hidden sm:inline">Visitors</span>
+      <span className="tabular-nums text-foreground/90">
+        {isPageViewsLoading ? '…' : pageViews.toLocaleString('en-US')}
+      </span>
+    </div>
+  );
+});
+
+/** Isolated so profile metadata resolution only re-renders the small brand link. */
+const BrandIdentity = memo(function BrandIdentity() {
+  const author = useAuthor(CITADEL_PUBKEY);
+  const metadata = author.data?.metadata;
+
+  return (
+    <a href="https://primal.net/wire" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity shrink-0">
+      <Avatar className="h-7 w-7 sm:h-8 sm:w-8 ring-2 ring-border/40 shrink-0">
+        {metadata?.picture ? (
+          <AvatarImage src={metadata.picture} alt={metadata?.display_name ?? 'CITADEL WIRE'} />
+        ) : null}
+        <AvatarFallback className="text-[10px] font-bold bg-primary text-primary-foreground">CW</AvatarFallback>
+      </Avatar>
+      <h1 className="text-xs sm:text-sm font-bold tracking-tight whitespace-nowrap">
+        CITADEL WIRE
+      </h1>
+    </a>
+  );
+});
+
+/** Isolated so theme toggles don't re-render the feed tree. */
+const ThemeToggleButton = memo(function ThemeToggleButton() {
+  const { theme, setTheme } = useTheme();
+  const isLightMode = theme === 'light';
+
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(isLightMode ? 'dark' : 'light')}
+      className="p-2 rounded-full hover:bg-muted/60 transition-colors text-muted-foreground/55 hover:text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40"
+      title={isLightMode ? 'Switch to dark mode' : 'Switch to light mode'}
+      aria-label={isLightMode ? 'Switch to dark mode' : 'Switch to light mode'}
+      aria-pressed={isLightMode}
+    >
+      {isLightMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+    </button>
+  );
+});
+
+/** Isolated so author metadata updates only touch this compact info bar. */
+const ProfileMetaBar = memo(function ProfileMetaBar() {
+  const author = useAuthor(CITADEL_PUBKEY);
+  const metadata = author.data?.metadata;
+
+  return (
+    <div className="px-4 sm:px-6">
+      <div className="py-1.5 sm:py-2 border-b border-border/40 flex items-center gap-1.5 sm:gap-2.5 text-[9px] sm:text-[11px] overflow-hidden">
+        <a href="https://odell.xyz" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 shrink-0 group/odell">
+          <Avatar className="h-3.5 w-3.5 sm:h-4 sm:w-4">
+            <AvatarImage src="https://primaldata.s3.us-east-005.backblazeb2.com/cache/2/c7/ce/2c7ce06799d9a1226680f19826b8fc18ea5df5e2702bcf681e267e0977069e44.jpg" alt="ODELL" />
+            <AvatarFallback className="text-[6px] bg-muted">O</AvatarFallback>
+          </Avatar>
+          <span className="text-white/70 whitespace-nowrap">
+            <span className="hidden sm:inline">Curated </span>by{' '}
+            <span className="text-white group-hover/odell:text-white font-medium transition-colors">ODELL</span>
+          </span>
+        </a>
+        {metadata?.lud16 && (
+          <>
+            <span className="text-muted-foreground/30">·</span>
+            <a
+              href="https://primal.net/wire"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 text-amber-500/70 hover:text-amber-500 font-medium transition-colors whitespace-nowrap shrink-0"
+            >
+              <Globe className="h-3 w-3" />
+              {metadata.lud16}
+            </a>
+          </>
+        )}
+        <span className="text-muted-foreground/30">·</span>
+        <span className="text-white whitespace-nowrap font-bold">high signal news</span>
+        <a
+          href="https://smp4.simplex.im/c#pnthhrx5BfdJEdTJ6QOEhEJ6g-hdwuOiMEFu6dpj3cQ"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex shrink-0 items-center rounded-full border border-sky-300/45 bg-sky-300/15 px-1.5 py-0.5 text-[7px] font-bold uppercase leading-none tracking-normal text-sky-200 transition-colors hover:border-sky-200/70 hover:bg-sky-300/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 sm:px-2 sm:text-[10px] sm:tracking-wide"
+        >
+          Join our SimpleX channel
+        </a>
+      </div>
+    </div>
   );
 });
 
@@ -130,26 +241,40 @@ const Index = () => {
   const [visiblePostTypes, setVisiblePostTypes] = useState<Set<PostType>>(() => getStoredVisiblePostTypes());
   const [postTypeTooltipOpen, setPostTypeTooltipOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { theme, setTheme } = useTheme();
-  const isLightMode = theme === 'light';
-  const author = useAuthor(CITADEL_PUBKEY);
-  const metadata = author.data?.metadata;
-  const { count: pageViews, isLoading: isPageViewsLoading } = usePageViewCount(
-    HOME_PAGE_VIEW_ID,
-    typeof window === 'undefined' ? 'https://wire.shakespeare.wtf/' : window.location.href,
-  );
+  const [renderedCount, setRenderedCount] = useState(INITIAL_RENDER_COUNT);
   const visiblePosts = useMemo(() => posts?.slice(0, CITADEL_FEED_LIMIT) ?? [], [posts]);
   const normalizedSearchQuery = useDeferredValue(searchQuery.trim().toLowerCase());
   const searchIndex = useMemo(
     () => visiblePosts.map((post) => ({ post, type: getPostType(post), text: post.content.toLowerCase() })),
     [visiblePosts],
   );
-  const filteredPosts = useMemo(
+  const filteredEntries = useMemo(
     () => searchIndex
       // Live wires bypass the Show-bar filters entirely; search still applies.
-      .filter(({ type, text }) => (type === 'live-wire' || visiblePostTypes.has(type)) && (!normalizedSearchQuery || text.includes(normalizedSearchQuery)))
-      .map(({ post }) => post),
+      .filter(({ type, text }) => (type === 'live-wire' || visiblePostTypes.has(type)) && (!normalizedSearchQuery || text.includes(normalizedSearchQuery))),
     [searchIndex, visiblePostTypes, normalizedSearchQuery],
+  );
+
+  // Reset the rendered window when the user changes filters or search query
+  useEffect(() => {
+    setRenderedCount(INITIAL_RENDER_COUNT);
+  }, [visiblePostTypes, normalizedSearchQuery]);
+
+  const hasMoreToRender = renderedCount < filteredEntries.length;
+  const { ref: loadMoreRef, inView: loadMoreInView } = useInView({
+    rootMargin: '800px 0px',
+    skip: !hasMoreToRender,
+  });
+
+  useEffect(() => {
+    if (loadMoreInView && hasMoreToRender) {
+      setRenderedCount((count) => Math.min(count + RENDER_BATCH_SIZE, filteredEntries.length));
+    }
+  }, [loadMoreInView, hasMoreToRender, filteredEntries.length]);
+
+  const renderedEntries = useMemo(
+    () => filteredEntries.slice(0, renderedCount),
+    [filteredEntries, renderedCount],
   );
 
   const togglePostType = (type: PostType) => {
@@ -163,10 +288,6 @@ const Index = () => {
       saveStoredVisiblePostTypes(next);
       return next;
     });
-  };
-
-  const toggleTheme = () => {
-    setTheme(isLightMode ? 'dark' : 'light');
   };
 
   useSeoMeta({
@@ -184,33 +305,13 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sticky header with identity + ticker */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/40">
+      {/* Sticky header: solid high-opacity on mobile to avoid expensive GPU backdrop-blur per scroll frame */}
+      <header className="sticky top-0 z-50 bg-background/95 md:bg-background/85 md:backdrop-blur-md border-b border-border/40">
         {/* Top row: identity + refresh */}
         <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-3 pb-2 flex items-center justify-between">
-          <a href="https://primal.net/wire" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity shrink-0">
-            <Avatar className="h-7 w-7 sm:h-8 sm:w-8 ring-2 ring-border/40 shrink-0">
-              {metadata?.picture ? (
-                <AvatarImage src={metadata.picture} alt={metadata?.display_name ?? 'CITADEL WIRE'} />
-              ) : null}
-              <AvatarFallback className="text-[10px] font-bold bg-primary text-primary-foreground">CW</AvatarFallback>
-            </Avatar>
-            <h1 className="text-xs sm:text-sm font-bold tracking-tight whitespace-nowrap">
-              CITADEL WIRE
-            </h1>
-          </a>
+          <BrandIdentity />
           <div className="flex items-center gap-2 shrink-0">
-            <div
-              className="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/30 px-2.5 py-1 text-[11px] font-medium text-muted-foreground/80"
-              title="Visitors"
-              aria-label={`Visitors ${pageViews.toLocaleString('en-US')}`}
-            >
-              <Eye className="h-3.5 w-3.5 text-sky-400" />
-              <span className="hidden sm:inline">Visitors</span>
-              <span className="tabular-nums text-foreground/90">
-                {isPageViewsLoading ? '…' : pageViews.toLocaleString('en-US')}
-              </span>
-            </div>
+            <VisitorCounter />
             <div
               className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-400"
               title="Auto refresh is enabled. New CITADEL WIRE posts appear automatically without interrupting playback."
@@ -229,16 +330,7 @@ const Index = () => {
             >
               <Rss className="h-4 w-4" />
             </a>
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="p-2 rounded-full hover:bg-muted/60 transition-colors text-muted-foreground/55 hover:text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40"
-              title={isLightMode ? 'Switch to dark mode' : 'Switch to light mode'}
-              aria-label={isLightMode ? 'Switch to dark mode' : 'Switch to light mode'}
-              aria-pressed={isLightMode}
-            >
-              {isLightMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-            </button>
+            <ThemeToggleButton />
             <DonateButton />
             <button
               onClick={() => window.location.reload()}
@@ -280,44 +372,7 @@ const Index = () => {
         {/* Center column — main content */}
         <div className="w-full max-w-2xl min-w-0">
           {/* Profile info — compact on mobile, full on desktop */}
-          <div className="px-4 sm:px-6">
-            <div className="py-1.5 sm:py-2 border-b border-border/40 flex items-center gap-1.5 sm:gap-2.5 text-[9px] sm:text-[11px] overflow-hidden">
-              <a href="https://odell.xyz" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 shrink-0 group/odell">
-                <Avatar className="h-3.5 w-3.5 sm:h-4 sm:w-4">
-                  <AvatarImage src="https://primaldata.s3.us-east-005.backblazeb2.com/cache/2/c7/ce/2c7ce06799d9a1226680f19826b8fc18ea5df5e2702bcf681e267e0977069e44.jpg" alt="ODELL" />
-                  <AvatarFallback className="text-[6px] bg-muted">O</AvatarFallback>
-                </Avatar>
-                <span className="text-white/70 whitespace-nowrap">
-                  <span className="hidden sm:inline">Curated </span>by{' '}
-                  <span className="text-white group-hover/odell:text-white font-medium transition-colors">ODELL</span>
-                </span>
-              </a>
-              {metadata?.lud16 && (
-                <>
-                  <span className="text-muted-foreground/30">·</span>
-                  <a
-                    href="https://primal.net/wire"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-0.5 text-amber-500/70 hover:text-amber-500 font-medium transition-colors whitespace-nowrap shrink-0"
-                  >
-                    <Globe className="h-3 w-3" />
-                    {metadata.lud16}
-                  </a>
-                </>
-              )}
-              <span className="text-muted-foreground/30">·</span>
-              <span className="text-white whitespace-nowrap font-bold">high signal news</span>
-              <a
-                href="https://smp4.simplex.im/c#pnthhrx5BfdJEdTJ6QOEhEJ6g-hdwuOiMEFu6dpj3cQ"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex shrink-0 items-center rounded-full border border-sky-300/45 bg-sky-300/15 px-1.5 py-0.5 text-[7px] font-bold uppercase leading-none tracking-normal text-sky-200 transition-colors hover:border-sky-200/70 hover:bg-sky-300/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 sm:px-2 sm:text-[10px] sm:tracking-wide"
-              >
-                Join our SimpleX channel
-              </a>
-            </div>
-          </div>
+          <ProfileMetaBar />
 
           {/* Prediction Markets */}
           <PolymarketSection />
@@ -420,11 +475,22 @@ const Index = () => {
                 </button>
               </div>
             ) : visiblePosts.length > 0 ? (
-              filteredPosts.length > 0 ? (
+              renderedEntries.length > 0 ? (
                 <div>
-                  {filteredPosts.map((post, index) => (
-                    <PostCard key={post.id} event={post} isFirst={index === 0} />
+                  {renderedEntries.map(({ post, type }, index) => (
+                    <PostCard key={post.id} event={post} postType={type} isFirst={index === 0} />
                   ))}
+                  {hasMoreToRender && (
+                    <div ref={loadMoreRef} className="py-6 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setRenderedCount((count) => Math.min(count + RENDER_BATCH_SIZE, filteredEntries.length))}
+                        className="text-xs font-semibold text-muted-foreground/60 hover:text-foreground transition-colors"
+                      >
+                        Load more wires ({filteredEntries.length - renderedEntries.length} remaining)
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="py-16 px-4 text-center">

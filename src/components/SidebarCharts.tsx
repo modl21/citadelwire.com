@@ -176,7 +176,7 @@ function ChartPanel({ market, title, icon, accentColor, activeAccent, sourceUrl,
   const { data: prices, isLoading } = useCoinChart(market, span.days, active);
 
   return (
-    <div ref={ref} className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
+    <div ref={ref} className="rounded-xl border border-border/30 bg-card/80 overflow-hidden">
       {/* Header */}
       <div className="px-3 py-2.5 border-b border-border/20">
         <div className="flex items-center gap-1.5 mb-1.5">
@@ -286,7 +286,7 @@ interface StatsPanelProps {
 
 function StatsPanel({ stats, symbol, hideMarketCap, hideCirculating, hideMaxSupply, isYield = false }: StatsPanelProps) {
   return (
-    <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
+    <div className="rounded-xl border border-border/30 bg-card/80 overflow-hidden">
       <div className="px-3 py-2 border-b border-border/20">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
           Key Stats
@@ -351,7 +351,7 @@ function StatsPanel({ stats, symbol, hideMarketCap, hideCirculating, hideMaxSupp
 
 function StatsSkeleton() {
   return (
-    <div className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
+    <div className="rounded-xl border border-border/30 bg-card/80 overflow-hidden">
       <div className="px-3 py-2 border-b border-border/20">
         <Skeleton className="h-2.5 w-16" />
       </div>
@@ -486,7 +486,7 @@ function MempoolHashrateChart({ enabled }: { enabled: boolean }) {
   const { data: hashrateSeries, isLoading } = useMempoolHashrate(span.days, active);
 
   return (
-    <div ref={ref} className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
+    <div ref={ref} className="rounded-xl border border-border/30 bg-card/80 overflow-hidden">
       <div className="px-3 py-2.5 border-b border-border/20">
         <div className="flex items-center gap-1.5 mb-1.5">
           <Gauge className="h-3.5 w-3.5 text-emerald-400" />
@@ -542,7 +542,7 @@ function MempoolStatsPanel({ enabled }: { enabled: boolean }) {
   const { data, isLoading } = useMempoolStats(active);
 
   return (
-    <div ref={ref} className="rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
+    <div ref={ref} className="rounded-xl border border-border/30 bg-card/80 overflow-hidden">
       <div className="px-3 py-2.5 border-b border-border/20">
         <div className="flex items-center gap-1.5">
           <Gauge className="h-3.5 w-3.5 text-emerald-400" />

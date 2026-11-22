@@ -19,10 +19,15 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
 
   // Use refs so the pool always has the latest data
   const relayMetadata = useRef(config.relayMetadata);
+  const isInitialMount = useRef(true);
 
-  // Invalidate Nostr queries when relay metadata changes
+  // Invalidate Nostr queries when relay metadata actually changes (skip initial mount)
   useEffect(() => {
     relayMetadata.current = config.relayMetadata;
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     queryClient.invalidateQueries({ queryKey: ['nostr'] });
   }, [config.relayMetadata, queryClient]);
 
