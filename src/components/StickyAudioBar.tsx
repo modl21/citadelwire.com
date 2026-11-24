@@ -45,7 +45,7 @@ export const StickyAudioBar = memo(function StickyAudioBar() {
     <div
       role="region"
       aria-label={`Now playing: ${active.title}`}
-      className="fixed inset-x-0 bottom-3 z-50 px-3 sm:px-6 pointer-events-none"
+      className="fixed inset-x-0 safe-bottom-bar safe-x z-50 px-3 sm:px-6 pointer-events-none"
     >
       <div className="pointer-events-auto mx-auto max-w-2xl overflow-hidden rounded-xl border border-border/80 bg-card shadow-2xl shadow-black/25 dark:shadow-black/50">
         {/* Scrubbable top progress rail */}

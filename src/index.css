@@ -94,11 +94,31 @@
   }
 }
 
-/* Smooth scrolling */
+/* Prevent horizontal drift/rubber-banding (using clip preserves position: sticky)
+   and avoid global smooth scrolling, which causes momentum-scroll hitching in iOS standalone PWAs. */
 html {
-  scroll-behavior: smooth;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+
+/* iOS standalone PWA safe-area helpers (notch / Dynamic Island / landscape bezels / home bar) */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-x {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+.safe-bottom-bar {
+  bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* Custom selection color */
@@ -205,11 +225,15 @@ html {
   background: hsl(45 96% 58% / 0.45);
 }
 
-/* Keep every wire in the DOM for find-in-page and assistive technology, but
-   let supporting browsers skip layout/painting of distant offscreen cards. */
-.wire-post-deferred {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 600px;
+/* Let desktop browsers skip layout/painting of distant offscreen cards.
+   Disabled on touch/coarse-pointer devices (especially iOS WebKit PWAs) where
+   content-visibility: auto triggers height-estimation scroll stutter; progressive
+   rendering already keeps the mobile DOM lean. */
+@media (hover: hover) and (pointer: fine) {
+  .wire-post-deferred {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 600px;
+  }
 }
 
 @media print {

@@ -8,7 +8,6 @@
   "display": "standalone",
   "background_color": "#080b12",
   "theme_color": "#080b12",
-  "orientation": "portrait",
   "icons": [
     {
       "src": "https://blossom.primal.net/d4bcc6326c8f61250fe0acaacd29332736ce5bf04d5600465145980b06f4a624.jpg",

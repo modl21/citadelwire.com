@@ -561,9 +561,9 @@ const Index = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background safe-x">
       {/* Sticky header: brand + live price ticker stay pinned; schedule sits below on mobile for extra reading room */}
-      <header className="sticky top-0 z-50 bg-background/95 md:bg-background/85 md:backdrop-blur-md border-b border-border/40">
+      <header className="sticky top-0 z-50 safe-top bg-background/95 md:bg-background/85 md:backdrop-blur-md border-b border-border/40">
         {/* Top row: identity + refresh */}
         <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-3 pb-2 flex items-center justify-between">
           <BrandIdentity />
@@ -600,7 +600,7 @@ const Index = () => {
         </div>
 
         {/* Ticker row */}
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-2 sm:pb-1.5">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-2 sm:pb-1.5 overflow-x-auto scrollbar-none">
           <TickerBar />
         </div>
 

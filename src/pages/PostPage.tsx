@@ -130,7 +130,7 @@ export default function PostPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background safe-x">
         <PostDetailHeader />
         <PostPageSkeleton />
       </div>
@@ -139,7 +139,7 @@ export default function PostPage() {
 
   if (isError || !event) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background safe-x">
         <PostDetailHeader />
         <div className="mx-auto max-w-2xl px-4 py-16 text-center">
           <Card className="border-dashed bg-card/50">
@@ -165,7 +165,7 @@ export default function PostPage() {
   const reposts = engagement.data?.reposts ?? [];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background safe-x">
       <PostDetailHeader />
 
       <main className="relative mx-auto w-full max-w-3xl px-4 py-5 sm:px-6 sm:py-8">
@@ -520,7 +520,7 @@ function PostDetailHeader() {
   const metadata = author.data?.metadata;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/40 bg-background/95 md:bg-background/85 md:backdrop-blur-md">
+    <header className="sticky top-0 z-50 safe-top border-b border-border/40 bg-background/95 md:bg-background/85 md:backdrop-blur-md">
       <div className="mx-auto flex max-w-3xl flex-col gap-2 px-4 py-3 sm:px-6">
         <div className="flex min-w-0 items-center justify-between gap-3">
           <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2 text-sm font-black tracking-[-0.02em] hover:opacity-80">
