@@ -4,43 +4,43 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 224 10% 10%;
+    --background: 40 20% 98%;
+    --foreground: 222 22% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 224 10% 10%;
+    --card-foreground: 222 22% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 224 10% 10%;
+    --popover-foreground: 222 22% 11%;
 
-    --primary: 224 10% 10%;
+    --primary: 222 22% 11%;
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 224 10% 10%;
+    --secondary: 36 16% 93%;
+    --secondary-foreground: 222 22% 11%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 8% 46%;
+    --muted: 36 14% 94%;
+    --muted-foreground: 220 10% 42%;
 
-    --accent: 220 14% 96%;
-    --accent-foreground: 224 10% 10%;
+    --accent: 36 16% 93%;
+    --accent-foreground: 222 22% 11%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 72% 46%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 224 10% 10%;
+    --border: 34 12% 86%;
+    --input: 34 12% 86%;
+    --ring: 222 22% 11%;
 
     --radius: 0.625rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 40 20% 97%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent: 36 14% 93%;
     --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
+    --sidebar-border: 34 12% 86%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -110,37 +110,99 @@ html {
   background: hsl(220 14% 93% / 0.18);
 }
 
-.light [class^="text-amber-"],
-.light [class*=" text-amber-"],
-.light [class^="text-yellow-"],
-.light [class*=" text-yellow-"],
-.light [class^="text-white"],
-.light [class*=" text-white"],
-.light [class^="text-muted-foreground"],
-.light [class*=" text-muted-foreground"],
-.light [class^="text-gray-"],
-.light [class*=" text-gray-"],
-.light [class^="text-zinc-"],
-.light [class*=" text-zinc-"],
-.light [class^="text-slate-"],
-.light [class*=" text-slate-"],
-.light [class^="text-neutral-"],
-.light [class*=" text-neutral-"],
-.light [class^="text-stone-"],
-.light [class*=" text-stone-"] {
-  color: hsl(var(--foreground)) !important;
+/* Light mode: preserve full visual hierarchy & semantic accents with WCAG-AA contrast on warm paper. */
+.light [class*="text-white"] {
+  color: hsl(var(--foreground));
+}
+.light [class*="text-white/70"],
+.light [class*="text-white/80"] {
+  color: hsl(var(--muted-foreground));
+}
+.light [class*="text-amber-200"],
+.light [class*="text-amber-300"],
+.light [class*="text-amber-400"],
+.light [class*="text-amber-500"] {
+  color: hsl(32 95% 32%);
+}
+.light [class*="text-yellow-300"],
+.light [class*="text-yellow-400"],
+.light [class*="text-yellow-500"] {
+  color: hsl(38 92% 33%);
+}
+.light [class*="text-cyan-200"],
+.light [class*="text-cyan-300"],
+.light [class*="text-cyan-400"] {
+  color: hsl(192 88% 30%);
+}
+.light [class*="text-sky-200"],
+.light [class*="text-sky-300"],
+.light [class*="text-sky-400"] {
+  color: hsl(204 86% 34%);
+}
+.light [class*="text-emerald-200"],
+.light [class*="text-emerald-300"],
+.light [class*="text-emerald-400"] {
+  color: hsl(156 76% 27%);
+}
+.light [class*="text-orange-200"],
+.light [class*="text-orange-300"],
+.light [class*="text-orange-400"] {
+  color: hsl(22 90% 36%);
+}
+.light [class*="text-purple-200"],
+.light [class*="text-purple-300"],
+.light [class*="text-purple-400"],
+.light [class*="text-violet-300"],
+.light [class*="text-violet-400"] {
+  color: hsl(266 64% 40%);
+}
+.light [class*="text-rose-200"],
+.light [class*="text-rose-300"],
+.light [class*="text-rose-400"],
+.light [class*="text-red-300"],
+.light [class*="text-red-400"] {
+  color: hsl(350 74% 40%);
+}
+.light [class*="text-lime-300"],
+.light [class*="text-lime-400"] {
+  color: hsl(88 72% 28%);
+}
+.light [class*="text-zinc-200"],
+.light [class*="text-zinc-300"] {
+  color: hsl(220 10% 34%);
+}
+/* Dark-surface tooltips & badges keep crisp white text on dark background */
+.light [data-radix-popper-content-wrapper] [class*="text-white"] {
+  color: #ffffff;
+}
+.light [data-radix-popper-content-wrapper] [class*="text-amber-200"] {
+  color: #fde68a;
+}
+.light [data-radix-popper-content-wrapper] [class*="text-emerald-200"] {
+  color: #a7f3d0;
+}
+.light [data-radix-popper-content-wrapper] [class*="text-orange-200"] {
+  color: #fed7aa;
+}
+.light [data-radix-popper-content-wrapper] [class*="text-purple-200"] {
+  color: #e9d5ff;
+}
+.light [data-radix-popper-content-wrapper] [class*="text-rose-200"] {
+  color: #fecdd3;
+}
+.light [data-radix-popper-content-wrapper] [class*="text-cyan-200"] {
+  color: #a5f3fc;
 }
 
-.light [class*="hover:text-amber-"]:hover,
-.light [class*="hover:text-yellow-"]:hover,
-.light [class*="hover:text-white"]:hover,
-.light [class*="hover:text-muted-foreground"]:hover,
-.light [class*="hover:text-gray-"]:hover,
-.light [class*="hover:text-zinc-"]:hover,
-.light [class*="hover:text-slate-"]:hover,
-.light [class*="hover:text-neutral-"]:hover,
-.light [class*="hover:text-stone-"]:hover {
-  color: hsl(var(--foreground)) !important;
+/* Search highlight mark inside NoteContent */
+.note-content mark.search-hit {
+  background: hsl(43 96% 56% / 0.28);
+  color: inherit;
+  border-radius: 0.2em;
+  padding: 0 0.14em;
+}
+.light .note-content mark.search-hit {
+  background: hsl(45 96% 58% / 0.45);
 }
 
 /* Keep every wire in the DOM for find-in-page and assistive technology, but

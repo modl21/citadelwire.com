@@ -16,9 +16,32 @@ function useVisiblePanel(enabled: boolean) {
 
 // ── Responsive Sparkline Canvas ──────────────────────────────
 
-const SidebarSparkline = memo(function SidebarSparkline({ prices, accentColor, enabled, isYield = false, isHashrate = false }: { prices: number[][]; accentColor: string; enabled: boolean; isYield?: boolean; isHashrate?: boolean }) {
+function formatCrosshairTimestamp(tsMs: number, spanDays: number): string {
+  const d = new Date(tsMs);
+  if (spanDays <= 1) {
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+const SidebarSparkline = memo(function SidebarSparkline({
+  prices,
+  accentColor,
+  enabled,
+  spanDays = 30,
+  isYield = false,
+  isHashrate = false,
+}: {
+  prices: number[][];
+  accentColor: string;
+  enabled: boolean;
+  spanDays?: number;
+  isYield?: boolean;
+  isHashrate?: boolean;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hoverIdxRef = useRef<number | null>(null);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -91,27 +114,92 @@ const SidebarSparkline = memo(function SidebarSparkline({ prices, accentColor, e
     // Price labels
     const computedStyle = getComputedStyle(document.documentElement);
     const mutedFg = computedStyle.getPropertyValue('--muted-foreground').trim();
-    const labelColor = mutedFg ? `hsl(${mutedFg} / 0.5)` : 'rgba(150,150,150,0.5)';
+    const labelColor = mutedFg ? `hsl(${mutedFg} / 0.6)` : 'rgba(150,150,150,0.6)';
 
     const formatValue = (value: number) => {
       if (isYield) return formatYield(value);
       if (isHashrate) return formatHashrate(value);
-      return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+      return `$${value.toLocaleString('en-US', { maximumFractionDigits: value < 200 ? 2 : 0 })}`;
     };
 
-    ctx.fillStyle = labelColor;
-    ctx.font = '9px Inter Variable, Inter, system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(formatValue(max), 4, padTop - 3);
-    ctx.fillText(formatValue(min), 4, padTop + chartH + 12);
+    const hoverIdx = hoverIdxRef.current;
 
-    // Current price
-    ctx.fillStyle = accentColor;
-    ctx.font = 'bold 10px Inter Variable, Inter, system-ui, sans-serif';
-    ctx.textAlign = 'right';
-    const last = values[values.length - 1];
-    ctx.fillText(formatValue(last), chartW - 4, padTop - 3);
-  }, [prices, accentColor, isYield, isHashrate]);
+    if (hoverIdx !== null && hoverIdx >= 0 && hoverIdx < prices.length) {
+      const [ts, val] = prices[hoverIdx];
+      const hx = (hoverIdx / (values.length - 1)) * chartW;
+      const hy = padTop + (1 - (val - min) / range) * chartH;
+
+      // Vertical hairline
+      ctx.save();
+      ctx.strokeStyle = mutedFg ? `hsl(${mutedFg} / 0.4)` : 'rgba(180,180,180,0.4)';
+      ctx.setLineDash([2, 2]);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(hx, padTop);
+      ctx.lineTo(hx, padTop + chartH);
+      ctx.stroke();
+      ctx.restore();
+
+      // Active point dot
+      ctx.beginPath();
+      ctx.arc(hx, hy, 3, 0, Math.PI * 2);
+      ctx.fillStyle = accentColor;
+      ctx.fill();
+
+      // Date on top-left, exact hovered price on top-right
+      ctx.fillStyle = labelColor;
+      ctx.font = '600 9px Inter Variable, Inter, system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(formatCrosshairTimestamp(ts, spanDays), 4, padTop - 3);
+
+      ctx.fillStyle = accentColor;
+      ctx.font = 'bold 10px Inter Variable, Inter, system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(formatValue(val), chartW - 4, padTop - 3);
+
+      ctx.fillStyle = labelColor;
+      ctx.font = '9px Inter Variable, Inter, system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(formatValue(min), 4, padTop + chartH + 12);
+    } else {
+      ctx.fillStyle = labelColor;
+      ctx.font = '9px Inter Variable, Inter, system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(formatValue(max), 4, padTop - 3);
+      ctx.fillText(formatValue(min), 4, padTop + chartH + 12);
+
+      // Current price
+      ctx.fillStyle = accentColor;
+      ctx.font = 'bold 10px Inter Variable, Inter, system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      const last = values[values.length - 1];
+      ctx.fillText(formatValue(last), chartW - 4, padTop - 3);
+    }
+  }, [prices, accentColor, spanDays, isYield, isHashrate]);
+
+  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const container = containerRef.current;
+    if (!container || prices.length < 2) return;
+    const rect = container.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const pct = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const idx = Math.round(pct * (prices.length - 1));
+    if (hoverIdxRef.current !== idx) {
+      hoverIdxRef.current = idx;
+      draw();
+    }
+  }, [prices.length, draw]);
+
+  const handlePointerLeave = useCallback(() => {
+    if (hoverIdxRef.current !== null) {
+      hoverIdxRef.current = null;
+      draw();
+    }
+  }, [draw]);
+
+  useEffect(() => {
+    hoverIdxRef.current = null;
+  }, [prices]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -131,7 +219,12 @@ const SidebarSparkline = memo(function SidebarSparkline({ prices, accentColor, e
   }, [draw, enabled]);
 
   return (
-    <div ref={containerRef} className="w-full h-full">
+    <div
+      ref={containerRef}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+      className="w-full h-full cursor-crosshair touch-pan-y"
+    >
       <canvas ref={canvasRef} className="block" />
     </div>
   );
@@ -217,7 +310,7 @@ function ChartPanel({ market, title, icon, accentColor, activeAccent, sourceUrl,
             <Skeleton className="h-full w-full rounded" />
           </div>
         ) : (
-          <SidebarSparkline prices={prices} accentColor={accentColor} isYield={isYield} enabled={active} />
+          <SidebarSparkline prices={prices} accentColor={accentColor} spanDays={span.days} isYield={isYield} enabled={active} />
         )}
       </div>
 
@@ -524,7 +617,7 @@ function MempoolHashrateChart({ enabled }: { enabled: boolean }) {
             <Skeleton className="h-full w-full rounded" />
           </div>
         ) : (
-          <SidebarSparkline prices={hashrateSeries} accentColor="#34d399" isHashrate enabled={active} />
+          <SidebarSparkline prices={hashrateSeries} accentColor="#34d399" spanDays={span.days} isHashrate enabled={active} />
         )}
       </div>
 

@@ -33,8 +33,17 @@ function formatBlockHeight(value: number): string {
   return value.toLocaleString('en-US');
 }
 
-function SparklineCanvas({ prices, width, height, accentColor, isYield = false }: { prices: number[][]; width: number; height: number; accentColor: string; isYield?: boolean }) {
+function formatDialogTimestamp(tsMs: number, spanDays: number): string {
+  const d = new Date(tsMs);
+  if (spanDays <= 1) {
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function SparklineCanvas({ prices, width, height, accentColor, spanDays = 30, isYield = false }: { prices: number[][]; width: number; height: number; accentColor: string; spanDays?: number; isYield?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hoverIdxRef = useRef<number | null>(null);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -55,7 +64,7 @@ function SparklineCanvas({ prices, width, height, accentColor, isYield = false }
 
     const lineColor = isUp ? '#22c55e' : '#ef4444';
 
-    const padTop = 16;
+    const padTop = 18;
     const padBottom = 24;
     const chartW = width;
     const chartH = height - padTop - padBottom;
@@ -98,34 +107,96 @@ function SparklineCanvas({ prices, width, height, accentColor, isYield = false }
     // Price labels
     const computedStyle = getComputedStyle(document.documentElement);
     const mutedFg = computedStyle.getPropertyValue('--muted-foreground').trim();
-    const labelColor = mutedFg ? `hsl(${mutedFg} / 0.5)` : 'rgba(150,150,150,0.5)';
+    const labelColor = mutedFg ? `hsl(${mutedFg} / 0.6)` : 'rgba(150,150,150,0.6)';
 
     const formatValue = (value: number) => {
       if (isYield) return formatYield(value);
-      return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+      return `$${value.toLocaleString('en-US', { maximumFractionDigits: value < 200 ? 2 : 0 })}`;
     };
 
-    ctx.fillStyle = labelColor;
-    ctx.font = '10px Inter Variable, Inter, system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(formatValue(max), 4, padTop - 4);
-    ctx.fillText(formatValue(min), 4, padTop + chartH + 14);
+    const hoverIdx = hoverIdxRef.current;
+    if (hoverIdx !== null && hoverIdx >= 0 && hoverIdx < prices.length) {
+      const [ts, val] = prices[hoverIdx];
+      const hx = (hoverIdx / (values.length - 1)) * chartW;
+      const hy = padTop + (1 - (val - min) / range) * chartH;
 
-    // Current price
-    ctx.fillStyle = accentColor;
-    ctx.font = 'bold 11px Inter Variable, Inter, system-ui, sans-serif';
-    ctx.textAlign = 'right';
-    const last = values[values.length - 1];
-    ctx.fillText(formatValue(last), chartW - 4, padTop - 4);
-  }, [prices, width, height, accentColor, isYield]);
+      ctx.save();
+      ctx.strokeStyle = mutedFg ? `hsl(${mutedFg} / 0.45)` : 'rgba(180,180,180,0.45)';
+      ctx.setLineDash([3, 3]);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(hx, padTop);
+      ctx.lineTo(hx, padTop + chartH);
+      ctx.stroke();
+      ctx.restore();
 
-  useEffect(() => { draw(); }, [draw]);
+      ctx.beginPath();
+      ctx.arc(hx, hy, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = accentColor;
+      ctx.fill();
+
+      ctx.fillStyle = labelColor;
+      ctx.font = '600 10px Inter Variable, Inter, system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(formatDialogTimestamp(ts, spanDays), 4, padTop - 4);
+
+      ctx.fillStyle = accentColor;
+      ctx.font = 'bold 11px Inter Variable, Inter, system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(formatValue(val), chartW - 4, padTop - 4);
+
+      ctx.fillStyle = labelColor;
+      ctx.font = '10px Inter Variable, Inter, system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(formatValue(min), 4, padTop + chartH + 14);
+    } else {
+      ctx.fillStyle = labelColor;
+      ctx.font = '10px Inter Variable, Inter, system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(formatValue(max), 4, padTop - 4);
+      ctx.fillText(formatValue(min), 4, padTop + chartH + 14);
+
+      // Current price
+      ctx.fillStyle = accentColor;
+      ctx.font = 'bold 11px Inter Variable, Inter, system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      const last = values[values.length - 1];
+      ctx.fillText(formatValue(last), chartW - 4, padTop - 4);
+    }
+  }, [prices, width, height, accentColor, spanDays, isYield]);
+
+  useEffect(() => {
+    hoverIdxRef.current = null;
+    draw();
+  }, [draw]);
+
+  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas || prices.length < 2) return;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const pct = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const idx = Math.round(pct * (prices.length - 1));
+    if (hoverIdxRef.current !== idx) {
+      hoverIdxRef.current = idx;
+      draw();
+    }
+  }, [prices.length, draw]);
+
+  const handlePointerLeave = useCallback(() => {
+    if (hoverIdxRef.current !== null) {
+      hoverIdxRef.current = null;
+      draw();
+    }
+  }, [draw]);
 
   return (
     <canvas
       ref={canvasRef}
       style={{ width, height }}
-      className="block w-full"
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+      className="block w-full cursor-crosshair touch-pan-y"
     />
   );
 }
@@ -207,7 +278,7 @@ function CoinChartDialog({ open, onOpenChange, market, title, icon, accentColor,
               <Skeleton className="h-full w-full rounded" />
             </div>
           ) : (
-            <SparklineCanvas prices={prices} width={460} height={200} accentColor={accentColor} isYield={isYield} />
+            <SparklineCanvas prices={prices} width={460} height={200} accentColor={accentColor} spanDays={span.days} isYield={isYield} />
           )}
         </div>
         <div className="px-4 py-2 border-t border-border/40">

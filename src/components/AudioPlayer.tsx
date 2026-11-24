@@ -1,6 +1,12 @@
-import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo, useId } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Play, Pause, Volume2, VolumeX, Mic, ExternalLink } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Mic, ExternalLink, RotateCcw, RotateCw } from 'lucide-react';
+import {
+  clearActiveAudio,
+  pauseOtherAudioPlayers,
+  publishActiveAudio,
+  registerAudioPlayer,
+} from '@/lib/audioBus';
 
 function formatTime(seconds: number): string {
   if (!isFinite(seconds) || seconds < 0) return '0:00';
@@ -209,10 +215,13 @@ export function AudioPlayerSkeleton() {
 
 export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, accentColor, storageKey, preloadMetadata = true }: AudioPlayerProps) {
   const c = colorMap[accentColor];
+  const instanceId = useId();
+  const playerId = storageKey ?? instanceId;
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
+  const [hasActivated, setHasActivated] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -226,6 +235,14 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
     () => Boolean(storageKey && getStoredActivePlaybackKey() === storageKey),
     [storageKey],
   );
+
+  // Register so starting any other podcast automatically pauses this one
+  useEffect(() => {
+    return registerAudioPlayer(playerId, () => {
+      const audio = audioRef.current;
+      if (audio && !audio.paused) audio.pause();
+    });
+  }, [playerId]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -300,7 +317,9 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
       clearStoredActivePlaybackKey(storageKey);
     };
     const onPlay = () => {
+      pauseOtherAudioPlayers(playerId);
       setIsPlaying(true);
+      setHasActivated(true);
       saveStoredActivePlaybackKey(storageKey);
     };
     const onPause = () => {
@@ -332,7 +351,7 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
       audio.removeEventListener('play', onPlay);
       audio.removeEventListener('pause', onPause);
     };
-  }, [mp3Url, storageKey]);
+  }, [mp3Url, storageKey, playerId]);
 
   useEffect(() => {
     hasRestoredPositionRef.current = false;
@@ -342,13 +361,42 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
     setDuration(0);
     setIsLoaded(false);
     setIsPlaying(false);
+    setHasActivated(false);
   }, [mp3Url, storageKey]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (isPlaying) { audio.pause(); } else { audio.play(); }
-  }, [isPlaying]);
+    if (audio.paused) {
+      pauseOtherAudioPlayers(playerId);
+      void audio.play();
+    } else {
+      audio.pause();
+    }
+  }, [playerId]);
+
+  const seekTo = useCallback((nextTime: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const max = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : Infinity;
+    const clamped = Math.max(0, Math.min(max, nextTime));
+    audio.currentTime = clamped;
+    setCurrentTime(clamped);
+    saveStoredPosition(storageKey, clamped, audio.duration);
+  }, [storageKey]);
+
+  const seekBy = useCallback((deltaSeconds: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    seekTo(audio.currentTime + deltaSeconds);
+  }, [seekTo]);
+
+  const dismiss = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio && !audio.paused) audio.pause();
+    setHasActivated(false);
+    clearActiveAudio(playerId);
+  }, [playerId]);
 
   const toggleMute = useCallback(() => {
     const audio = audioRef.current;
@@ -365,17 +413,49 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
     if (audioRef.current) { audioRef.current.playbackRate = nextSpeed; }
   }, [speedIndex, speeds]);
 
+  // Keep the floating StickyAudioBar synced while this player is active
+  useEffect(() => {
+    if (!hasActivated) return;
+    publishActiveAudio({
+      id: playerId,
+      label,
+      title,
+      accentColor,
+      isPlaying,
+      currentTime,
+      duration,
+      speed: speeds[speedIndex],
+      togglePlay,
+      seekBy,
+      seekTo,
+      cycleSpeed,
+      dismiss,
+    });
+  }, [
+    hasActivated,
+    playerId,
+    label,
+    title,
+    accentColor,
+    isPlaying,
+    currentTime,
+    duration,
+    speedIndex,
+    speeds,
+    togglePlay,
+    seekBy,
+    seekTo,
+    cycleSpeed,
+    dismiss,
+  ]);
+
   const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const audio = audioRef.current;
     const bar = progressRef.current;
-    if (!audio || !bar || !duration) return;
+    if (!bar || !duration) return;
     const rect = bar.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const nextTime = pct * duration;
-    audio.currentTime = nextTime;
-    setCurrentTime(nextTime);
-    saveStoredPosition(storageKey, nextTime, duration);
-  }, [duration, storageKey]);
+    seekTo(pct * duration);
+  }, [duration, seekTo]);
 
   const progressDuration = duration > 0 ? duration : Math.max(currentTime, 0);
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -411,6 +491,30 @@ export function AudioPlayer({ label, title, mp3Url, timeLabel, allEpisodesUrl, a
         </div>
 
         <div className="flex items-center gap-0.5 shrink-0">
+          {(isPlaying || currentTime > 0) && (
+            <>
+              <button
+                type="button"
+                onClick={() => seekBy(-15)}
+                className="hidden sm:inline-flex items-center gap-0.5 px-1 py-0.5 rounded hover:bg-muted/40 text-muted-foreground/55 hover:text-muted-foreground transition-colors text-[9px] font-semibold tabular-nums"
+                title="Back 15s"
+                aria-label="Back 15 seconds"
+              >
+                <RotateCcw className="h-2.5 w-2.5" />
+                <span>15</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => seekBy(30)}
+                className="hidden sm:inline-flex items-center gap-0.5 px-1 py-0.5 rounded hover:bg-muted/40 text-muted-foreground/55 hover:text-muted-foreground transition-colors text-[9px] font-semibold tabular-nums"
+                title="Forward 30s"
+                aria-label="Forward 30 seconds"
+              >
+                <RotateCw className="h-2.5 w-2.5" />
+                <span>30</span>
+              </button>
+            </>
+          )}
           <button
             onClick={cycleSpeed}
             className="px-1 py-0.5 rounded hover:bg-muted/40 text-muted-foreground/50 hover:text-muted-foreground transition-colors text-[9px] font-semibold tabular-nums min-w-[1.75rem] text-center"

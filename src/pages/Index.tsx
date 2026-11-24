@@ -1,4 +1,5 @@
-import { lazy, memo, Suspense, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { Fragment, lazy, memo, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
 import { useInView } from 'react-intersection-observer';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,12 +11,14 @@ import { getPostType, useCitadelFeed, CITADEL_FEED_LIMIT, CITADEL_PUBKEY, type P
 import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
 import { usePageViewCount, HOME_PAGE_VIEW_ID } from '@/hooks/usePageViewCount';
-import { Globe, RefreshCw, Rss, Eye, Radio, Info, Moon, Sun, Search } from 'lucide-react';
+import { ArrowUp, Bookmark, ChevronDown, Clock, Globe, RefreshCw, Rss, Eye, Radio, Info, Moon, Sun, Search, RotateCcw } from 'lucide-react';
 import { WireSchedule } from '@/components/WireSchedule';
 import { PolymarketSection } from '@/components/PolymarketSection';
+import { StickyAudioBar } from '@/components/StickyAudioBar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTheme } from '@/hooks/useTheme';
 import { useMediaQuery } from '@/hooks/useIsMobile';
+import { useSavedWires } from '@/hooks/useSavedWires';
 
 const BTCSidebarCharts = lazy(() =>
   import('@/components/SidebarCharts').then((module) => ({ default: module.BTCSidebarCharts })),
@@ -27,6 +30,7 @@ const XAUTSidebarCharts = lazy(() =>
 const CHART_SIDEBAR_QUERY = '(min-width: 1280px), (orientation: landscape) and (min-width: 768px) and (pointer: coarse)';
 const INITIAL_RENDER_COUNT = 30;
 const RENDER_BATCH_SIZE = 40;
+const LAST_SEEN_WIRE_KEY = 'citadel-wire:last-seen-wire-ts';
 
 // Breakpoint updates stay inside these rails, not the entire news feed.
 const ChartSidebar = memo(function ChartSidebar({ side }: { side: 'left' | 'right' }) {
@@ -172,6 +176,51 @@ const ProfileMetaBar = memo(function ProfileMetaBar() {
   );
 });
 
+/** Compact mobile schedule toggle pill — expands the full 24h schedule & countdowns on tap. */
+const MobileScheduleStrip = memo(function MobileScheduleStrip() {
+  const [open, setOpen] = useState(false);
+  const [minsLeft, setMinsLeft] = useState(() => 60 - new Date().getUTCMinutes());
+
+  useEffect(() => {
+    const update = () => setMinsLeft(60 - new Date().getUTCMinutes());
+    const id = setInterval(update, 30 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="sm:hidden border-b border-border/30 bg-background/60">
+      <div className="max-w-2xl mx-auto px-4 py-1.5 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground/80 hover:text-foreground transition-colors"
+        >
+          <Clock className="h-3 w-3 text-sky-400" />
+          <span className="uppercase tracking-wider">Schedule</span>
+          <span className="text-muted-foreground/40">·</span>
+          <span className="tabular-nums text-sky-400">Next wire in {minsLeft}m</span>
+          <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </button>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="inline-flex shrink-0 rounded-full p-1 text-muted-foreground/50 transition-colors hover:bg-muted/60 hover:text-foreground"
+          title="Refresh"
+          aria-label="Refresh"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {open && (
+        <div className="max-w-2xl mx-auto px-4 pb-2.5 pt-1 border-t border-border/20">
+          <WireSchedule />
+        </div>
+      )}
+    </div>
+  );
+});
+
 const POST_TYPE_FILTERS: { type: PostType; label: string }[] = [
   { type: 'standard', label: 'MAIN WIRE' },
   { type: 'editor-wire', label: 'EDITOR WIRE' },
@@ -184,6 +233,10 @@ const POST_TYPE_FILTER_STORAGE_KEY = 'citadel-wire:visible-post-types';
 
 function getDefaultVisiblePostTypes(): Set<PostType> {
   return new Set(POST_TYPE_FILTERS.map(({ type }) => type));
+}
+
+function isAllPostTypesActive(set: Set<PostType>): boolean {
+  return POST_TYPE_FILTERS.every(({ type }) => set.has(type));
 }
 
 function getStoredVisiblePostTypes(): Set<PostType> {
@@ -220,6 +273,27 @@ function saveStoredVisiblePostTypes(visiblePostTypes: Set<PostType>): void {
   }
 }
 
+function readPreviousSeenTimestamp(): number | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(LAST_SEEN_WIRE_KEY);
+    if (!raw) return null;
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeLastSeenTimestamp(ts: number): void {
+  if (typeof window === 'undefined' || !Number.isFinite(ts) || ts <= 0) return;
+  try {
+    window.localStorage.setItem(LAST_SEEN_WIRE_KEY, String(ts));
+  } catch {
+    // Ignore storage failures
+  }
+}
+
 function PostSkeleton() {
   return (
     <div className="py-5 px-4 sm:px-6 border-t border-border/60">
@@ -237,12 +311,85 @@ function PostSkeleton() {
 }
 
 const Index = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: posts, isLoading, isError, refetch } = useCitadelFeed();
-  const [visiblePostTypes, setVisiblePostTypes] = useState<Set<PostType>>(() => getStoredVisiblePostTypes());
+  const { savedIds, savedCount, toggleSaved } = useSavedWires();
+
+  // Initialize filters from URL (?only=editor-wire, ?saved=1, ?q=...) with localStorage fallback
+  const [visiblePostTypes, setVisiblePostTypes] = useState<Set<PostType>>(() => {
+    const onlyParam = searchParams.get('only');
+    if (onlyParam) {
+      const allowed = getDefaultVisiblePostTypes();
+      const requested = onlyParam
+        .split(',')
+        .map((part) => part.trim())
+        .filter((part): part is PostType => allowed.has(part as PostType));
+      if (requested.length > 0) return new Set(requested);
+    }
+    return getStoredVisiblePostTypes();
+  });
+  const [savedOnly, setSavedOnly] = useState<boolean>(() => searchParams.get('saved') === '1');
   const [postTypeTooltipOpen, setPostTypeTooltipOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '');
   const [renderedCount, setRenderedCount] = useState(INITIAL_RENDER_COUNT);
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Unread "caught up to here" marker from previous session + live arrival pill while scrolled down
+  const [previousVisitNewestTs] = useState<number | null>(() => readPreviousSeenTimestamp());
+  const sessionBaselineTsRef = useRef<number | null>(null);
+  const [pendingNewWiresCount, setPendingNewWiresCount] = useState(0);
+
   const visiblePosts = useMemo(() => posts?.slice(0, CITADEL_FEED_LIMIT) ?? [], [posts]);
+  const newestPostTs = visiblePosts[0]?.created_at ?? null;
+
+  // Record session baseline once initial posts arrive, and detect live arrivals while scrolled down
+  useEffect(() => {
+    if (!newestPostTs) return;
+
+    if (sessionBaselineTsRef.current === null) {
+      sessionBaselineTsRef.current = newestPostTs;
+      writeLastSeenTimestamp(newestPostTs);
+      return;
+    }
+
+    if (newestPostTs > sessionBaselineTsRef.current) {
+      const arrivedCount = visiblePosts.filter((post) => post.created_at > (sessionBaselineTsRef.current ?? 0)).length;
+      if (typeof window !== 'undefined' && window.scrollY > 240) {
+        setPendingNewWiresCount((prev) => Math.max(prev, arrivedCount));
+      } else {
+        sessionBaselineTsRef.current = newestPostTs;
+        writeLastSeenTimestamp(newestPostTs);
+        setPendingNewWiresCount(0);
+      }
+    }
+  }, [newestPostTs, visiblePosts]);
+
+  // Clear the floating "new wires" pill automatically if the user scrolls back to top
+  useEffect(() => {
+    if (pendingNewWiresCount === 0) return;
+    const onScroll = () => {
+      if (window.scrollY <= 160) {
+        if (newestPostTs) {
+          sessionBaselineTsRef.current = newestPostTs;
+          writeLastSeenTimestamp(newestPostTs);
+        }
+        setPendingNewWiresCount(0);
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [pendingNewWiresCount, newestPostTs]);
+
+  const scrollToNewWires = useCallback(() => {
+    if (newestPostTs) {
+      sessionBaselineTsRef.current = newestPostTs;
+      writeLastSeenTimestamp(newestPostTs);
+    }
+    setPendingNewWiresCount(0);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [newestPostTs]);
+
   const normalizedSearchQuery = useDeferredValue(searchQuery.trim().toLowerCase());
   const searchIndex = useMemo(
     () => visiblePosts.map((post) => ({ post, type: getPostType(post), text: post.content.toLowerCase() })),
@@ -250,15 +397,38 @@ const Index = () => {
   );
   const filteredEntries = useMemo(
     () => searchIndex
-      // Live wires bypass the Show-bar filters entirely; search still applies.
-      .filter(({ type, text }) => (type === 'live-wire' || visiblePostTypes.has(type)) && (!normalizedSearchQuery || text.includes(normalizedSearchQuery))),
-    [searchIndex, visiblePostTypes, normalizedSearchQuery],
+      .filter(({ post, type, text }) => {
+        if (savedOnly && !savedIds.has(post.id)) return false;
+        // Live wires bypass the Show-bar filters entirely; search still applies.
+        if (!savedOnly && type !== 'live-wire' && !visiblePostTypes.has(type)) return false;
+        if (normalizedSearchQuery && !text.includes(normalizedSearchQuery)) return false;
+        return true;
+      }),
+    [searchIndex, visiblePostTypes, normalizedSearchQuery, savedOnly, savedIds],
   );
 
-  // Reset the rendered window when the user changes filters or search query
+  // Sync active search/filter state to URL query params for shareable links
+  useEffect(() => {
+    const next = new URLSearchParams();
+    const trimmedSearch = searchQuery.trim();
+    if (trimmedSearch) next.set('q', trimmedSearch);
+    if (savedOnly) {
+      next.set('saved', '1');
+    } else if (!isAllPostTypesActive(visiblePostTypes) && visiblePostTypes.size > 0) {
+      next.set('only', Array.from(visiblePostTypes).join(','));
+    }
+    const nextStr = next.toString();
+    const curStr = searchParams.toString();
+    if (nextStr !== curStr) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchQuery, visiblePostTypes, savedOnly, searchParams, setSearchParams]);
+
+  // Reset rendered batch & keyboard selection when filter/search changes
   useEffect(() => {
     setRenderedCount(INITIAL_RENDER_COUNT);
-  }, [visiblePostTypes, normalizedSearchQuery]);
+    setSelectedIndex(-1);
+  }, [visiblePostTypes, normalizedSearchQuery, savedOnly]);
 
   const hasMoreToRender = renderedCount < filteredEntries.length;
   const { ref: loadMoreRef, inView: loadMoreInView } = useInView({
@@ -277,7 +447,85 @@ const Index = () => {
     [filteredEntries, renderedCount],
   );
 
-  const togglePostType = (type: PostType) => {
+  // Index of the first wire older than or equal to what the user saw on their previous visit
+  const unreadDividerIndex = useMemo(() => {
+    if (!previousVisitNewestTs || savedOnly || normalizedSearchQuery) return -1;
+    const idx = renderedEntries.findIndex(({ post }) => post.created_at <= previousVisitNewestTs);
+    // Only show divider if there is at least 1 genuinely newer wire above it
+    return idx > 0 ? idx : -1;
+  }, [previousVisitNewestTs, renderedEntries, savedOnly, normalizedSearchQuery]);
+
+  // Keyboard shortcuts: '/' focuses search, 'j'/'k' step through wires, 'Enter' opens focused wire, 'Escape' clears
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      const isTyping = Boolean(
+        target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable),
+      );
+
+      if (event.key === '/' && !isTyping) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        if (isTyping && target === searchInputRef.current) {
+          searchInputRef.current?.blur();
+        } else if (selectedIndex >= 0) {
+          setSelectedIndex(-1);
+        }
+        return;
+      }
+
+      if (isTyping || renderedEntries.length === 0) return;
+
+      if (event.key === 'j' || event.key === 'k') {
+        event.preventDefault();
+        setSelectedIndex((current) => {
+          const next = event.key === 'j'
+            ? Math.min(current + 1, renderedEntries.length - 1)
+            : Math.max(current - 1, 0);
+          const targetId = renderedEntries[next]?.post.id;
+          if (targetId) {
+            const el = document.querySelector<HTMLElement>(`article[data-wire-id="${targetId}"]`);
+            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return next;
+        });
+      } else if (event.key === 'Enter' && selectedIndex >= 0 && selectedIndex < renderedEntries.length) {
+        const targetId = renderedEntries[selectedIndex]?.post.id;
+        if (targetId) {
+          const el = document.querySelector<HTMLElement>(`article[data-wire-id="${targetId}"]`);
+          el?.click();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [renderedEntries, selectedIndex]);
+
+  const soloPostType = useCallback((type: PostType) => {
+    setSavedOnly(false);
+    setVisiblePostTypes((current) => {
+      // If already soloed on this type, restore all types
+      const next = current.size === 1 && current.has(type)
+        ? getDefaultVisiblePostTypes()
+        : new Set<PostType>([type]);
+      saveStoredVisiblePostTypes(next);
+      return next;
+    });
+  }, []);
+
+  const togglePostType = useCallback((type: PostType, altKey = false) => {
+    if (altKey) {
+      soloPostType(type);
+      return;
+    }
+    setSavedOnly(false);
     setVisiblePostTypes((current) => {
       const next = new Set(current);
       if (next.has(type)) {
@@ -288,7 +536,16 @@ const Index = () => {
       saveStoredVisiblePostTypes(next);
       return next;
     });
-  };
+  }, [soloPostType]);
+
+  const resetFilters = useCallback(() => {
+    const all = getDefaultVisiblePostTypes();
+    setSavedOnly(false);
+    setVisiblePostTypes(all);
+    saveStoredVisiblePostTypes(all);
+  }, []);
+
+  const hasCustomFilter = savedOnly || !isAllPostTypesActive(visiblePostTypes);
 
   useSeoMeta({
     title: 'CITADEL WIRE',
@@ -305,7 +562,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sticky header: solid high-opacity on mobile to avoid expensive GPU backdrop-blur per scroll frame */}
+      {/* Sticky header: brand + live price ticker stay pinned; schedule sits below on mobile for extra reading room */}
       <header className="sticky top-0 z-50 bg-background/95 md:bg-background/85 md:backdrop-blur-md border-b border-border/40">
         {/* Top row: identity + refresh */}
         <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-3 pb-2 flex items-center justify-between">
@@ -343,27 +600,32 @@ const Index = () => {
         </div>
 
         {/* Ticker row */}
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-1.5">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-2 sm:pb-1.5">
           <TickerBar />
         </div>
 
-        {/* Schedule row */}
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-2.5 border-t border-border/20 pt-2">
-          <div className="flex items-center gap-2">
-            <div className="min-w-0 flex-1">
-              <WireSchedule />
-            </div>
-            <button
-              onClick={() => window.location.reload()}
-              className="inline-flex shrink-0 rounded-full p-2 text-muted-foreground/50 transition-colors hover:bg-muted/60 hover:text-foreground sm:hidden"
-              title="Refresh"
-              aria-label="Refresh"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </button>
-          </div>
+        {/* Desktop/tablet schedule row — pinned inside header */}
+        <div className="hidden sm:block max-w-2xl mx-auto px-4 sm:px-6 pb-2.5 border-t border-border/20 pt-2">
+          <WireSchedule />
         </div>
       </header>
+
+      {/* Mobile schedule strip — scrolls away & expands on tap to preserve mobile reading viewport */}
+      <MobileScheduleStrip />
+
+      {/* Floating pill when live wires arrive while scrolled down */}
+      {pendingNewWiresCount > 0 && (
+        <div className="fixed top-[92px] sm:top-[146px] left-1/2 -translate-x-1/2 z-40">
+          <button
+            type="button"
+            onClick={scrollToNewWires}
+            className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/50 bg-background/95 px-3.5 py-1.5 text-xs font-bold text-amber-400 shadow-lg shadow-amber-500/15 hover:bg-amber-500/15 transition-colors"
+          >
+            <ArrowUp className="h-3.5 w-3.5" />
+            <span>{pendingNewWiresCount} new {pendingNewWiresCount === 1 ? 'wire' : 'wires'}</span>
+          </button>
+        </div>
+      )}
 
       {/* Chart rails on wide desktops and landscape touch viewports. */}
       <div className="flex justify-center gap-6 xl:px-6">
@@ -385,14 +647,16 @@ const Index = () => {
             <div className="px-4 sm:px-6 py-2.5 border-b border-border/30">
               <div className="flex items-center gap-1 overflow-x-auto scrollbar-none sm:gap-1.5" aria-label="Post type filters">
                 {POST_TYPE_FILTERS.map(({ type, label }) => {
-                  const isActive = visiblePostTypes.has(type);
+                  const isActive = !savedOnly && visiblePostTypes.has(type);
                   return (
                     <button
                       key={type}
                       type="button"
-                      onClick={() => togglePostType(type)}
+                      onClick={(event) => togglePostType(type, event.altKey)}
+                      onDoubleClick={() => soloPostType(type)}
                       aria-pressed={isActive}
-                      className={`shrink-0 rounded-full border px-1 py-0.5 text-[7px] font-semibold leading-none tracking-tighter transition-colors sm:px-2 sm:py-0.5 sm:text-[9px] sm:tracking-tight ${
+                      title="Click to toggle · Double-click (or Alt+click) to solo"
+                      className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[7px] font-semibold leading-none tracking-tighter transition-colors sm:px-2 sm:py-0.5 sm:text-[9px] sm:tracking-tight ${
                         isActive
                           ? 'border-amber-500/40 bg-amber-500/15 text-amber-300'
                           : 'border-border/40 bg-muted/20 text-muted-foreground/50 hover:bg-muted/40 hover:text-muted-foreground/80'
@@ -402,6 +666,31 @@ const Index = () => {
                     </button>
                   );
                 })}
+                <button
+                  type="button"
+                  onClick={() => setSavedOnly((v) => !v)}
+                  aria-pressed={savedOnly}
+                  title="Show bookmarked wires"
+                  className={`inline-flex items-center gap-0.5 shrink-0 rounded-full border px-1.5 py-0.5 text-[7px] font-semibold leading-none tracking-tighter transition-colors sm:px-2 sm:py-0.5 sm:text-[9px] sm:tracking-tight ${
+                    savedOnly
+                      ? 'border-amber-500/50 bg-amber-500/20 text-amber-300'
+                      : 'border-border/40 bg-muted/20 text-muted-foreground/55 hover:bg-muted/40 hover:text-muted-foreground/80'
+                  }`}
+                >
+                  <Bookmark className={`h-2.5 w-2.5 ${savedOnly ? 'fill-current' : ''}`} />
+                  <span>SAVED{savedCount > 0 ? ` (${savedCount})` : ''}</span>
+                </button>
+                {hasCustomFilter && (
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    title="Show all wire types"
+                    className="inline-flex items-center gap-0.5 shrink-0 rounded-full border border-border/50 bg-muted/30 px-1.5 py-0.5 text-[7px] font-semibold uppercase leading-none text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors sm:px-2 sm:text-[9px]"
+                  >
+                    <RotateCcw className="h-2.5 w-2.5" />
+                    <span>Reset</span>
+                  </button>
+                )}
                 <Tooltip open={postTypeTooltipOpen} onOpenChange={setPostTypeTooltipOpen}>
                   <TooltipTrigger asChild>
                     <button
@@ -422,6 +711,9 @@ const Index = () => {
                       <p><span className="font-black text-purple-200">WEEKLY WIRE</span> fridays at 21:45 utc.</p>
                       <p><span className="font-black text-rose-200">FORWARD WIRE</span> mondays at 11:15 utc.</p>
                       <p><span className="font-black text-cyan-200">EDITOR WIRE</span> hand-picked by the editor.</p>
+                      <p className="pt-1 border-t border-white/10 text-[11px] text-white/60">
+                        Tip: double-click a filter to solo it · press <kbd className="font-mono text-white/90">/</kbd> to search, <kbd className="font-mono text-white/90">j</kbd>/<kbd className="font-mono text-white/90">k</kbd> to navigate.
+                      </p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -430,19 +722,25 @@ const Index = () => {
               <div className="mt-1.5 flex items-center gap-1.5">
                 <Search className="h-3 w-3 shrink-0 text-muted-foreground/40" />
                 <input
+                  ref={searchInputRef}
                   type="search"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search 500 most recent wires"
+                  placeholder="Search 500 most recent wires (press /)"
                   aria-label="Search 500 most recent wires"
                   title="Searches only the 500 most recent wires"
                   className="h-5 min-w-0 flex-1 border-0 bg-transparent p-0 text-[10px] text-foreground/85 outline-none ring-0 placeholder:text-muted-foreground/35 focus:outline-none focus:ring-0 sm:text-[11px]"
                 />
+                {normalizedSearchQuery && (
+                  <span className="shrink-0 text-[9px] font-semibold tabular-nums text-amber-400/90 sm:text-[10px]">
+                    {filteredEntries.length} {filteredEntries.length === 1 ? 'match' : 'matches'}
+                  </span>
+                )}
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="shrink-0 rounded-full px-1 text-[8px] font-semibold uppercase tracking-wide text-muted-foreground/45 transition-colors hover:bg-muted/40 hover:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40"
+                    className="shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-muted-foreground/60 transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40"
                     aria-label="Clear post search"
                   >
                     Clear
@@ -478,7 +776,26 @@ const Index = () => {
               renderedEntries.length > 0 ? (
                 <div>
                   {renderedEntries.map(({ post, type }, index) => (
-                    <PostCard key={post.id} event={post} postType={type} isFirst={index === 0} />
+                    <Fragment key={post.id}>
+                      {index === unreadDividerIndex && (
+                        <div className="flex items-center gap-3 px-4 sm:px-6 py-2 bg-amber-500/[0.06] border-y border-amber-500/25">
+                          <span className="h-px flex-1 bg-amber-500/25" />
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-amber-400">
+                            Caught up to your last visit
+                          </span>
+                          <span className="h-px flex-1 bg-amber-500/25" />
+                        </div>
+                      )}
+                      <PostCard
+                        event={post}
+                        postType={type}
+                        isFirst={index === 0}
+                        highlightQuery={normalizedSearchQuery}
+                        isSaved={savedIds.has(post.id)}
+                        onToggleSaved={toggleSaved}
+                        isSelected={index === selectedIndex}
+                      />
+                    </Fragment>
                   ))}
                   {hasMoreToRender && (
                     <div ref={loadMoreRef} className="py-6 text-center">
@@ -493,10 +810,21 @@ const Index = () => {
                   )}
                 </div>
               ) : (
-                <div className="py-16 px-4 text-center">
+                <div className="py-16 px-4 text-center space-y-2">
                   <p className="text-muted-foreground text-sm">
-                    No posts match the selected filters.
+                    {savedOnly
+                      ? 'No saved wires yet. Click the bookmark icon on any wire to save it here.'
+                      : 'No posts match the selected filters.'}
                   </p>
+                  {hasCustomFilter && (
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="text-xs font-semibold text-amber-400 hover:underline"
+                    >
+                      Show all wires
+                    </button>
+                  )}
                 </div>
               )
             ) : (
@@ -508,8 +836,8 @@ const Index = () => {
             )}
           </main>
 
-          {/* Footer */}
-          <footer className="px-4 sm:px-6 py-8 mt-4 border-t border-border/20">
+          {/* Footer — extra bottom padding so content clears the floating mini audio player */}
+          <footer className="px-4 sm:px-6 pt-8 pb-20 mt-4 border-t border-border/20">
             <p className="text-[11px] text-muted-foreground/30 text-center">
               Vibed with{' '}
               <a
@@ -526,6 +854,9 @@ const Index = () => {
 
         <ChartSidebar side="right" />
       </div>
+
+      {/* Floating mini podcast player when an episode is playing */}
+      <StickyAudioBar />
     </div>
   );
 };

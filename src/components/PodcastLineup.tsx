@@ -1,7 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Headphones } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useRSSEpisode, type RSSEpisode } from '@/hooks/useRSSEpisode';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { AudioPlayer, AudioPlayerSkeleton } from '@/components/AudioPlayer';
 import { cn } from '@/lib/utils';
 
@@ -243,10 +244,12 @@ const PodcastShowPlayer = memo(function PodcastShowPlayer({
 
 export const PodcastLineup = memo(function PodcastLineup() {
   const [expanded, setExpanded] = useState(false);
+  const [collapsed, setCollapsed] = useLocalStorage<boolean>('citadel-wire:section-collapsed:podcasts', false);
   const [deferredReady, setDeferredReady] = useState(false);
   const [visibleIds, setVisibleIds] = useState<Set<string>>(() => new Set(PODCASTS.map(({ id }) => id)));
 
   useEffect(() => {
+    if (collapsed) return;
     if (expanded) {
       setDeferredReady(true);
       return;
@@ -264,7 +267,7 @@ export const PodcastLineup = memo(function PodcastLineup() {
 
     const timer = setTimeout(() => setDeferredReady(true), 1200);
     return () => clearTimeout(timer);
-  }, [expanded, deferredReady]);
+  }, [expanded, deferredReady, collapsed]);
 
   const setPodcastVisibility = useCallback((id: string, visible: boolean) => {
     setVisibleIds((current) => {
@@ -288,38 +291,59 @@ export const PodcastLineup = memo(function PodcastLineup() {
   const hiddenCount = Math.max(visibleOrder.length - 2, 0);
 
   return (
-    <div>
-      {PODCASTS.map((config, index) => {
-        const hiddenBehindToggle = hiddenPodcastIds.has(config.id);
-        const showMoreToggle = hiddenCount > 0 && config.id === firstHiddenPodcastId;
-        const fetchEnabled = index < PRIORITY_PODCAST_COUNT || deferredReady || expanded;
+    <section aria-label="Latest Podcasts" className="border-b border-border/30 py-1.5">
+      <div className="px-4 sm:px-6 flex items-center justify-between gap-2 pb-0.5">
+        <div className="flex items-center gap-1.5">
+          <Headphones className="h-3 w-3 text-emerald-400/80" />
+          <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            Latest Podcasts
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCollapsed((v) => !v)}
+          aria-expanded={!collapsed}
+          className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/55 hover:bg-muted/40 hover:text-foreground transition-colors"
+        >
+          <span>{collapsed ? 'Show' : 'Hide'}</span>
+          <ChevronDown className={cn('h-3 w-3 transition-transform duration-200', !collapsed && 'rotate-180')} />
+        </button>
+      </div>
 
-        return (
-          <div key={config.id}>
-            {showMoreToggle && (
-              <div className="px-4 py-1.5">
-                <button
-                  type="button"
-                  onClick={() => setExpanded((value) => !value)}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-border/40 bg-muted/20 py-2 text-xs font-semibold text-muted-foreground/70 transition-colors hover:bg-muted/40 hover:text-muted-foreground"
-                  aria-expanded={expanded}
-                >
-                  {expanded ? 'Show Fewer Shows' : `Show ${hiddenCount} More Shows`}
-                  <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')} />
-                </button>
+      {/* Keep players mounted with CSS hidden when collapsed so active audio keeps playing uninterrupted */}
+      <div className={cn(collapsed && 'hidden')}>
+        {PODCASTS.map((config, index) => {
+          const hiddenBehindToggle = hiddenPodcastIds.has(config.id);
+          const showMoreToggle = hiddenCount > 0 && config.id === firstHiddenPodcastId;
+          const fetchEnabled = !collapsed && (index < PRIORITY_PODCAST_COUNT || deferredReady || expanded);
+
+          return (
+            <div key={config.id}>
+              {showMoreToggle && (
+                <div className="px-4 sm:px-6 py-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setExpanded((value) => !value)}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-border/40 bg-muted/20 py-2 text-xs font-semibold text-muted-foreground/70 transition-colors hover:bg-muted/40 hover:text-muted-foreground"
+                    aria-expanded={expanded}
+                  >
+                    {expanded ? 'Show Fewer Shows' : `Show ${hiddenCount} More Shows`}
+                    <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')} />
+                  </button>
+                </div>
+              )}
+              <div className={cn(hiddenBehindToggle && !expanded && 'hidden')}>
+                <PodcastShowPlayer
+                  config={config}
+                  onVisibilityChange={setPodcastVisibility}
+                  preloadMetadata={!collapsed && (expanded || !hiddenBehindToggle)}
+                  fetchEnabled={fetchEnabled}
+                />
               </div>
-            )}
-            <div className={cn(hiddenBehindToggle && !expanded && 'hidden')}>
-              <PodcastShowPlayer
-                config={config}
-                onVisibilityChange={setPodcastVisibility}
-                preloadMetadata={expanded || !hiddenBehindToggle}
-                fetchEnabled={fetchEnabled}
-              />
             </div>
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+    </section>
   );
 });

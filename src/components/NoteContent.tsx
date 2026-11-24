@@ -9,6 +9,8 @@ interface NoteContentProps {
   titleClassName?: string;
   /** Render with editor-wire formatting: bold headline line + clean sources list. */
   editorWire?: boolean;
+  /** Optional lowercase search query whose occurrences should be highlighted in text nodes. */
+  highlightQuery?: string;
 }
 
 function escapeHtml(str: string): string {
@@ -419,12 +421,35 @@ function getCachedRenderedHtml(
   return html;
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Highlight search query occurrences only in HTML text segments, never inside tags or entities. */
+function applySearchHighlight(html: string, query: string): string {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return html;
+  const regex = new RegExp(`(${escapeRegExp(escapeHtml(trimmed))})`, 'gi');
+  return html
+    .split(/(<[^>]+>)/g)
+    .map((part) => (part.startsWith('<') ? part : part.replace(regex, '<mark class="search-hit">$1</mark>')))
+    .join('');
+}
+
 /** Parses content of text note events with smart formatting. */
-export const NoteContent = memo(function NoteContent({ event, className, showMoreInfo = false, titleClassName, editorWire = false }: NoteContentProps) {
+export const NoteContent = memo(function NoteContent({
+  event,
+  className,
+  showMoreInfo = false,
+  titleClassName,
+  editorWire = false,
+  highlightQuery,
+}: NoteContentProps) {
   const html = useMemo(() => {
     const cacheKey = `${event.id}|${showMoreInfo ? 1 : 0}|${editorWire ? 1 : 0}|${titleClassName ?? ''}`;
-    return getCachedRenderedHtml(cacheKey, event.content, showMoreInfo, titleClassName, editorWire);
-  }, [event.id, event.content, showMoreInfo, titleClassName, editorWire]);
+    const baseHtml = getCachedRenderedHtml(cacheKey, event.content, showMoreInfo, titleClassName, editorWire);
+    return highlightQuery ? applySearchHighlight(baseHtml, highlightQuery) : baseHtml;
+  }, [event.id, event.content, showMoreInfo, titleClassName, editorWire, highlightQuery]);
 
   return (
     <div

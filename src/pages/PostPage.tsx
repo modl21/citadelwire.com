@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { useCallback, useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSeoMeta } from '@unhead/react';
 import { format } from 'date-fns';
 import { nip19 } from 'nostr-tools';
-import { AlertTriangle, ArrowLeft, ArrowUpRight, Check, Copy, Rabbit, Radio, Shield, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Bookmark, Check, Copy, Rabbit, Radio, Shield, Sparkles } from 'lucide-react';
 import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -23,6 +24,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLoginActions } from '@/hooks/useLoginActions';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { usePostEngagement } from '@/hooks/usePostEngagement';
+import { useSavedWires } from '@/hooks/useSavedWires';
 import { CITADEL_FEED_RELAYS, CITADEL_PUBKEY, getPostType, type PostType } from '@/hooks/useCitadelFeed';
 import { genUserName } from '@/lib/genUserName';
 import { getEventTitle, parsePostPointer, useNostrEvent } from '@/lib/nostrPost';
@@ -66,6 +68,7 @@ function PostPageSkeleton() {
 
 interface PostLocationState {
   event?: NostrEvent;
+  fromFeed?: boolean;
 }
 
 function isMatchingInitialEvent(event: NostrEvent | undefined, pointer: ReturnType<typeof parsePostPointer>): event is NostrEvent {
@@ -78,9 +81,13 @@ function isMatchingInitialEvent(event: NostrEvent | undefined, pointer: ReturnTy
 export default function PostPage() {
   const { identifier } = useParams<{ identifier: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { savedIds, toggleSaved } = useSavedWires();
   const routeIdentifier = identifier ?? (typeof window !== 'undefined' ? window.__CITADEL_CANONICAL_PATH__?.match(/^\/posts\/([^/?#]+)/)?.[1] : undefined);
   const pointer = useMemo(() => parsePostPointer(routeIdentifier), [routeIdentifier]);
   const locationState = location.state as PostLocationState | null;
+  const cameFromFeed = Boolean(locationState?.fromFeed);
   const initialEvent = isMatchingInitialEvent(locationState?.event, pointer) ? locationState.event : undefined;
   const { data: event, isLoading, isError } = useNostrEvent(pointer, initialEvent);
   const [replyOpen, setReplyOpen] = useState(false);
@@ -88,6 +95,19 @@ export default function PostPage() {
   const isAnonAccount = Boolean(user && getStoredGuestPubkey() === user.pubkey);
   const author = useAuthor(event?.pubkey);
   const engagement = usePostEngagement(event);
+
+  const refreshEngagement = useCallback(() => {
+    if (!event?.id) return;
+    void queryClient.invalidateQueries({ queryKey: ['nostr', 'post-engagement', event.id] });
+  }, [event?.id, queryClient]);
+
+  const handleBackToWire = useCallback(() => {
+    if (cameFromFeed) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  }, [cameFromFeed, navigate]);
 
   const metadata: NostrMetadata | undefined = author.data?.metadata;
   const displayName = metadata?.display_name ?? metadata?.name ?? (event ? genUserName(event.pubkey) : 'CITADEL WIRE');
@@ -151,13 +171,30 @@ export default function PostPage() {
       <main className="relative mx-auto w-full max-w-3xl px-4 py-5 sm:px-6 sm:py-8">
         <div className="pointer-events-none absolute inset-x-0 top-0 -z-0 h-80 bg-[radial-gradient(circle_at_50%_0%,rgba(245,158,11,0.09),transparent_58%)]" />
 
-        <Link
-          to="/"
-          className="relative z-10 mb-4 inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/60 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to wire
-        </Link>
+        <div className="relative z-10 mb-4 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={handleBackToWire}
+            className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/60 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to wire
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleSaved(event.id)}
+            aria-pressed={savedIds.has(event.id)}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-colors',
+              savedIds.has(event.id)
+                ? 'border-amber-500/50 bg-amber-500/15 text-amber-400'
+                : 'border-border/50 bg-card/60 text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+            )}
+          >
+            <Bookmark className={cn('h-3.5 w-3.5', savedIds.has(event.id) && 'fill-current')} />
+            <span>{savedIds.has(event.id) ? 'Saved' : 'Save'}</span>
+          </button>
+        </div>
 
         <article className="relative z-10 overflow-hidden rounded-[28px] border border-border/60 bg-card/72 shadow-2xl shadow-black/20 backdrop-blur-xl">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/60 to-transparent" />
@@ -200,7 +237,7 @@ export default function PostPage() {
               event={event}
               expanded
               onComment={() => setReplyOpen(true)}
-              onActionSuccess={() => window.location.reload()}
+              onActionSuccess={refreshEngagement}
               className="mt-6 justify-around border-y border-border/40 py-3"
             />
           </div>
@@ -208,7 +245,14 @@ export default function PostPage() {
 
         {replyOpen && (
           <div className="relative z-10 mt-4">
-            <ReplyComposer root={event} onCancel={() => setReplyOpen(false)} onSuccess={() => window.location.reload()} />
+            <ReplyComposer
+              root={event}
+              onCancel={() => setReplyOpen(false)}
+              onSuccess={() => {
+                setReplyOpen(false);
+                refreshEngagement();
+              }}
+            />
           </div>
         )}
 
