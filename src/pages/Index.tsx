@@ -11,7 +11,7 @@ import { getPostType, useCitadelFeed, CITADEL_FEED_LIMIT, CITADEL_PUBKEY, type P
 import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
 import { usePageViewCount, HOME_PAGE_VIEW_ID } from '@/hooks/usePageViewCount';
-import { ArrowUp, Bookmark, ChevronDown, Clock, Globe, RefreshCw, Rss, Eye, Radio, Info, Moon, Sun, Search, RotateCcw } from 'lucide-react';
+import { ArrowUp, Bookmark, ChevronDown, Clock, Globe, History, Loader2, RefreshCw, Rss, Eye, Radio, Info, Moon, Sun, Search, RotateCcw } from 'lucide-react';
 import { WireSchedule } from '@/components/WireSchedule';
 import { PolymarketSection } from '@/components/PolymarketSection';
 import { StickyAudioBar } from '@/components/StickyAudioBar';
@@ -312,7 +312,15 @@ function PostSkeleton() {
 
 const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: posts, isLoading, isError, refetch } = useCitadelFeed();
+  const {
+    data: posts,
+    isLoading,
+    isError,
+    refetch,
+    loadOlderWires,
+    isLoadingOlder,
+    hasMoreOlder,
+  } = useCitadelFeed();
   const { savedIds, savedCount, toggleSaved } = useSavedWires();
 
   // Initialize filters from URL (?only=editor-wire, ?saved=1, ?q=...) with localStorage fallback
@@ -340,7 +348,8 @@ const Index = () => {
   const sessionBaselineTsRef = useRef<number | null>(null);
   const [pendingNewWiresCount, setPendingNewWiresCount] = useState(0);
 
-  const visiblePosts = useMemo(() => posts?.slice(0, CITADEL_FEED_LIMIT) ?? [], [posts]);
+  const visiblePosts = useMemo(() => posts ?? [], [posts]);
+  const indexedCountLabel = (visiblePosts.length > 0 ? visiblePosts.length : CITADEL_FEED_LIMIT).toLocaleString('en-US');
   const newestPostTs = visiblePosts[0]?.created_at ?? null;
 
   // Record session baseline once initial posts arrive, and detect live arrivals while scrolled down
@@ -726,9 +735,9 @@ const Index = () => {
                   type="search"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search 500 most recent wires (press /)"
-                  aria-label="Search 500 most recent wires"
-                  title="Searches only the 500 most recent wires"
+                  placeholder={`Search ${indexedCountLabel} loaded wires (press /)`}
+                  aria-label={`Search ${indexedCountLabel} loaded wires`}
+                  title={`Searches ${indexedCountLabel} loaded wires`}
                   className="h-5 min-w-0 flex-1 border-0 bg-transparent p-0 text-[10px] text-foreground/85 outline-none ring-0 placeholder:text-muted-foreground/35 focus:outline-none focus:ring-0 sm:text-[11px]"
                 />
                 {normalizedSearchQuery && (
@@ -804,27 +813,77 @@ const Index = () => {
                         onClick={() => setRenderedCount((count) => Math.min(count + RENDER_BATCH_SIZE, filteredEntries.length))}
                         className="text-xs font-semibold text-muted-foreground/60 hover:text-foreground transition-colors"
                       >
-                        Load more wires ({filteredEntries.length - renderedEntries.length} remaining)
+                        Show more wires ({filteredEntries.length - renderedEntries.length} remaining)
+                      </button>
+                    </div>
+                  )}
+                  {!hasMoreToRender && !savedOnly && hasMoreOlder && (
+                    <div className="py-6 px-4 text-center border-t border-border/30">
+                      <button
+                        type="button"
+                        onClick={() => void loadOlderWires()}
+                        disabled={isLoadingOlder}
+                        className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/25 px-4 py-2 text-xs font-semibold text-muted-foreground hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-foreground transition-colors disabled:opacity-60"
+                      >
+                        {isLoadingOlder ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            <span>Loading older wires…</span>
+                          </>
+                        ) : (
+                          <>
+                            <History className="h-3.5 w-3.5 text-amber-400" />
+                            <span>
+                              {normalizedSearchQuery
+                                ? `Load older wires to search deeper (${indexedCountLabel} loaded)`
+                                : `Load older wires (${indexedCountLabel} loaded)`}
+                            </span>
+                          </>
+                        )}
                       </button>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="py-16 px-4 text-center space-y-2">
+                <div className="py-16 px-4 text-center space-y-3">
                   <p className="text-muted-foreground text-sm">
                     {savedOnly
                       ? 'No saved wires yet. Click the bookmark icon on any wire to save it here.'
-                      : 'No posts match the selected filters.'}
+                      : normalizedSearchQuery
+                        ? `No matches in the ${indexedCountLabel} loaded wires.`
+                        : 'No posts match the selected filters.'}
                   </p>
-                  {hasCustomFilter && (
-                    <button
-                      type="button"
-                      onClick={resetFilters}
-                      className="text-xs font-semibold text-amber-400 hover:underline"
-                    >
-                      Show all wires
-                    </button>
-                  )}
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    {normalizedSearchQuery && !savedOnly && hasMoreOlder && (
+                      <button
+                        type="button"
+                        onClick={() => void loadOlderWires()}
+                        disabled={isLoadingOlder}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/25 px-3.5 py-1.5 text-xs font-semibold text-foreground hover:border-amber-500/40 hover:bg-amber-500/10 transition-colors disabled:opacity-60"
+                      >
+                        {isLoadingOlder ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            <span>Loading older wires…</span>
+                          </>
+                        ) : (
+                          <>
+                            <History className="h-3.5 w-3.5 text-amber-400" />
+                            <span>Load older wires</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                    {hasCustomFilter && (
+                      <button
+                        type="button"
+                        onClick={resetFilters}
+                        className="text-xs font-semibold text-amber-400 hover:underline"
+                      >
+                        Show all wires
+                      </button>
+                    )}
+                  </div>
                 </div>
               )
             ) : (
