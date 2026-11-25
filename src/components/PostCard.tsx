@@ -102,7 +102,11 @@ export const PostCard = memo(function PostCard({
 
     setShareState('generating');
     try {
-      await downloadPostScreenshot(event, postType);
+      const result = await downloadPostScreenshot(event, postType);
+      if (result === 'cancelled') {
+        setShareState('idle');
+        return;
+      }
       setShareState('done');
       setTimeout(() => setShareState('idle'), 2000);
     } catch {

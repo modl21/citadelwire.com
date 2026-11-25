@@ -107,7 +107,11 @@ export default function PostPage() {
     if (!event || shareState === 'generating') return;
     setShareState('generating');
     try {
-      await downloadPostScreenshot(event, getPostType(event));
+      const result = await downloadPostScreenshot(event, getPostType(event));
+      if (result === 'cancelled') {
+        setShareState('idle');
+        return;
+      }
       setShareState('done');
       setTimeout(() => setShareState('idle'), 2000);
     } catch {

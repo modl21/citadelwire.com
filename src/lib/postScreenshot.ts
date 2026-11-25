@@ -238,7 +238,7 @@ export async function renderPostScreenshotPng(
   event: NostrEvent,
   postType: PostType,
 ): Promise<Blob> {
-  if (typeof document !== 'undefined' && document.fonts?.ready) {
+  if (typeof document !== 'undefined' && document.fonts && document.fonts.status !== 'loaded') {
     await document.fonts.ready.catch(() => {});
   }
 
@@ -675,14 +675,54 @@ export async function renderPostScreenshotPng(
   });
 }
 
-/** Generate and download a watermarked PNG screenshot of a wire post. */
+export type ShareScreenshotResult = 'shared' | 'downloaded' | 'cancelled';
+
+function isTouchMobileDevice(): boolean {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+  return (
+    window.matchMedia('(pointer: coarse)').matches ||
+    /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  );
+}
+
+/**
+ * Generate a watermarked PNG screenshot of a wire post.
+ * - On mobile / tablet touch devices (iOS, iPadOS, Android), opens the native
+ *   Share Sheet with only `{ files: [file] }` so iOS displays "Save Image"
+ *   (directly to Photos / Camera Roll) plus one-tap sharing to social apps.
+ * - On desktop (or browsers without file-sharing support), downloads the PNG directly.
+ */
 export async function downloadPostScreenshot(
   event: NostrEvent,
   postType: PostType,
-): Promise<string> {
+): Promise<ShareScreenshotResult> {
   const blob = await renderPostScreenshotPng(event, postType);
   const slug = getPostUtcSlug(event);
   const filename = `citadelwire-${slug}.png`;
+
+  if (
+    isTouchMobileDevice() &&
+    typeof navigator !== 'undefined' &&
+    typeof navigator.share === 'function' &&
+    typeof File !== 'undefined'
+  ) {
+    const file = new File([blob], filename, { type: 'image/png' });
+    const shareData: ShareData = { files: [file] };
+    const canShareFiles = typeof navigator.canShare === 'function' ? navigator.canShare(shareData) : false;
+
+    if (canShareFiles) {
+      try {
+        // Passing only `files` (no `text`/`url`) ensures iOS shows "Save Image" to Camera Roll.
+        await navigator.share(shareData);
+        return 'shared';
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return 'cancelled';
+        }
+        // Any other error (e.g. NotAllowedError): fall through to direct file download.
+      }
+    }
+  }
 
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -694,5 +734,5 @@ export async function downloadPostScreenshot(
   document.body.removeChild(link);
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 
-  return filename;
+  return 'downloaded';
 }
