@@ -15,7 +15,7 @@ import { ArrowUp, Bookmark, Check, ChevronDown, Clock, Globe, History, Loader2, 
 import { WireSchedule } from '@/components/WireSchedule';
 import { PolymarketSection } from '@/components/PolymarketSection';
 import { StickyAudioBar } from '@/components/StickyAudioBar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useTheme } from '@/hooks/useTheme';
 import { useIsMobile, useMediaQuery } from '@/hooks/useIsMobile';
@@ -798,56 +798,17 @@ const Index = () => {
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {isMobile ? (
-                        <button
-                          type="button"
-                          onClick={() => setFilterMenuOpen(true)}
-                          aria-label={`Wire filters (${filterBadgeLabel})`}
-                          className={filterTriggerClassName}
-                        >
-                          <SlidersHorizontal className="h-3 w-3" />
-                          <span>{filterBadgeLabel}</span>
-                          <ChevronDown className="h-3 w-3 opacity-60" />
-                        </button>
-                      ) : (
-                        <Popover open={filterMenuOpen} onOpenChange={setFilterMenuOpen}>
-                          <PopoverTrigger asChild>
-                            <button
-                              type="button"
-                              aria-label={`Wire filters (${filterBadgeLabel})`}
-                              className={filterTriggerClassName}
-                            >
-                              <SlidersHorizontal className="h-3 w-3" />
-                              <span>{filterBadgeLabel}</span>
-                              <ChevronDown className={`h-3 w-3 opacity-60 transition-transform ${filterMenuOpen ? 'rotate-180' : ''}`} />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent
-                            side="bottom"
-                            align="end"
-                            className="w-[330px] rounded-2xl border-border/70 bg-popover p-3.5 shadow-2xl"
-                            onOpenAutoFocus={(event) => event.preventDefault()}
-                          >
-                            <div className="mb-2.5 flex items-center justify-between">
-                              <span className="text-xs font-bold tracking-tight text-foreground">Filter Wires</span>
-                              {hasCustomFilter && (
-                                <button
-                                  type="button"
-                                  onClick={resetFilters}
-                                  className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-foreground hover:bg-muted/70 transition-colors"
-                                >
-                                  <RotateCcw className="h-2.5 w-2.5" />
-                                  <span>Reset All</span>
-                                </button>
-                              )}
-                            </div>
-                            {filterMenuBody}
-                            <p className="mt-2.5 pt-2 border-t border-border/30 text-[10px] text-muted-foreground/70">
-                              Shortcuts: <kbd className="font-mono text-foreground/80">/</kbd> search · <kbd className="font-mono text-foreground/80">j</kbd>/<kbd className="font-mono text-foreground/80">k</kbd> navigate
-                            </p>
-                          </PopoverContent>
-                        </Popover>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => setFilterMenuOpen(true)}
+                        aria-label={`Wire filters (${filterBadgeLabel})`}
+                        aria-expanded={filterMenuOpen}
+                        className={filterTriggerClassName}
+                      >
+                        <SlidersHorizontal className="h-3 w-3" />
+                        <span>{filterBadgeLabel}</span>
+                        <ChevronDown className={`h-3 w-3 opacity-60 transition-transform ${filterMenuOpen ? 'rotate-180' : ''}`} />
+                      </button>
 
                       <button
                         type="button"
@@ -867,8 +828,8 @@ const Index = () => {
                     </div>
                   </div>
 
-                  {/* Mobile Filters Bottom Sheet */}
-                  {isMobile && (
+                  {/* Mobile: Bottom Sheet · Desktop/Tablet/Landscape: Centered Dialog (never clipped on short screens) */}
+                  {isMobile ? (
                     <Sheet open={filterMenuOpen} onOpenChange={setFilterMenuOpen}>
                       <SheetContent
                         side="bottom"
@@ -893,6 +854,33 @@ const Index = () => {
                         {filterMenuBody}
                       </SheetContent>
                     </Sheet>
+                  ) : (
+                    <Dialog open={filterMenuOpen} onOpenChange={setFilterMenuOpen}>
+                      <DialogContent
+                        className="sm:max-w-[380px] max-h-[85dvh] overflow-y-auto rounded-2xl p-5"
+                        onOpenAutoFocus={(event) => event.preventDefault()}
+                      >
+                        <DialogHeader className="pb-1 text-left">
+                          <div className="flex items-center justify-between pr-8">
+                            <DialogTitle className="text-base font-bold">Filter Wires</DialogTitle>
+                            {hasCustomFilter && (
+                              <button
+                                type="button"
+                                onClick={resetFilters}
+                                className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted/70 transition-colors"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                                <span>Reset All</span>
+                              </button>
+                            )}
+                          </div>
+                        </DialogHeader>
+                        {filterMenuBody}
+                        <p className="pt-2 border-t border-border/30 text-[11px] text-muted-foreground/70">
+                          Shortcuts: <kbd className="font-mono text-foreground/80">/</kbd> search · <kbd className="font-mono text-foreground/80">j</kbd>/<kbd className="font-mono text-foreground/80">k</kbd> navigate
+                        </p>
+                      </DialogContent>
+                    </Dialog>
                   )}
                 </div>
               );
