@@ -3,11 +3,12 @@ import { type NostrEvent } from '@nostrify/nostrify';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow, format } from 'date-fns';
-import { Bookmark, Check, Share2 } from 'lucide-react';
+import { Bookmark, Check, Loader2, Share2 } from 'lucide-react';
 import { NoteContent } from '@/components/NoteContent';
 import { cn } from '@/lib/utils';
 import { CITADEL_FEED_RELAYS, getPostType, type PostType } from '@/hooks/useCitadelFeed';
 import { encodePostPath, getPostIdPrefix, getPostUtcSlug } from '@/lib/nostrPost';
+import { downloadPostScreenshot } from '@/lib/postScreenshot';
 
 interface PostCardProps {
   event: NostrEvent;
@@ -87,28 +88,25 @@ export const PostCard = memo(function PostCard({
 }: PostCardProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [copied, setCopied] = useState(false);
+  const [shareState, setShareState] = useState<'idle' | 'generating' | 'done'>('idle');
   const absolute = format(new Date(event.created_at * 1000), 'MMM d, yyyy · h:mm a');
   const postPath = encodePostPath(event);
   const postType = providedPostType ?? getPostType(event);
   const postTypeClassName = POST_TYPE_STYLES[postType];
   const cardAccentClassName = POST_TYPE_CARD_ACCENT[postType];
 
-  const getShareUrl = () => {
-    if (typeof window === 'undefined') return postPath;
-    return new URL(postPath, window.location.origin).toString();
-  };
-
   const handleShare = async (shareEvent: React.MouseEvent<HTMLButtonElement>) => {
     shareEvent.preventDefault();
     shareEvent.stopPropagation();
+    if (shareState === 'generating') return;
 
+    setShareState('generating');
     try {
-      await navigator.clipboard.writeText(getShareUrl());
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
+      await downloadPostScreenshot(event, postType);
+      setShareState('done');
+      setTimeout(() => setShareState('idle'), 2000);
     } catch {
-      setCopied(false);
+      setShareState('idle');
     }
   };
 
@@ -186,12 +184,19 @@ export const PostCard = memo(function PostCard({
           <button
             type="button"
             onClick={handleShare}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/40 bg-background/45 px-2 py-1 text-[11px] font-semibold text-muted-foreground/55 opacity-80 transition-colors hover:border-amber-400/30 hover:bg-amber-400/10 hover:text-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40"
-            aria-label="Copy post link"
-            title="Copy post link"
+            disabled={shareState === 'generating'}
+            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/40 bg-background/45 px-2 py-1 text-[11px] font-semibold text-muted-foreground/55 opacity-80 transition-colors hover:border-amber-400/30 hover:bg-amber-400/10 hover:text-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40 disabled:opacity-60"
+            aria-label="Download post screenshot"
+            title="Download watermarked screenshot for sharing"
           >
-            {copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Share2 className="h-3.5 w-3.5" />}
-            <span>{copied ? 'Copied' : 'Share'}</span>
+            {shareState === 'generating' ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : shareState === 'done' ? (
+              <Check className="h-3.5 w-3.5 text-emerald-300" />
+            ) : (
+              <Share2 className="h-3.5 w-3.5" />
+            )}
+            <span>{shareState === 'done' ? 'Saved' : 'Share'}</span>
           </button>
         </div>
       </div>

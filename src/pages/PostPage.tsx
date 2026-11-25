@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSeoMeta } from '@unhead/react';
 import { format } from 'date-fns';
 import { nip19 } from 'nostr-tools';
-import { AlertTriangle, ArrowLeft, ArrowUpRight, Bookmark, Check, Copy, Rabbit, Radio, Shield, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Bookmark, Check, Copy, Loader2, Rabbit, Radio, Share2, Shield, Sparkles } from 'lucide-react';
 import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -28,6 +28,7 @@ import { useSavedWires } from '@/hooks/useSavedWires';
 import { CITADEL_FEED_RELAYS, CITADEL_PUBKEY, getPostType, type PostType } from '@/hooks/useCitadelFeed';
 import { genUserName } from '@/lib/genUserName';
 import { getEventTitle, parsePostPointer, useNostrEvent } from '@/lib/nostrPost';
+import { downloadPostScreenshot } from '@/lib/postScreenshot';
 import { cn } from '@/lib/utils';
 import NotFound from '@/pages/NotFound';
 
@@ -91,6 +92,7 @@ export default function PostPage() {
   const initialEvent = isMatchingInitialEvent(locationState?.event, pointer) ? locationState.event : undefined;
   const { data: event, isLoading, isError } = useNostrEvent(pointer, initialEvent);
   const [replyOpen, setReplyOpen] = useState(false);
+  const [shareState, setShareState] = useState<'idle' | 'generating' | 'done'>('idle');
   const { user } = useCurrentUser();
   const isAnonAccount = Boolean(user && getStoredGuestPubkey() === user.pubkey);
   const author = useAuthor(event?.pubkey);
@@ -100,6 +102,18 @@ export default function PostPage() {
     if (!event?.id) return;
     void queryClient.invalidateQueries({ queryKey: ['nostr', 'post-engagement', event.id] });
   }, [event?.id, queryClient]);
+
+  const handleShareScreenshot = useCallback(async () => {
+    if (!event || shareState === 'generating') return;
+    setShareState('generating');
+    try {
+      await downloadPostScreenshot(event, getPostType(event));
+      setShareState('done');
+      setTimeout(() => setShareState('idle'), 2000);
+    } catch {
+      setShareState('idle');
+    }
+  }, [event, shareState]);
 
   const handleBackToWire = useCallback(() => {
     if (cameFromFeed) {
@@ -180,20 +194,39 @@ export default function PostPage() {
             <ArrowLeft className="h-4 w-4" />
             Back to wire
           </button>
-          <button
-            type="button"
-            onClick={() => toggleSaved(event.id)}
-            aria-pressed={savedIds.has(event.id)}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-colors',
-              savedIds.has(event.id)
-                ? 'border-amber-500/50 bg-amber-500/15 text-amber-400'
-                : 'border-border/50 bg-card/60 text-muted-foreground hover:bg-muted/50 hover:text-foreground',
-            )}
-          >
-            <Bookmark className={cn('h-3.5 w-3.5', savedIds.has(event.id) && 'fill-current')} />
-            <span>{savedIds.has(event.id) ? 'Saved' : 'Save'}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => toggleSaved(event.id)}
+              aria-pressed={savedIds.has(event.id)}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-colors',
+                savedIds.has(event.id)
+                  ? 'border-amber-500/50 bg-amber-500/15 text-amber-400'
+                  : 'border-border/50 bg-card/60 text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+              )}
+            >
+              <Bookmark className={cn('h-3.5 w-3.5', savedIds.has(event.id) && 'fill-current')} />
+              <span>{savedIds.has(event.id) ? 'Saved' : 'Save'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleShareScreenshot()}
+              disabled={shareState === 'generating'}
+              aria-label="Download post screenshot"
+              title="Download watermarked screenshot for sharing"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-card/60 px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:border-amber-400/40 hover:bg-amber-400/10 hover:text-foreground disabled:opacity-60"
+            >
+              {shareState === 'generating' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : shareState === 'done' ? (
+                <Check className="h-3.5 w-3.5 text-emerald-300" />
+              ) : (
+                <Share2 className="h-3.5 w-3.5" />
+              )}
+              <span>{shareState === 'done' ? 'Downloaded' : 'Share'}</span>
+            </button>
+          </div>
         </div>
 
         <article className="relative z-10 overflow-hidden rounded-[28px] border border-border/60 bg-card/72 shadow-2xl shadow-black/20 backdrop-blur-xl">
