@@ -1,4 +1,3 @@
-import { format } from 'date-fns';
 import type { NostrEvent } from '@nostrify/nostrify';
 import type { PostType } from '@/hooks/useCitadelFeed';
 import { getPostUtcSlug } from '@/lib/nostrPost';
@@ -62,28 +61,28 @@ function getPalette(postType: PostType, isLight: boolean): Palette {
   const accentSet = isLight ? POST_TYPE_COLORS_LIGHT[postType] : POST_TYPE_COLORS_DARK[postType];
   if (isLight) {
     return {
-      outerBg: '#f3f1eb',
+      outerBg: '#ffffff',
       cardBg: '#ffffff',
       cardBorder: '#e2ded5',
-      text: '#141821',
-      bodyText: '#232938',
-      mutedText: '#606878',
-      subtleText: '#8a92a1',
-      linkText: '#1d6ce0',
-      ruleColor: '#e7e3da',
+      text: '#0f131a',
+      bodyText: '#1a202c',
+      mutedText: '#475061',
+      subtleText: '#6b7280',
+      linkText: '#1d4ed8',
+      ruleColor: '#e5e7eb',
       ...accentSet,
     };
   }
   return {
-    outerBg: '#080b12',
-    cardBg: '#0e121b',
+    outerBg: '#0b0e14',
+    cardBg: '#0b0e14',
     cardBorder: '#1f2636',
-    text: '#f3f5f8',
-    bodyText: '#dce1ea',
-    mutedText: '#8e98aa',
-    subtleText: '#5e687a',
-    linkText: '#60a5fa',
-    ruleColor: '#1d2433',
+    text: '#ffffff',
+    bodyText: '#e6eaf2',
+    mutedText: '#b5bfd0',
+    subtleText: '#8590a3',
+    linkText: '#7ab8ff',
+    ruleColor: '#232b3d',
     ...accentSet,
   };
 }
@@ -248,10 +247,10 @@ export async function renderPostScreenshotPng(
   const isEditorWire = postType === 'editor-wire';
 
   const WIDTH = 760;
-  const OUTER_PAD = 28;
-  const CARD_X = OUTER_PAD;
-  const CARD_W = WIDTH - OUTER_PAD * 2;
-  const INNER_PAD_X = 36;
+  const OUTER_PAD = 0;
+  const CARD_X = 0;
+  const CARD_W = WIDTH;
+  const INNER_PAD_X = 40;
   const CONTENT_X = CARD_X + INNER_PAD_X;
   const CONTENT_W = CARD_W - INNER_PAD_X * 2;
 
@@ -262,9 +261,8 @@ export async function renderPostScreenshotPng(
   const ops: DrawOp[] = [];
   let y = OUTER_PAD + 34;
 
-  // ── Top header row: type badge + timestamp + subtle brand mark ──
+  // ── Top header row: type badge + brand watermark (no local timestamp; wire text already has UTC + block) ──
   const typeLabel = postType === 'standard' ? 'MAIN WIRE' : postType.replace('-', ' ').toUpperCase();
-  const absoluteTime = format(new Date(event.created_at * 1000), 'MMM d, yyyy · h:mm a');
 
   mctx.font = fontSpec(800, 11);
   const badgeTextW = mctx.measureText(typeLabel).width;
@@ -282,13 +280,6 @@ export async function renderPostScreenshotPng(
     color: palette.badgeText,
     text: typeLabel,
     font: fontSpec(800, 11),
-  });
-
-  ops.push({
-    type: 'line',
-    x: CONTENT_X + badgeW + 12,
-    y,
-    runs: [{ text: absoluteTime, font: fontSpec(500, 12), color: palette.mutedText }],
   });
 
   const topWatermark = 'citadelwire.com';
@@ -616,7 +607,7 @@ export async function renderPostScreenshotPng(
     runs: [{ text: bottomUrl, font: fontSpec(800, 13), color: palette.accent }],
   });
 
-  const CARD_H = y - OUTER_PAD + 26;
+  const CARD_H = y - OUTER_PAD + 30;
   const TOTAL_HEIGHT = CARD_H + OUTER_PAD * 2;
 
   // Render at 2x DPR for crisp Retina social sharing (cap scale if an unusually long post exceeds canvas limits)
@@ -629,25 +620,13 @@ export async function renderPostScreenshotPng(
 
   ctx.scale(scale, scale);
 
-  // Outer canvas background
-  ctx.fillStyle = palette.outerBg;
+  // Clean, solid high-contrast background (no outer frame or gradient)
+  ctx.fillStyle = palette.cardBg;
   ctx.fillRect(0, 0, WIDTH, TOTAL_HEIGHT);
 
-  // Card background + border
-  drawRoundedRect(ctx, CARD_X, OUTER_PAD, CARD_W, CARD_H, 18);
-  ctx.fillStyle = palette.cardBg;
-  ctx.fill();
-  ctx.strokeStyle = palette.cardBorder;
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // Top accent bar clipped cleanly inside card corners
-  ctx.save();
-  drawRoundedRect(ctx, CARD_X, OUTER_PAD, CARD_W, CARD_H, 18);
-  ctx.clip();
+  // Subtle top accent bar
   ctx.fillStyle = palette.accent;
-  ctx.fillRect(CARD_X, OUTER_PAD, CARD_W, 3);
-  ctx.restore();
+  ctx.fillRect(0, 0, WIDTH, 4);
 
   // Execute draw ops
   for (const op of ops) {

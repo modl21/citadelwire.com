@@ -183,8 +183,6 @@ export default function PostPage() {
       <PostDetailHeader />
 
       <main className="relative mx-auto w-full max-w-3xl px-4 py-5 sm:px-6 sm:py-8">
-        <div className="pointer-events-none absolute inset-x-0 top-0 -z-0 h-80 bg-[radial-gradient(circle_at_50%_0%,rgba(245,158,11,0.09),transparent_58%)]" />
-
         <div className="relative z-10 mb-4 flex items-center justify-between gap-2">
           <button
             type="button"
@@ -229,7 +227,7 @@ export default function PostPage() {
           </div>
         </div>
 
-        <article className="relative z-10 overflow-hidden rounded-[28px] border border-border/60 bg-card/72 shadow-2xl shadow-black/20 backdrop-blur-xl">
+        <article className="relative z-10 overflow-hidden rounded-[28px] border border-border/60 bg-card shadow-2xl shadow-black/20">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/60 to-transparent" />
           <div className="p-5 sm:p-7">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
