@@ -11,14 +11,14 @@ import { getPostType, useCitadelFeed, CITADEL_FEED_LIMIT, CITADEL_PUBKEY, type P
 import { useAuthor } from '@/hooks/useAuthor';
 import { DonateButton } from '@/components/DonateButton';
 import { usePageViewCount, HOME_PAGE_VIEW_ID } from '@/hooks/usePageViewCount';
-import { ArrowUp, Bookmark, Check, ChevronDown, Clock, Globe, History, Loader2, RefreshCw, Rss, Eye, Radio, Info, Moon, Sun, Search, SlidersHorizontal, RotateCcw } from 'lucide-react';
+import { ArrowUp, Bookmark, Check, ChevronDown, Clock, Globe, History, Loader2, RefreshCw, Rss, Eye, Radio, Moon, Sun, Search, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import { WireSchedule } from '@/components/WireSchedule';
 import { PolymarketSection } from '@/components/PolymarketSection';
 import { StickyAudioBar } from '@/components/StickyAudioBar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTheme } from '@/hooks/useTheme';
-import { useMediaQuery } from '@/hooks/useIsMobile';
+import { useIsMobile, useMediaQuery } from '@/hooks/useIsMobile';
 import { useSavedWires } from '@/hooks/useSavedWires';
 
 const BTCSidebarCharts = lazy(() =>
@@ -344,8 +344,8 @@ const Index = () => {
     return getStoredVisiblePostTypes();
   });
   const [savedOnly, setSavedOnly] = useState<boolean>(() => searchParams.get('saved') === '1');
-  const [postTypeTooltipOpen, setPostTypeTooltipOpen] = useState(false);
-  const [mobileFilterSheetOpen, setMobileFilterSheetOpen] = useState(false);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '');
   const [renderedCount, setRenderedCount] = useState(INITIAL_RENDER_COUNT);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
@@ -564,7 +564,7 @@ const Index = () => {
 
   const hasCustomFilter = savedOnly || !isAllPostTypesActive(visiblePostTypes);
 
-  const mobileFilterBadge = useMemo(() => {
+  const filterBadgeLabel = useMemo(() => {
     if (savedOnly) return 'Saved';
     if (isAllPostTypesActive(visiblePostTypes)) return 'All';
     if (visiblePostTypes.size === 1) {
@@ -671,255 +671,232 @@ const Index = () => {
 
           {/* Feed */}
           <main>
-            <div className="px-4 sm:px-6 py-2.5 border-b border-border/30">
-              {/* Desktop/tablet inline filter pill bar */}
-              <div className="hidden sm:flex items-center gap-1.5 overflow-x-auto scrollbar-none" aria-label="Post type filters">
-                {POST_TYPE_FILTERS.map(({ type, label }) => {
-                  const isActive = !savedOnly && visiblePostTypes.has(type);
-                  return (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={(event) => togglePostType(type, event.altKey)}
-                      onDoubleClick={() => soloPostType(type)}
-                      aria-pressed={isActive}
-                      title="Click to toggle · Double-click (or Alt+click) to solo"
-                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-none tracking-tight transition-colors ${
-                        isActive
-                          ? 'border-amber-500/40 bg-amber-500/15 text-amber-300'
-                          : 'border-border/40 bg-muted/20 text-muted-foreground/50 hover:bg-muted/40 hover:text-muted-foreground/80'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  onClick={() => setSavedOnly((v) => !v)}
-                  aria-pressed={savedOnly}
-                  title="Show bookmarked wires"
-                  className={`inline-flex items-center gap-0.5 shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-none tracking-tight transition-colors ${
-                    savedOnly
-                      ? 'border-amber-500/50 bg-amber-500/20 text-amber-300'
-                      : 'border-border/40 bg-muted/20 text-muted-foreground/55 hover:bg-muted/40 hover:text-muted-foreground/80'
-                  }`}
-                >
-                  <Bookmark className={`h-2.5 w-2.5 ${savedOnly ? 'fill-current' : ''}`} />
-                  <span>SAVED{savedCount > 0 ? ` (${savedCount})` : ''}</span>
-                </button>
-                {hasCustomFilter && (
-                  <button
-                    type="button"
-                    onClick={resetFilters}
-                    title="Show all wire types"
-                    className="inline-flex items-center gap-0.5 shrink-0 rounded-full border border-border/50 bg-muted/30 px-2 py-0.5 text-[9px] font-semibold uppercase leading-none text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
-                  >
-                    <RotateCcw className="h-2.5 w-2.5" />
-                    <span>Reset</span>
-                  </button>
-                )}
-                <Tooltip open={postTypeTooltipOpen} onOpenChange={setPostTypeTooltipOpen}>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => setPostTypeTooltipOpen((open) => !open)}
-                      className="inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-full border border-amber-400/45 bg-amber-400/15 px-1.5 text-white shadow-[0_0_18px_rgba(245,158,11,0.18)] transition-colors hover:border-amber-300/70 hover:bg-amber-400/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60"
-                      aria-label="Post type explanations"
-                    >
-                      <Info className="h-3 w-3" />
-                      <span className="text-[9px] font-black uppercase leading-none tracking-tight">Info</span>
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" align="end" className="max-w-[290px] border-amber-400/30 bg-[#080b12]/95 px-4 py-3 text-xs leading-5 text-white shadow-2xl shadow-amber-500/15 backdrop-blur-xl">
-                    <div className="space-y-2">
-                      <p><span className="font-black text-amber-200">MAIN WIRE</span> 120+ global sources.</p>
-                      <p><span className="font-black text-emerald-200">CODE WIRE</span> 400+ open source projects.</p>
-                      <p><span className="font-black text-orange-200">DAILY WIRE</span> daily at 21:30 utc.</p>
-                      <p><span className="font-black text-purple-200">WEEKLY WIRE</span> fridays at 21:45 utc.</p>
-                      <p><span className="font-black text-rose-200">FORWARD WIRE</span> mondays at 11:15 utc.</p>
-                      <p><span className="font-black text-cyan-200">EDITOR WIRE</span> hand-picked by the editor.</p>
-                      <p className="pt-1 border-t border-white/10 text-[11px] text-white/60">
-                        Tip: double-click a filter to solo it · press <kbd className="font-mono text-white/90">/</kbd> to search, <kbd className="font-mono text-white/90">j</kbd>/<kbd className="font-mono text-white/90">k</kbd> to navigate.
-                      </p>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-
-              {/* Search row — on mobile, shares one clean row with the Filters drawer button + Saved toggle */}
-              <div className="sm:mt-1.5 flex items-center gap-2 sm:gap-1.5">
-                <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                  <Search className="h-3.5 w-3.5 sm:h-3 sm:w-3 shrink-0 text-muted-foreground/50" />
-                  <input
-                    ref={searchInputRef}
-                    type="search"
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder={`Search ${indexedCountLabel} wires`}
-                    aria-label={`Search ${indexedCountLabel} loaded wires`}
-                    title={`Searches ${indexedCountLabel} loaded wires (press /)`}
-                    className="h-7 sm:h-5 min-w-0 flex-1 border-0 bg-transparent p-0 text-xs text-foreground/90 outline-none ring-0 placeholder:text-muted-foreground/45 focus:outline-none focus:ring-0 sm:text-[11px]"
-                  />
-                  {normalizedSearchQuery && (
-                    <span className="shrink-0 text-[10px] font-semibold tabular-nums text-amber-400/90">
-                      {filteredEntries.length} {filteredEntries.length === 1 ? 'match' : 'matches'}
-                    </span>
-                  )}
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery('')}
-                      className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] sm:text-[8px] font-semibold uppercase tracking-wide text-muted-foreground/60 transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40"
-                      aria-label="Clear post search"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-
-                {/* Mobile compact filter trigger + bookmark toggle */}
-                <div className="flex sm:hidden items-center gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setMobileFilterSheetOpen(true)}
-                    aria-label={`Wire filters (${mobileFilterBadge})`}
-                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold leading-none transition-colors ${
-                      hasCustomFilter && !savedOnly
-                        ? 'border-amber-500/50 bg-amber-500/15 text-amber-300'
-                        : 'border-border/60 bg-muted/30 text-foreground/85 hover:bg-muted/50'
-                    }`}
-                  >
-                    <SlidersHorizontal className="h-3 w-3" />
-                    <span>{mobileFilterBadge}</span>
-                    <ChevronDown className="h-3 w-3 opacity-60" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSavedOnly((v) => !v)}
-                    aria-pressed={savedOnly}
-                    aria-label={savedCount > 0 ? `Saved wires (${savedCount})` : 'Saved wires'}
-                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold leading-none transition-colors ${
-                      savedOnly
-                        ? 'border-amber-500/50 bg-amber-500/20 text-amber-300'
-                        : 'border-border/60 bg-muted/30 text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <Bookmark className={`h-3 w-3 ${savedOnly ? 'fill-current' : ''}`} />
-                    {savedCount > 0 && <span className="tabular-nums">{savedCount}</span>}
-                  </button>
-                </div>
-              </div>
-
-              {/* Mobile Filters Bottom Sheet */}
-              <Sheet open={mobileFilterSheetOpen} onOpenChange={setMobileFilterSheetOpen}>
-                <SheetContent
-                  side="bottom"
-                  className="rounded-t-2xl max-h-[85dvh] overflow-y-auto px-4 pb-8 pt-5"
-                  onOpenAutoFocus={(event) => event.preventDefault()}
-                >
-                  <SheetHeader className="pb-3 text-left">
-                    <div className="flex items-center justify-between pr-8">
-                      <SheetTitle className="text-base font-bold">Filter Wires</SheetTitle>
-                      {hasCustomFilter && (
+            {(() => {
+              const filterMenuBody = (
+                <div className="space-y-1.5">
+                  {POST_TYPE_FILTERS.map(({ type, label, description, accentClassName }) => {
+                    const isActive = !savedOnly && visiblePostTypes.has(type);
+                    const isSoloed = !savedOnly && visiblePostTypes.size === 1 && visiblePostTypes.has(type);
+                    return (
+                      <div
+                        key={type}
+                        className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 transition-colors ${
+                          isActive
+                            ? 'border-amber-500/35 bg-amber-500/[0.06]'
+                            : 'border-border/40 bg-muted/20 opacity-65'
+                        }`}
+                      >
                         <button
                           type="button"
-                          onClick={resetFilters}
-                          className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted/70 transition-colors"
+                          onClick={() => togglePostType(type)}
+                          aria-pressed={isActive}
+                          className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
                         >
-                          <RotateCcw className="h-3 w-3" />
-                          <span>Reset All</span>
+                          <span
+                            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                              isActive
+                                ? 'border-amber-400 bg-amber-400 text-zinc-950'
+                                : 'border-border/70 bg-background'
+                            }`}
+                          >
+                            {isActive && <Check className="h-3 w-3 stroke-[3]" />}
+                          </span>
+                          <div className="min-w-0">
+                            <div className={`text-xs font-bold tracking-tight ${accentClassName}`}>
+                              {label}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground truncate">
+                              {description}
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soloPostType(type);
+                            setFilterMenuOpen(false);
+                          }}
+                          className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-colors ${
+                            isSoloed
+                              ? 'border-amber-400/60 bg-amber-400/20 text-amber-300'
+                              : 'border-border/50 bg-background/60 text-muted-foreground hover:border-amber-400/40 hover:text-foreground'
+                          }`}
+                        >
+                          {isSoloed ? 'All' : 'Only'}
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  {/* Saved wires row */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSavedOnly((v) => !v);
+                      setFilterMenuOpen(false);
+                    }}
+                    aria-pressed={savedOnly}
+                    className={`mt-2 flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition-colors ${
+                      savedOnly
+                        ? 'border-amber-500/50 bg-amber-500/15'
+                        : 'border-border/50 bg-muted/25 hover:bg-muted/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Bookmark className={`h-4 w-4 text-amber-400 ${savedOnly ? 'fill-current' : ''}`} />
+                      <div>
+                        <div className="text-xs font-bold text-foreground">
+                          Saved Wires{savedCount > 0 ? ` (${savedCount})` : ''}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">
+                          Show only wires you bookmarked on this device
+                        </div>
+                      </div>
+                    </div>
+                    {savedOnly && <Check className="h-4 w-4 text-amber-400 shrink-0" />}
+                  </button>
+                </div>
+              );
+
+              const filterTriggerClassName = `inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] sm:text-[11px] font-semibold leading-none transition-colors ${
+                hasCustomFilter && !savedOnly
+                  ? 'border-amber-500/50 bg-amber-500/15 text-amber-300'
+                  : 'border-border/60 bg-muted/30 text-foreground/85 hover:bg-muted/50'
+              }`;
+
+              return (
+                <div className="px-4 sm:px-6 py-2.5 border-b border-border/30">
+                  {/* Unified single-row Search + Filters + Saved bar on mobile and desktop */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                      <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                      <input
+                        ref={searchInputRef}
+                        type="search"
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        placeholder={`Search ${indexedCountLabel} wires`}
+                        aria-label={`Search ${indexedCountLabel} loaded wires`}
+                        title={`Searches ${indexedCountLabel} loaded wires (press /)`}
+                        className="h-7 min-w-0 flex-1 border-0 bg-transparent p-0 text-xs text-foreground/90 outline-none ring-0 placeholder:text-muted-foreground/45 focus:outline-none focus:ring-0"
+                      />
+                      {normalizedSearchQuery && (
+                        <span className="shrink-0 text-[10px] font-semibold tabular-nums text-amber-400/90">
+                          {filteredEntries.length} {filteredEntries.length === 1 ? 'match' : 'matches'}
+                        </span>
+                      )}
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery('')}
+                          className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground/60 transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40"
+                          aria-label="Clear post search"
+                        >
+                          Clear
                         </button>
                       )}
                     </div>
-                  </SheetHeader>
 
-                  <div className="space-y-1.5">
-                    {POST_TYPE_FILTERS.map(({ type, label, description, accentClassName }) => {
-                      const isActive = !savedOnly && visiblePostTypes.has(type);
-                      const isSoloed = !savedOnly && visiblePostTypes.size === 1 && visiblePostTypes.has(type);
-                      return (
-                        <div
-                          key={type}
-                          className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 transition-colors ${
-                            isActive
-                              ? 'border-amber-500/35 bg-amber-500/[0.06]'
-                              : 'border-border/40 bg-muted/20 opacity-65'
-                          }`}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {isMobile ? (
+                        <button
+                          type="button"
+                          onClick={() => setFilterMenuOpen(true)}
+                          aria-label={`Wire filters (${filterBadgeLabel})`}
+                          className={filterTriggerClassName}
                         >
-                          <button
-                            type="button"
-                            onClick={() => togglePostType(type)}
-                            aria-pressed={isActive}
-                            className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
-                          >
-                            <span
-                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
-                                isActive
-                                  ? 'border-amber-400 bg-amber-400 text-zinc-950'
-                                  : 'border-border/70 bg-background'
-                              }`}
+                          <SlidersHorizontal className="h-3 w-3" />
+                          <span>{filterBadgeLabel}</span>
+                          <ChevronDown className="h-3 w-3 opacity-60" />
+                        </button>
+                      ) : (
+                        <Popover open={filterMenuOpen} onOpenChange={setFilterMenuOpen}>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={`Wire filters (${filterBadgeLabel})`}
+                              className={filterTriggerClassName}
                             >
-                              {isActive && <Check className="h-3.5 w-3.5 stroke-[3]" />}
-                            </span>
-                            <div className="min-w-0">
-                              <div className={`text-xs font-bold tracking-tight ${accentClassName}`}>
-                                {label}
-                              </div>
-                              <div className="text-[11px] text-muted-foreground truncate">
-                                {description}
-                              </div>
-                            </div>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              soloPostType(type);
-                              setMobileFilterSheetOpen(false);
-                            }}
-                            className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-colors ${
-                              isSoloed
-                                ? 'border-amber-400/60 bg-amber-400/20 text-amber-300'
-                                : 'border-border/50 bg-background/60 text-muted-foreground hover:border-amber-400/40 hover:text-foreground'
-                            }`}
+                              <SlidersHorizontal className="h-3 w-3" />
+                              <span>{filterBadgeLabel}</span>
+                              <ChevronDown className={`h-3 w-3 opacity-60 transition-transform ${filterMenuOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            side="bottom"
+                            align="end"
+                            className="w-[330px] rounded-2xl border-border/70 bg-popover p-3.5 shadow-2xl"
+                            onOpenAutoFocus={(event) => event.preventDefault()}
                           >
-                            {isSoloed ? 'All' : 'Only'}
-                          </button>
-                        </div>
-                      );
-                    })}
+                            <div className="mb-2.5 flex items-center justify-between">
+                              <span className="text-xs font-bold tracking-tight text-foreground">Filter Wires</span>
+                              {hasCustomFilter && (
+                                <button
+                                  type="button"
+                                  onClick={resetFilters}
+                                  className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-foreground hover:bg-muted/70 transition-colors"
+                                >
+                                  <RotateCcw className="h-2.5 w-2.5" />
+                                  <span>Reset All</span>
+                                </button>
+                              )}
+                            </div>
+                            {filterMenuBody}
+                            <p className="mt-2.5 pt-2 border-t border-border/30 text-[10px] text-muted-foreground/70">
+                              Shortcuts: <kbd className="font-mono text-foreground/80">/</kbd> search · <kbd className="font-mono text-foreground/80">j</kbd>/<kbd className="font-mono text-foreground/80">k</kbd> navigate
+                            </p>
+                          </PopoverContent>
+                        </Popover>
+                      )}
 
-                    {/* Saved wires row */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSavedOnly((v) => !v);
-                        setMobileFilterSheetOpen(false);
-                      }}
-                      aria-pressed={savedOnly}
-                      className={`mt-2 flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors ${
-                        savedOnly
-                          ? 'border-amber-500/50 bg-amber-500/15'
-                          : 'border-border/50 bg-muted/25 hover:bg-muted/40'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Bookmark className={`h-4 w-4 text-amber-400 ${savedOnly ? 'fill-current' : ''}`} />
-                        <div>
-                          <div className="text-xs font-bold text-foreground">
-                            Saved Wires{savedCount > 0 ? ` (${savedCount})` : ''}
-                          </div>
-                          <div className="text-[11px] text-muted-foreground">
-                            Show only wires you bookmarked on this device
-                          </div>
-                        </div>
-                      </div>
-                      {savedOnly && <Check className="h-4 w-4 text-amber-400 shrink-0" />}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setSavedOnly((v) => !v)}
+                        aria-pressed={savedOnly}
+                        aria-label={savedCount > 0 ? `Saved wires (${savedCount})` : 'Saved wires'}
+                        title="Show bookmarked wires"
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] sm:text-[11px] font-semibold leading-none transition-colors ${
+                          savedOnly
+                            ? 'border-amber-500/50 bg-amber-500/20 text-amber-300'
+                            : 'border-border/60 bg-muted/30 text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <Bookmark className={`h-3 w-3 ${savedOnly ? 'fill-current' : ''}`} />
+                        {savedCount > 0 && <span className="tabular-nums">{savedCount}</span>}
+                      </button>
+                    </div>
                   </div>
-                </SheetContent>
-              </Sheet>
-            </div>
+
+                  {/* Mobile Filters Bottom Sheet */}
+                  {isMobile && (
+                    <Sheet open={filterMenuOpen} onOpenChange={setFilterMenuOpen}>
+                      <SheetContent
+                        side="bottom"
+                        className="rounded-t-2xl max-h-[85dvh] overflow-y-auto px-4 pb-8 pt-5"
+                        onOpenAutoFocus={(event) => event.preventDefault()}
+                      >
+                        <SheetHeader className="pb-3 text-left">
+                          <div className="flex items-center justify-between pr-8">
+                            <SheetTitle className="text-base font-bold">Filter Wires</SheetTitle>
+                            {hasCustomFilter && (
+                              <button
+                                type="button"
+                                onClick={resetFilters}
+                                className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted/70 transition-colors"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                                <span>Reset All</span>
+                              </button>
+                            )}
+                          </div>
+                        </SheetHeader>
+                        {filterMenuBody}
+                      </SheetContent>
+                    </Sheet>
+                  )}
+                </div>
+              );
+            })()}
             {isError && visiblePosts.length > 0 && (
               <div role="status" className="px-4 py-2 text-xs text-muted-foreground sm:px-6">
                 Showing saved wires. Live sync could not finish.{' '}
