@@ -41,20 +41,27 @@ function formatDialogTimestamp(tsMs: number, spanDays: number): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-function SparklineCanvas({ prices, width, height, accentColor, spanDays = 30, isYield = false }: { prices: number[][]; width: number; height: number; accentColor: string; spanDays?: number; isYield?: boolean }) {
+function SparklineCanvas({ prices, height, accentColor, spanDays = 30, isYield = false }: { prices: number[][]; height: number; accentColor: string; spanDays?: number; isYield?: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverIdxRef = useRef<number | null>(null);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas || prices.length < 2) return;
+    const container = containerRef.current;
+    if (!canvas || !container || prices.length < 2) return;
+    const width = container.getBoundingClientRect().width;
+    if (width <= 0) return;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    ctx.scale(dpr, dpr);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const values = prices.map((p) => p[1]);
     const min = Math.min(...values);
@@ -163,17 +170,28 @@ function SparklineCanvas({ prices, width, height, accentColor, spanDays = 30, is
       const last = values[values.length - 1];
       ctx.fillText(formatValue(last), chartW - 4, padTop - 4);
     }
-  }, [prices, width, height, accentColor, spanDays, isYield]);
+  }, [prices, height, accentColor, spanDays, isYield]);
 
   useEffect(() => {
     hoverIdxRef.current = null;
-    draw();
+    let frame = 0;
+    const scheduleDraw = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(draw);
+    };
+    scheduleDraw();
+    const observer = new ResizeObserver(scheduleDraw);
+    if (containerRef.current) observer.observe(containerRef.current);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
   }, [draw]);
 
-  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas || prices.length < 2) return;
-    const rect = canvas.getBoundingClientRect();
+  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const container = containerRef.current;
+    if (!container || prices.length < 2) return;
+    const rect = container.getBoundingClientRect();
     if (rect.width <= 0) return;
     const pct = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
     const idx = Math.round(pct * (prices.length - 1));
@@ -191,13 +209,15 @@ function SparklineCanvas({ prices, width, height, accentColor, spanDays = 30, is
   }, [draw]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{ width, height }}
+    <div
+      ref={containerRef}
+      style={{ height }}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
-      className="block w-full cursor-crosshair touch-pan-y"
-    />
+      className="w-full cursor-crosshair touch-pan-y"
+    >
+      <canvas ref={canvasRef} className="block" />
+    </div>
   );
 }
 
@@ -240,12 +260,12 @@ function CoinChartDialog({ open, onOpenChange, market, title, icon, accentColor,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden bg-background border-border/60 gap-0">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-lg rounded-xl p-0 overflow-hidden bg-background border-border/60 gap-0">
         <VisuallyHidden>
           <DialogTitle>{title} Price Chart</DialogTitle>
         </VisuallyHidden>
-        <div className="px-4 py-3 border-b border-border/40">
-          <div className="flex items-center gap-2">
+        <div className="px-4 py-3 pr-10 border-b border-border/40">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             {icon}
             <span className="text-sm font-semibold text-foreground">{title}</span>
             <div className="flex items-center gap-0.5 ml-1">
@@ -272,13 +292,13 @@ function CoinChartDialog({ open, onOpenChange, market, title, icon, accentColor,
             </div>
           )}
         </div>
-        <div className="bg-background px-2 py-3" style={{ minHeight: 200 }}>
+        <div className="bg-background px-3 py-3" style={{ minHeight: 200 }}>
           {isLoading || !prices ? (
             <div className="flex items-center justify-center h-[180px]">
               <Skeleton className="h-full w-full rounded" />
             </div>
           ) : (
-            <SparklineCanvas prices={prices} width={460} height={200} accentColor={accentColor} spanDays={span.days} isYield={isYield} />
+            <SparklineCanvas prices={prices} height={200} accentColor={accentColor} spanDays={span.days} isYield={isYield} />
           )}
         </div>
         <div className="px-4 py-2 border-t border-border/40">
